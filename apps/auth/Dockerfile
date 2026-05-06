@@ -8,7 +8,7 @@ RUN corepack enable && pnpm install --frozen-lockfile
 
 COPY packages/db ./packages/db
 COPY apps/auth ./apps/auth
-RUN pnpm --filter=@krieger/auth run build
+RUN pnpm --filter=@nexo/auth run build
 
 FROM node:24-alpine
 WORKDIR /app

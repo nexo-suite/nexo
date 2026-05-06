@@ -6,7 +6,7 @@ COPY apps/landing/package.json ./apps/landing/
 RUN corepack enable && pnpm install --frozen-lockfile
 
 COPY apps/landing ./apps/landing
-RUN pnpm --filter=@krieger/landing run build
+RUN pnpm --filter=@nexo/landing run build
 
 FROM node:24-alpine
 WORKDIR /app

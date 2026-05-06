@@ -5,7 +5,7 @@ COPY packages/db/package.json ./packages/db/
 RUN corepack enable && pnpm install --frozen-lockfile
 
 COPY packages/db ./packages/db
-RUN pnpm --filter=@krieger/db run db:migrate 2>/dev/null || true
+RUN pnpm --filter=@nexo/db run db:migrate 2>/dev/null || true
 
 FROM node:24-alpine
 WORKDIR /app
