@@ -1,6 +1,6 @@
 FROM node:24-alpine AS builder
 WORKDIR /app
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/db/package.json ./packages/db/
 RUN corepack enable && pnpm install --frozen-lockfile
 
