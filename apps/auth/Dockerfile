@@ -9,6 +9,8 @@ RUN corepack enable && pnpm install --frozen-lockfile
 COPY vite.shared.ts ./
 COPY packages/db ./packages/db
 COPY apps/auth ./apps/auth
+ARG PUBLIC_AUTH_URL=https://auth.krieger2501.de
+ENV PUBLIC_AUTH_URL=$PUBLIC_AUTH_URL
 RUN pnpm --filter=@nexo/auth run build
 
 FROM node:24-alpine

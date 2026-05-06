@@ -11,7 +11,9 @@ COPY packages/db ./packages/db
 COPY apps/finance ./apps/finance
 
 ARG PUBLIC_APP_VERSION=dev
+ARG PUBLIC_AUTH_URL=https://auth.krieger2501.de
 ENV PUBLIC_APP_VERSION=$PUBLIC_APP_VERSION
+ENV PUBLIC_AUTH_URL=$PUBLIC_AUTH_URL
 RUN pnpm --filter=@nexo/finance run build
 
 FROM node:24-alpine
