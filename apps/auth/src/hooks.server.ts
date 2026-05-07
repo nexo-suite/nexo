@@ -1,6 +1,6 @@
 import { auth } from '$lib/server/auth';
 import { initDb } from '@nexo/db';
-import { DATABASE_URL } from '$env/static/private';
+import { DATABASE_URL } from '$env/dynamic/private';
 import { type Handle } from '@sveltejs/kit';
 
 initDb(DATABASE_URL);

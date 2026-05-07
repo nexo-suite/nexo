@@ -12,8 +12,8 @@ import {
 	GITHUB_CLIENT_SECRET,
 	DISCORD_CLIENT_ID,
 	DISCORD_CLIENT_SECRET
-} from '$env/static/private';
-import { PUBLIC_AUTH_URL } from '$env/static/public';
+} from '$env/dynamic/private';
+import { PUBLIC_AUTH_URL } from '$env/dynamic/public';
 
 export const auth = betterAuth({
 	secret: BETTER_AUTH_SECRET,

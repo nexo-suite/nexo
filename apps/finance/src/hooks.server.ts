@@ -1,7 +1,7 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { auth } from '$lib/server/auth';
 import { initDb } from '@nexo/db';
-import { DATABASE_URL } from '$env/static/private';
+import { DATABASE_URL } from '$env/dynamic/private';
 
 initDb(DATABASE_URL);
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PUBLIC_AUTH_URL } from '$env/static/public';
+	import { PUBLIC_AUTH_URL } from '$env/dynamic/public';
 	import logo from '$lib/assets/logo.webp';
 
 	let { data } = $props();
