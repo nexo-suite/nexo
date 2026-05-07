@@ -1,9 +1,8 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { auth } from '$lib/server/auth';
 import { initDb } from '@nexo/db';
-import { DATABASE_URL } from '$env/dynamic/private';
 
-initDb(DATABASE_URL);
+initDb(process.env.DATABASE_URL!);
 
 export const handle: Handle = async ({ event, resolve }) => {
 	// Skip session check for static assets

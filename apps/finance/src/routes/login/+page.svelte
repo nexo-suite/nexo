@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { PUBLIC_AUTH_URL } from '$env/dynamic/public';
 	import logo from '$lib/assets/logo.webp';
 
 	let { data } = $props();
@@ -28,7 +27,7 @@
 		<!-- Auth buttons -->
 		<div class="space-y-3">
 			<a
-				href="{PUBLIC_AUTH_URL}/login"
+				href="{data.authUrl}/login"
 				class="flex w-full items-center justify-center gap-3 rounded-2xl border border-border bg-surface
 				       py-3.5 text-sm font-semibold shadow-sm transition-shadow hover:shadow-md active:scale-[0.98]"
 			>

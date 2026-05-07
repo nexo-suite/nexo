@@ -4,16 +4,17 @@ import { jwt } from 'better-auth/plugins';
 import { oauthProvider } from '@better-auth/oauth-provider';
 import { db, allowedEmails, users, sessions, oauthAccounts, verifications } from '@nexo/db';
 import { eq } from 'drizzle-orm';
-import {
+
+const {
 	BETTER_AUTH_SECRET,
 	GOOGLE_CLIENT_ID,
 	GOOGLE_CLIENT_SECRET,
 	GITHUB_CLIENT_ID,
 	GITHUB_CLIENT_SECRET,
 	DISCORD_CLIENT_ID,
-	DISCORD_CLIENT_SECRET
-} from '$env/dynamic/private';
-import { PUBLIC_AUTH_URL } from '$env/dynamic/public';
+	DISCORD_CLIENT_SECRET,
+	PUBLIC_AUTH_URL = 'https://auth.krieger2501.de'
+} = process.env;
 
 export const auth = betterAuth({
 	secret: BETTER_AUTH_SECRET,
