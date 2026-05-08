@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { Settings, LogOut } from 'lucide-svelte';
 	import type { User } from 'better-auth';
-	import { PUBLIC_APP_VERSION } from '$env/static/public';
+	import { env } from '$env/dynamic/public';
 
 	let { user, displayName = null }: { user: User; displayName?: string | null } = $props();
 
@@ -113,7 +113,7 @@
 			</div>
 
 			<div class="flex items-center justify-between px-4 py-1.5">
-				<span class="text-faint text-[10px]">v{PUBLIC_APP_VERSION}</span>
+				<span class="text-faint text-[10px]">v{env.PUBLIC_APP_VERSION}</span>
 			</div>
 
 			<div class="h-px bg-border"></div>

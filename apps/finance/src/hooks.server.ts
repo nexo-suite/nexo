@@ -4,7 +4,7 @@ import { initDb } from '@nexo/db';
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
 
-initDb(env.DATABASE_URL);
+initDb(env.DATABASE_URL!);
 
 function isAllowedOrigin(origin: string): boolean {
 	try {
