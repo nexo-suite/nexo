@@ -10,7 +10,12 @@ function createAuth() {
 		baseURL: publicEnv.PUBLIC_AUTH_URL,
 		database: drizzleAdapter(db, {
 			provider: 'pg',
-			schema: { user: users, session: sessions, account: oauthAccounts, verification: verifications }
+			schema: {
+				user: users,
+				session: sessions,
+				account: oauthAccounts,
+				verification: verifications
+			}
 		})
 	});
 }

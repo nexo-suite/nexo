@@ -35,8 +35,8 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Check unused exports (finance)
-        run: pnpm --filter=@nexo/finance knip
+      - name: Check unused exports
+        run: pnpm knip
 
       - name: Type check
         run: pnpm type:check

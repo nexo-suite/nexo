@@ -11,19 +11,6 @@ const config: KnipConfig = {
 		'src/lib/index.ts',
 		// cn() helper used exclusively by shadcn components (above ignored path)
 		'src/lib/utils.ts'
-	],
-	ignoreDependencies: [
-		// Used by Tailwind v4 via CSS @import, not explicit JS imports
-		'@fontsource-variable/inter',
-		// pnpm hoisting helpers
-		'@internationalized/date',
-		// Used by shadcn-svelte components (in ignored src/lib/components/ui/**)
-		'bits-ui',
-		'tailwind-variants',
-		// Consumed by @tailwindcss/vite at build time, not imported in JS
-		'tailwindcss',
-		// Used in test files via @testing-library/svelte (peer of vitest)
-		'@testing-library/svelte'
 	]
 };
 

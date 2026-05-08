@@ -20,7 +20,12 @@ function createAuth() {
 		},
 		database: drizzleAdapter(db, {
 			provider: 'pg',
-			schema: { user: users, session: sessions, account: oauthAccounts, verification: verifications }
+			schema: {
+				user: users,
+				session: sessions,
+				account: oauthAccounts,
+				verification: verifications
+			}
 		}),
 		socialProviders: {
 			google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET },
