@@ -8,7 +8,7 @@
 		"dev": "vite dev --port 3000",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"knip": "knip",
+		"knip": "svelte-kit sync && knip",
 		"package:check": "sort-package-json --check",
 		"package:format": "sort-package-json",
 		"preview": "vite preview",
