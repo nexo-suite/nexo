@@ -14,6 +14,9 @@ dist/
 # Docker volumes (if mounted locally)
 pgdata/
 
+# Local dev Docker overrides — never deploy to server
+docker-compose.override.yml
+
 # OS
 .DS_Store
 Thumbs.db
