@@ -8,11 +8,11 @@ import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
 
 function createAuth() {
-	const baseURL = publicEnv.PUBLIC_AUTH_URL;
-	const trustedOrigins = [baseURL];
+	const baseURL = publicEnv.PUBLIC_AUTH_URL!;
+	const trustedOrigins: string[] = [baseURL];
 	if (env.FINANCE_URL) trustedOrigins.push(env.FINANCE_URL);
 	return betterAuth({
-		secret: env.BETTER_AUTH_SECRET,
+		secret: env.BETTER_AUTH_SECRET!,
 		baseURL,
 		trustedOrigins,
 		advanced: {
@@ -28,9 +28,9 @@ function createAuth() {
 			}
 		}),
 		socialProviders: {
-			google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET },
-			github: { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET },
-			discord: { clientId: env.DISCORD_CLIENT_ID, clientSecret: env.DISCORD_CLIENT_SECRET }
+			google: { clientId: env.GOOGLE_CLIENT_ID!, clientSecret: env.GOOGLE_CLIENT_SECRET! },
+			github: { clientId: env.GITHUB_CLIENT_ID!, clientSecret: env.GITHUB_CLIENT_SECRET! },
+			discord: { clientId: env.DISCORD_CLIENT_ID!, clientSecret: env.DISCORD_CLIENT_SECRET! }
 		},
 		plugins: [
 			jwt(),
