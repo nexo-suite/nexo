@@ -4,7 +4,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { PUBLIC_FINANCE_URL } from '$env/static/public';
+	import { env } from '$env/dynamic/public';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -26,7 +26,7 @@
 			monogram: 'F',
 			status: 'live',
 			desc: 'Track accounts, categorize spend, and see where the month went. No banks involved.',
-			href: PUBLIC_FINANCE_URL,
+			href: env.PUBLIC_FINANCE_URL ?? '#',
 			meta: `v${data.versions.finance}`
 		},
 		{
