@@ -62,7 +62,9 @@
 			<img
 				src={avatarUrl}
 				alt={name}
-				class="absolute inset-0 size-9 rounded-full object-cover ring-2 ring-border transition-opacity duration-200 {avatarLoaded ? 'opacity-100' : 'opacity-0'}"
+				class="absolute inset-0 size-9 rounded-full object-cover ring-2 ring-border transition-opacity duration-200 {avatarLoaded
+					? 'opacity-100'
+					: 'opacity-0'}"
 				onload={() => (avatarLoaded = true)}
 				onerror={() => (avatarFailed = true)}
 			/>
@@ -96,7 +98,9 @@
 						<img
 							src={avatarUrl}
 							alt={name}
-							class="absolute inset-0 size-10 rounded-full object-cover transition-opacity duration-200 {avatarLoaded ? 'opacity-100' : 'opacity-0'}"
+							class="absolute inset-0 size-10 rounded-full object-cover transition-opacity duration-200 {avatarLoaded
+								? 'opacity-100'
+								: 'opacity-0'}"
 							onload={() => (avatarLoaded = true)}
 							onerror={() => (avatarFailed = true)}
 						/>
@@ -109,7 +113,7 @@
 			</div>
 
 			<div class="flex items-center justify-between px-4 py-1.5">
-				<span class="text-[10px] text-faint">v{PUBLIC_APP_VERSION}</span>
+				<span class="text-faint text-[10px]">v{PUBLIC_APP_VERSION}</span>
 			</div>
 
 			<div class="h-px bg-border"></div>

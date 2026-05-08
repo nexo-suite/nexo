@@ -1,14 +1,22 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db, users, sessions, oauthAccounts, verifications } from '@nexo/db';
-import { BETTER_AUTH_SECRET } from '$env/dynamic/private';
-import { PUBLIC_AUTH_URL } from '$env/dynamic/public';
+import { env } from '$env/dynamic/private';
+import { env as publicEnv } from '$env/dynamic/public';
 
-export const auth = betterAuth({
-	secret: BETTER_AUTH_SECRET,
-	baseURL: PUBLIC_AUTH_URL,
-	database: drizzleAdapter(db, {
-		provider: 'pg',
-		schema: { user: users, session: sessions, account: oauthAccounts, verification: verifications }
-	})
-});
+function createAuth() {
+	return betterAuth({
+		secret: env.BETTER_AUTH_SECRET,
+		baseURL: publicEnv.PUBLIC_AUTH_URL,
+		database: drizzleAdapter(db, {
+			provider: 'pg',
+			schema: { user: users, session: sessions, account: oauthAccounts, verification: verifications }
+		})
+	});
+}
+
+let _auth: ReturnType<typeof createAuth> | null = null;
+
+export function getAuth(): ReturnType<typeof createAuth> {
+	return (_auth ??= createAuth());
+}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ChevronRight } from 'lucide-svelte';
 	import { formatCurrency } from '$lib/utils';
+	import type { Account } from '$lib/types';
 
 	const TYPE_ICONS: Record<string, string> = {
 		checking: '🏦',
@@ -11,17 +12,11 @@
 		other: '💼'
 	};
 
-	type Account = {
-		id: string;
-		name: string;
-		type: string;
-		balance: number;
-		currency: string;
-		include_in_total: boolean;
-		color: string | null;
-	};
-
-	let { account, currency, onEdit }: { account: Account; currency: string; onEdit?: (a: Account) => void } = $props();
+	let {
+		account,
+		currency,
+		onEdit
+	}: { account: Account; currency: string; onEdit?: (a: Account) => void } = $props();
 
 	const fmt = (n: number) => formatCurrency(n, currency);
 </script>
@@ -42,7 +37,7 @@
 		<p class="truncate text-sm font-medium">{account.name}</p>
 		<p class="text-xs text-[var(--color-neutral)] capitalize">
 			{account.type}
-			{#if !account.include_in_total}
+			{#if !account.includeInTotal}
 				· <span class="text-[var(--color-debt)]">excluded from total</span>
 			{/if}
 		</p>

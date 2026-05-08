@@ -7,8 +7,9 @@
 	import { Plus } from 'lucide-svelte';
 	import { enhance } from '$app/forms';
 
+	import type { Income } from '$lib/types';
+
 	let { data } = $props();
-	type Income = (typeof data.incomeItems)[number] & { starting_month?: string | null };
 
 	// ── Form state ───────────────────────────────────────────────────────────
 	let showForm = $state(false);
@@ -124,7 +125,7 @@
 		if (sortBy === 'amount') {
 			list.sort((a, b) => (sortDir === 'asc' ? a.amount - b.amount : b.amount - a.amount));
 		} else {
-			list.sort((a, b) => dateVal(a.expected_date, sortDir) - dateVal(b.expected_date, sortDir));
+			list.sort((a, b) => dateVal(a.expectedDate, sortDir) - dateVal(b.expectedDate, sortDir));
 		}
 		return list;
 	});
@@ -135,12 +136,12 @@
 			list.sort((a, b) => (sortDir === 'asc' ? a.amount - b.amount : b.amount - a.amount));
 		} else {
 			list.sort((a, b) => {
-				const av = a.expected_date
-					? new Date(a.expected_date).getTime()
-					: new Date(a.created_at).getTime();
-				const bv = b.expected_date
-					? new Date(b.expected_date).getTime()
-					: new Date(b.created_at).getTime();
+				const av = a.expectedDate
+					? new Date(a.expectedDate).getTime()
+					: new Date(a.createdAt).getTime();
+				const bv = b.expectedDate
+					? new Date(b.expectedDate).getTime()
+					: new Date(b.createdAt).getTime();
 				return sortDir === 'desc' ? bv - av : av - bv;
 			});
 		}

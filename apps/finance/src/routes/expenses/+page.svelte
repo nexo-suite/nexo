@@ -6,9 +6,11 @@
 	import Tabs from '$lib/components/ui/Tabs.svelte';
 	import { Plus, ChevronDown } from 'lucide-svelte';
 	import { normalizeToMonthly } from '$lib/utils';
+	import { enhance } from '$app/forms';
+
+	import type { Expense } from '$lib/types';
 
 	let { data } = $props();
-	type Expense = (typeof data.expenses)[number] & { starting_month?: string | null };
 
 	// ── Form state ───────────────────────────────────────────────────────────
 	let showForm = $state(false);
@@ -171,7 +173,13 @@
 			list.sort((a, b) => (a.active === b.active ? 0 : a.active ? -1 : 1));
 		}
 
-		const groups: { recurrence: string; label: string; items: Expense[]; subtotal: number; monthlyEquiv: number }[] = [];
+		const groups: {
+			recurrence: string;
+			label: string;
+			items: Expense[];
+			subtotal: number;
+			monthlyEquiv: number;
+		}[] = [];
 		for (const recurrence of RECURRENCE_ORDER) {
 			const items = list.filter((e) => e.recurrence === recurrence);
 			if (items.length === 0) continue;
@@ -189,7 +197,13 @@
 		const rest = list.filter((e) => !known.has(e.recurrence));
 		if (rest.length > 0) {
 			const active = rest.filter((e) => e.active);
-			groups.push({ recurrence: 'other', label: 'Other', items: rest, subtotal: active.reduce((s, e) => s + e.amount, 0), monthlyEquiv: active.reduce((s, e) => s + normalizeToMonthly(e.amount, e.recurrence), 0) });
+			groups.push({
+				recurrence: 'other',
+				label: 'Other',
+				items: rest,
+				subtotal: active.reduce((s, e) => s + e.amount, 0),
+				monthlyEquiv: active.reduce((s, e) => s + normalizeToMonthly(e.amount, e.recurrence), 0)
+			});
 		}
 		return groups;
 	});
@@ -200,7 +214,7 @@
 		if (sortBy === 'amount') {
 			list.sort((a, b) => (sortDir === 'asc' ? a.amount - b.amount : b.amount - a.amount));
 		} else {
-			list.sort((a, b) => dateVal(a.due_date, sortDir) - dateVal(b.due_date, sortDir));
+			list.sort((a, b) => dateVal(a.dueDate, sortDir) - dateVal(b.dueDate, sortDir));
 		}
 		return list;
 	});
@@ -211,8 +225,8 @@
 			list.sort((a, b) => (sortDir === 'asc' ? a.amount - b.amount : b.amount - a.amount));
 		} else {
 			list.sort((a, b) => {
-				const av = a.due_date ? new Date(a.due_date).getTime() : new Date(a.created_at).getTime();
-				const bv = b.due_date ? new Date(b.due_date).getTime() : new Date(b.created_at).getTime();
+				const av = a.dueDate ? new Date(a.dueDate).getTime() : new Date(a.createdAt).getTime();
+				const bv = b.dueDate ? new Date(b.dueDate).getTime() : new Date(b.createdAt).getTime();
 				return sortDir === 'desc' ? bv - av : av - bv;
 			});
 		}
@@ -271,7 +285,7 @@
 		</PageHeader>
 	</div>
 
-	<div class="mx-4 mb-4 rounded-lg border border-border bg-surface overflow-hidden">
+	<div class="mx-4 mb-4 overflow-hidden rounded-lg border border-border bg-surface">
 		<button
 			type="button"
 			onclick={() => (breakdownOpen = !breakdownOpen)}
@@ -280,24 +294,29 @@
 			<span class="text-neutral">Monthly equivalent</span>
 			<div class="flex items-center gap-2">
 				<span class="font-semibold text-expense tabular-nums">{fmt(monthlyTotal)}</span>
-				<ChevronDown size={14} class="text-neutral transition-transform duration-200 {breakdownOpen ? 'rotate-180' : ''}" />
+				<ChevronDown
+					size={14}
+					class="text-neutral transition-transform duration-200 {breakdownOpen ? 'rotate-180' : ''}"
+				/>
 			</div>
 		</button>
 		{#if breakdownOpen}
-			<div class="border-t border-border px-4 py-3 space-y-2">
+			<div class="space-y-2 border-t border-border px-4 py-3">
 				{#each monthlyBreakdown as row (row.recurrence)}
 					<div class="flex items-center justify-between text-xs">
-						<div class="flex items-center gap-2 text-neutral min-w-0">
+						<div class="flex min-w-0 items-center gap-2 text-neutral">
 							<span class="w-24 shrink-0 capitalize">{row.label}</span>
-							<span class="tabular-nums shrink-0">{fmt(row.raw)}</span>
-							<span class="text-border shrink-0">{BREAKDOWN_LABEL[row.recurrence] ?? ''}</span>
+							<span class="shrink-0 tabular-nums">{fmt(row.raw)}</span>
+							<span class="shrink-0 text-border">{BREAKDOWN_LABEL[row.recurrence] ?? ''}</span>
 						</div>
-						<span class="font-semibold tabular-nums text-expense ml-2 shrink-0">{fmt(row.monthly)}/mo</span>
+						<span class="ml-2 shrink-0 font-semibold text-expense tabular-nums"
+							>{fmt(row.monthly)}/mo</span
+						>
 					</div>
 				{/each}
 				<div class="flex items-center justify-between border-t border-border pt-2 text-xs">
 					<span class="font-semibold text-neutral">Total</span>
-					<span class="font-semibold tabular-nums text-expense">{fmt(monthlyTotal)}/mo</span>
+					<span class="font-semibold text-expense tabular-nums">{fmt(monthlyTotal)}/mo</span>
 				</div>
 			</div>
 		{/if}
@@ -458,12 +477,18 @@
 				{#each recurringView as group (group.recurrence)}
 					<div>
 						<div class="mb-2 flex items-center justify-between">
-							<p class="text-xs font-semibold tracking-widest text-neutral uppercase">{group.label}</p>
+							<p class="text-xs font-semibold tracking-widest text-neutral uppercase">
+								{group.label}
+							</p>
 							{#if group.subtotal > 0}
 								<div class="text-right">
-									<p class="text-xs font-semibold tabular-nums text-expense">{fmt(group.subtotal)}</p>
+									<p class="text-xs font-semibold text-expense tabular-nums">
+										{fmt(group.subtotal)}
+									</p>
 									{#if group.recurrence !== 'monthly'}
-										<p class="text-[10px] tabular-nums text-neutral">{fmt(group.monthlyEquiv)}/mo</p>
+										<p class="text-[10px] text-neutral tabular-nums">
+											{fmt(group.monthlyEquiv)}/mo
+										</p>
 									{/if}
 								</div>
 							{/if}

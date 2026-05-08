@@ -14,8 +14,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 	]);
 
 	const MONTHLY_FACTOR: Record<string, number> = {
-		weekly: 52 / 12, biweekly: 26 / 12, monthly: 1,
-		quarterly: 1 / 3, 'half-yearly': 1 / 6, yearly: 1 / 12
+		weekly: 52 / 12,
+		biweekly: 26 / 12,
+		monthly: 1,
+		quarterly: 1 / 3,
+		'half-yearly': 1 / 6,
+		yearly: 1 / 12
 	};
 
 	const monthlyExpenses = expenseList
@@ -65,11 +69,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
 	return {
-		accounts: accountList.map((a) => ({
-			...a,
-			balance: Number(a.balance),
-			include_in_total: a.includeInTotal
-		})),
+		accounts: accountList.map((a) => ({ ...a, balance: Number(a.balance) })),
 		expenses: expenseList,
 		incomeItems: incomeList,
 		monthlyExpenses,

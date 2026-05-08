@@ -18,7 +18,7 @@
 			name: string;
 			type: string;
 			balance: number;
-			include_in_total: boolean;
+			includeInTotal: boolean;
 			color: string | null;
 		};
 		currency: string;
@@ -43,7 +43,7 @@
 	</div>
 	<div class="text-right">
 		<p class="text-sm font-semibold tabular-nums">{fmt(account.balance)}</p>
-		{#if !account.include_in_total}
+		{#if !account.includeInTotal}
 			<p class="text-[10px] text-neutral">excluded</p>
 		{/if}
 	</div>

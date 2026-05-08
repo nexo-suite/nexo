@@ -11,11 +11,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.where(eq(accounts.userId, userId))
 		.orderBy(asc(accounts.createdAt));
 	return {
-		accounts: rows.map((a) => ({
-			...a,
-			balance: Number(a.balance),
-			include_in_total: a.includeInTotal
-		})),
+		accounts: rows.map((a) => ({ ...a, balance: Number(a.balance) })),
 		userId
 	};
 };

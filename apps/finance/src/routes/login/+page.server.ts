@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { PUBLIC_AUTH_URL } from '$env/dynamic/public';
+import { env } from '$env/dynamic/public';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -7,6 +7,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	return {
 		error: url.searchParams.get('error'),
-		authUrl: PUBLIC_AUTH_URL
+		authUrl: env.PUBLIC_AUTH_URL
 	};
 };

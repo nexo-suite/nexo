@@ -6,8 +6,9 @@
 	import { Plus, ChevronDown } from 'lucide-svelte';
 	import { enhance } from '$app/forms';
 
+	import type { Debt } from '$lib/types';
+
 	let { data } = $props();
-	type Debt = (typeof data.debts)[number];
 
 	let showForm = $state(false);
 	let editing = $state<Debt | null>(null);
@@ -124,7 +125,10 @@
 				class="flex w-full items-center justify-between py-2 text-xs font-semibold tracking-widest text-neutral uppercase"
 			>
 				Settled ({settledDebts.length})
-				<ChevronDown size={14} class="transition-transform duration-200 {showSettled ? 'rotate-180' : ''}" />
+				<ChevronDown
+					size={14}
+					class="transition-transform duration-200 {showSettled ? 'rotate-180' : ''}"
+				/>
 			</button>
 			{#if showSettled}
 				<div class="mt-2 space-y-2">

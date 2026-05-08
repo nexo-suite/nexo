@@ -1,7 +1,8 @@
-import { auth } from '$lib/server/auth';
+import { getAuth } from '$lib/server/auth';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
+	const auth = getAuth();
 	const response = await auth.api.signOut({ headers: request.headers, asResponse: true });
 
 	const loginUrl = `${auth.options.baseURL}/login`;

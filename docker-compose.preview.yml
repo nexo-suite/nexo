@@ -5,11 +5,11 @@ services:
     volumes:
       - pgdata_preview:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: nexo
+      POSTGRES_USER: nexo
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
+      test: ['CMD-SHELL', 'pg_isready -U nexo']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -60,17 +60,18 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
     depends_on:
-      - auth_preview
+      migrate_preview:
+        condition: service_completed_successfully
 
   landing_preview:
     build:
       context: .
       dockerfile: apps/landing/Dockerfile
+      args:
+        PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
     restart: unless-stopped
     ports:
       - '4000:3000'
-    environment:
-      PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
 
 volumes:
   pgdata_preview:

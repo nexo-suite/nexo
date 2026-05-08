@@ -3,7 +3,8 @@ WORKDIR /app
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/landing/package.json ./apps/landing/
-RUN corepack enable && pnpm install --frozen-lockfile
+RUN corepack enable && corepack prepare pnpm@10.33.3 --activate
+RUN pnpm install --frozen-lockfile
 
 COPY vite.shared.ts ./
 COPY apps/landing ./apps/landing
@@ -14,8 +15,10 @@ RUN pnpm --filter=@nexo/landing run build
 
 FROM node:24-alpine
 WORKDIR /app
-COPY --from=builder /app/apps/landing/build ./build
-COPY --from=builder /app/apps/landing/package.json ./
+RUN addgroup -S app && adduser -S app -G app
+COPY --from=builder --chown=app:app /app/apps/landing/build ./build
+COPY --from=builder --chown=app:app /app/apps/landing/package.json ./
+USER app
 ENV NODE_ENV=production PORT=3000
 EXPOSE 3000
 CMD ["node", "build"]

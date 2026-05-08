@@ -7,14 +7,14 @@
 		monthlyIncome,
 		currency
 	}: {
-		accounts: { balance: number; include_in_total: boolean }[];
+		accounts: { balance: number; includeInTotal: boolean }[];
 		monthlyExpenses: number;
 		monthlyIncome: number;
 		currency: string;
 	} = $props();
 
 	const totalLiquid = $derived(
-		accounts.filter((a) => a.include_in_total).reduce((sum, a) => sum + a.balance, 0)
+		accounts.filter((a) => a.includeInTotal).reduce((sum, a) => sum + a.balance, 0)
 	);
 
 	const netCashflow = $derived(monthlyIncome - monthlyExpenses);
@@ -62,7 +62,9 @@
 	{#if monthlyIncome > 0}
 		<div class="mt-4">
 			<div class="mb-1.5 flex items-center justify-between">
-				<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">Saved this month</p>
+				<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">
+					Saved this month
+				</p>
 				<p class="text-[10px] font-semibold text-white/70">{savingsRate.toFixed(0)}%</p>
 			</div>
 			<div class="h-1.5 w-full overflow-hidden rounded-full bg-white/15">
@@ -70,7 +72,9 @@
 					class="h-full rounded-full transition-all duration-500 {netCashflow >= 0
 						? 'bg-emerald-300'
 						: 'bg-red-400'}"
-					style="width: {netCashflow >= 0 ? savingsRate : Math.min(100, (Math.abs(netCashflow) / monthlyIncome) * 100)}%"
+					style="width: {netCashflow >= 0
+						? savingsRate
+						: Math.min(100, (Math.abs(netCashflow) / monthlyIncome) * 100)}%"
 				></div>
 			</div>
 		</div>

@@ -1,15 +1,8 @@
 <script lang="ts">
 	import { ChevronRight, CheckCircle } from 'lucide-svelte';
 	import { formatCurrency } from '$lib/utils';
+	import type { Income } from '$lib/types';
 
-	type Income = {
-		id: string;
-		name: string;
-		amount: number;
-		recurrence: string;
-		expected_date: string | null;
-		received: boolean;
-	};
 	let {
 		income,
 		once = false,
@@ -40,8 +33,8 @@
 		</p>
 		<p class="text-xs text-neutral capitalize">
 			{#if once}
-				{#if income.expected_date}
-					due {new Date(income.expected_date).toLocaleDateString('en-GB', {
+				{#if income.expectedDate}
+					due {new Date(income.expectedDate).toLocaleDateString('en-GB', {
 						day: 'numeric',
 						month: 'short'
 					})}
@@ -51,8 +44,8 @@
 				{#if income.received}<span class="text-income"> · received</span>{/if}
 			{:else}
 				{income.recurrence}
-				{#if income.expected_date}
-					· due {new Date(income.expected_date).toLocaleDateString('en-GB', {
+				{#if income.expectedDate}
+					· due {new Date(income.expectedDate).toLocaleDateString('en-GB', {
 						day: 'numeric',
 						month: 'short'
 					})}{/if}

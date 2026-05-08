@@ -22,7 +22,7 @@
 
 	const currentBalance = $derived(
 		data.accounts
-			.filter((a: { include_in_total: boolean }) => a.include_in_total)
+			.filter((a: { includeInTotal: boolean }) => a.includeInTotal)
 			.reduce((s: number, a: { balance: number }) => s + a.balance, 0)
 	);
 
@@ -79,19 +79,19 @@
 			const events: ForecastPoint['events'] = [];
 
 			for (const e of data.expenses) {
-				if (e.active && firesOnDay(e.recurrence, e.day_of_month, e.due_date, d, dayStr, todayMs)) {
+				if (e.active && firesOnDay(e.recurrence, e.dayOfMonth, e.dueDate, d, dayStr, todayMs)) {
 					events.push({ label: e.name, amount: Number(e.amount), type: 'expense' });
 					running -= Number(e.amount);
 				}
 			}
 			for (const inc of data.incomeItems) {
-				if (firesOnDay(inc.recurrence, inc.day_of_month, inc.expected_date, d, dayStr, todayMs)) {
+				if (firesOnDay(inc.recurrence, inc.dayOfMonth, inc.expectedDate, d, dayStr, todayMs)) {
 					events.push({ label: inc.name, amount: Number(inc.amount), type: 'income' });
 					running += Number(inc.amount);
 				}
 			}
 			for (const debt of data.debts) {
-				if (!debt.paid && debt.due_date === dayStr) {
+				if (!debt.paid && debt.dueDate === dayStr) {
 					const sign = debt.direction === 'owe' ? -1 : 1;
 					events.push({ label: debt.counterparty, amount: Number(debt.amount), type: 'debt' });
 					running += sign * Number(debt.amount);

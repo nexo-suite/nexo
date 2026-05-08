@@ -11,11 +11,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		db.select().from(debts).where(eq(debts.userId, userId)).orderBy(asc(debts.createdAt))
 	]);
 	return {
-		accounts: accountList.map((a) => ({
-			...a,
-			balance: Number(a.balance),
-			include_in_total: a.includeInTotal
-		})),
+		accounts: accountList.map((a) => ({ ...a, balance: Number(a.balance) })),
 		expenses: expenseList,
 		incomeItems: incomeList,
 		debts: debtList

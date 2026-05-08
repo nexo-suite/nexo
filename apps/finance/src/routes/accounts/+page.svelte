@@ -6,9 +6,9 @@
 	import { Plus } from 'lucide-svelte';
 	import { enhance } from '$app/forms';
 
-	let { data } = $props();
+	import type { Account } from '$lib/types';
 
-	type Account = (typeof data.accounts)[number];
+	let { data } = $props();
 
 	let showForm = $state(false);
 	let editing = $state<Account | null>(null);
@@ -24,12 +24,14 @@
 
 	const accountTypes = ['checking', 'savings', 'crypto', 'investment', 'cash', 'other'];
 	const fmt = (n: number) =>
-		new Intl.NumberFormat('en-US', { style: 'currency', currency: data.settings.currency }).format(n);
+		new Intl.NumberFormat('en-US', { style: 'currency', currency: data.settings.currency }).format(
+			n
+		);
 
 	const totalBalance = $derived(data.accounts.reduce((s: number, a: Account) => s + a.balance, 0));
 	const liquidBalance = $derived(
 		data.accounts
-			.filter((a: Account) => a.include_in_total)
+			.filter((a: Account) => a.includeInTotal)
 			.reduce((s: number, a: Account) => s + a.balance, 0)
 	);
 
@@ -56,7 +58,7 @@
 			balance: String(account.balance),
 			currency: data.settings.currency,
 			color: account.color ?? '',
-			include_in_total: account.include_in_total
+			include_in_total: account.includeInTotal
 		};
 		showForm = true;
 	}
@@ -181,11 +183,15 @@
 						<div>
 							<p class="mb-1 text-xs font-medium text-[var(--color-neutral)]">Currency</p>
 							<div class="group relative">
-								<div class="input flex cursor-default items-center justify-between opacity-60 select-none">
+								<div
+									class="input flex cursor-default items-center justify-between opacity-60 select-none"
+								>
 									<span>{data.settings.currency}</span>
 									<span class="text-[10px] text-[var(--color-neutral)]">?</span>
 								</div>
-								<div class="pointer-events-none absolute bottom-full left-0 mb-1.5 w-52 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[11px] text-[var(--color-neutral)] opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+								<div
+									class="pointer-events-none absolute bottom-full left-0 mb-1.5 w-52 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[11px] text-[var(--color-neutral)] opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
+								>
 									Change your currency in Settings (top-right).
 								</div>
 							</div>

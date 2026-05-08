@@ -43,26 +43,16 @@ jobs:
         uses: actions/github-script@v7
         if: success()
         with:
-          app-id: ${{ secrets.GH_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { createAppAuth } = require('@octokit/auth-app');
-            const { Octokit } = require('@octokit/rest');
-            const auth = createAppAuth({
-              appId: ${{ secrets.GH_APP_ID }},
-              privateKey: `${{ secrets.GH_APP_PRIVATE_KEY }}`,
-            });
-            const { token } = await auth({ type: 'installation', installationId: process.env.INSTALLATION_ID });
-            const octokit = new Octokit({ auth: token });
-            await octokit.issues.updateComment({
+            await github.rest.issues.updateComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               comment_id: ${{ inputs.comment_id }},
               body: [
                 '### Nexo Preview',
                 '',
-                '**Status:** ✅ Deployed',
-                '**Commit:** `${{ inputs.sha }}`',
+                '**Status:** ✅ Live @ `${{ inputs.sha }}`',
                 '',
                 '| App | URL |',
                 '|---|---|',
@@ -70,8 +60,9 @@ jobs:
                 '| Finance | https://finance.preview.krieger2501.de |',
                 '| Auth | https://auth.preview.krieger2501.de |',
                 '',
-                '<!-- nexo-preview-redeploy -->',
-                '> React with 🚀 on this comment to redeploy.',
+                '- [ ] Redeploy',
+                '',
+                '<!-- nexo-preview pr:${{ inputs.pr_number }} -->',
               ].join('\n'),
             });
 
@@ -88,6 +79,10 @@ jobs:
               body: [
                 '### Nexo Preview',
                 '',
-                '**Status:** ❌ Deployment failed — check the [Actions run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.',
+                '**Status:** ❌ Deploy failed @ `${{ inputs.sha }}` — [view run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})',
+                '',
+                '- [ ] Retry deploy',
+                '',
+                '<!-- nexo-preview pr:${{ inputs.pr_number }} -->',
               ].join('\n'),
             });

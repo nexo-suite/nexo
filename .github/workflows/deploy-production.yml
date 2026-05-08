@@ -9,14 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Resolve version
-        id: version
-        run: |
-          TAG=$(git tag --sort=-version:refname | grep '^v' | head -1)
-          echo "value=${TAG:-dev}" >> $GITHUB_OUTPUT
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
@@ -30,10 +22,9 @@ jobs:
             git pull origin main
 
             export $(grep -v '^#' .env | xargs)
-            export PUBLIC_APP_VERSION=${{ steps.version.outputs.value }}
 
             docker compose pull --ignore-pull-failures || true
-            docker compose up -d --build --remove-orphans
+            docker compose --profile server up -d --build --remove-orphans
 
             # Also redeploy preview with the same main code so it stays in sync
             docker compose -f docker-compose.preview.yml \

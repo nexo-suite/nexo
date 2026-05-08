@@ -1,15 +1,8 @@
 <script lang="ts">
 	import { ChevronRight } from 'lucide-svelte';
 	import { formatCurrency } from '$lib/utils';
+	import type { Debt } from '$lib/types';
 
-	type Debt = {
-		id: string;
-		direction: string;
-		counterparty: string;
-		amount: number;
-		paid: boolean;
-		due_date: string | null;
-	};
 	let { debt, onEdit }: { debt: Debt; onEdit?: (d: Debt) => void } = $props();
 
 	const fmt = (n: number) => formatCurrency(n);
@@ -32,8 +25,8 @@
 		<p class="truncate text-sm font-medium">{debt.counterparty}</p>
 		<p class="text-xs text-neutral">
 			{debt.direction === 'owe' ? 'I owe' : 'Owed to me'}
-			{#if debt.due_date}
-				· due {new Date(debt.due_date).toLocaleDateString('en-GB', {
+			{#if debt.dueDate}
+				· due {new Date(debt.dueDate).toLocaleDateString('en-GB', {
 					day: 'numeric',
 					month: 'short'
 				})}{/if}
