@@ -1,8 +1,9 @@
 name: Deploy Production
 
 on:
-  release:
-    types: [released]
+  push:
+    tags:
+      - 'nexo-v*'
 
 jobs:
   deploy:
