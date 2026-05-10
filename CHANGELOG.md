@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/krieger2501/nexo/compare/nexo-v0.2.0...nexo-v0.3.0) (2026-05-10)
+
+
+### Features
+
+* add logger utility to auth and finance apps ([9cab61a](https://github.com/krieger2501/nexo/commit/9cab61a22b9eced4a060b2483c513a231097d85a))
+
+
+### Bug Fixes
+
+* cross-subdomain cookies + structured logging for auth flow ([121f105](https://github.com/krieger2501/nexo/commit/121f105bdd224f95328dd7aad0fda560eb38924c))
+* pass finance version as build arg to landing, read from env at runtime ([c0a65fa](https://github.com/krieger2501/nexo/commit/c0a65fa6d9aff378987d5fe18b3b6fe7dba0fa48))
+
 ## [0.2.0](https://github.com/krieger2501/nexo/compare/nexo-v0.1.0...nexo-v0.2.0) (2026-05-08)
 
 
