@@ -80,7 +80,7 @@ function createAuth() {
 						return {
 							response: new Response(null, {
 								status: 302,
-								headers: { Location: '/not-authorized' }
+								headers: { Location: '/login?error=not_authorized' }
 							}),
 							headers: null
 						};
