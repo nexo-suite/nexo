@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/krieger2501/nexo/compare/nexo-v0.3.0...nexo-v0.3.1) (2026-05-10)
+
+
+### Bug Fixes
+
+* remove export \$(cat .env | xargs) from deploy script ([6f46fbb](https://github.com/krieger2501/nexo/commit/6f46fbbc4c0b1e22caf22a4744343e827e0e6642))
+
 ## [0.3.0](https://github.com/krieger2501/nexo/compare/nexo-v0.2.0...nexo-v0.3.0) (2026-05-10)
 
 
