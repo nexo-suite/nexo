@@ -6,6 +6,7 @@ import { db, allowedEmails, users, sessions, oauthAccounts, verifications } from
 import { eq } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
+import { logger } from './logger';
 
 function createAuth() {
 	const baseURL = publicEnv.PUBLIC_AUTH_URL!;
@@ -55,11 +56,11 @@ function createAuth() {
 			after: async (ctx: any) => {
 				try {
 					const path = ctx.request?.url ? new URL(ctx.request.url).pathname : '';
-					console.log('[auth] after-hook path:', path);
+					logger.info('after-hook path:', path);
 					if (!path.includes('/callback')) return { response: undefined, headers: null };
 
 					const email = ctx.context?.newSession?.user?.email;
-					console.log('[auth] callback — email:', email ?? '(none)');
+					logger.info('callback — email:', email ?? '(none)');
 					if (!email) return { response: undefined, headers: null };
 
 					const [allowed] = await db
@@ -68,10 +69,10 @@ function createAuth() {
 						.where(eq(allowedEmails.email, email))
 						.limit(1);
 
-					console.log('[auth] allowedEmails check:', email, '→', allowed ? 'allowed' : 'BLOCKED');
+					logger.info('allowedEmails check:', email, '→', allowed ? 'allowed' : 'BLOCKED');
 
 					if (!allowed) {
-						console.log('[auth] deleting session for blocked user');
+						logger.info('deleting session for blocked user');
 						const token = ctx.context?.newSession?.session?.token;
 						if (token) {
 							await db.delete(sessions).where(eq(sessions.token, token));
@@ -85,7 +86,7 @@ function createAuth() {
 						};
 					}
 				} catch (e) {
-					console.error('[auth] after hook error:', e);
+					logger.error('after hook error:', e);
 				}
 				return { response: undefined, headers: null };
 			}
