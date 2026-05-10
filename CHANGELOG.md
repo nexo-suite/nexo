@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/krieger2501/nexo/compare/nexo-v0.3.1...nexo-v0.3.2) (2026-05-10)
+
+
+### Bug Fixes
+
+* derive FINANCE_VERSION from tag name instead of node on server ([8f20df7](https://github.com/krieger2501/nexo/commit/8f20df7f3936b00e9d604640b45879a2bbb897c0))
+
 ## [0.3.1](https://github.com/krieger2501/nexo/compare/nexo-v0.3.0...nexo-v0.3.1) (2026-05-10)
 
 
