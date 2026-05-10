@@ -38,11 +38,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const auth = getAuth();
 	const session = await auth.api.getSession({ headers: event.request.headers });
+	console.log('[finance] getSession:', session?.user?.email ?? 'null', '—', event.url.pathname);
 	event.locals.user = session?.user ?? null;
 
 	if (!event.locals.user && !event.url.pathname.startsWith('/auth')) {
 		const financeURL = publicEnv.PUBLIC_FINANCE_URL ?? `${event.url.protocol}//${event.url.host}`;
 		const redirectTo = encodeURIComponent(`${financeURL}${event.url.pathname}${event.url.search}`);
+		console.log('[finance] → auth login, redirectTo:', decodeURIComponent(redirectTo));
 		redirect(303, `${auth.options.baseURL}/login?redirectTo=${redirectTo}`);
 	}
 

@@ -6,5 +6,6 @@ import type { RequestHandler } from './$types';
 // redirects the user back here. We just bounce them to the app root.
 export const GET: RequestHandler = ({ url }) => {
 	const next = url.searchParams.get('next') ?? '/';
+	console.log('[finance] auth/callback next:', next);
 	redirect(303, next);
 };

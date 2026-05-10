@@ -16,7 +16,11 @@ function createAuth() {
 		baseURL,
 		trustedOrigins,
 		advanced: {
-			useSecureCookies: baseURL.startsWith('https://')
+			useSecureCookies: baseURL.startsWith('https://'),
+			crossSubDomainCookies: {
+				enabled: true,
+				domain: '.krieger2501.de'
+			}
 		},
 		database: drizzleAdapter(db, {
 			provider: 'pg',
@@ -51,9 +55,11 @@ function createAuth() {
 			after: async (ctx: any) => {
 				try {
 					const path = ctx.request?.url ? new URL(ctx.request.url).pathname : '';
+					console.log('[auth] after-hook path:', path);
 					if (!path.includes('/callback')) return { response: undefined, headers: null };
 
 					const email = ctx.context?.newSession?.user?.email;
+					console.log('[auth] callback — email:', email ?? '(none)');
 					if (!email) return { response: undefined, headers: null };
 
 					const [allowed] = await db
@@ -62,7 +68,10 @@ function createAuth() {
 						.where(eq(allowedEmails.email, email))
 						.limit(1);
 
+					console.log('[auth] allowedEmails check:', email, '→', allowed ? 'allowed' : 'BLOCKED');
+
 					if (!allowed) {
+						console.log('[auth] deleting session for blocked user');
 						const token = ctx.context?.newSession?.session?.token;
 						if (token) {
 							await db.delete(sessions).where(eq(sessions.token, token));
@@ -76,7 +85,7 @@ function createAuth() {
 						};
 					}
 				} catch (e) {
-					console.error('[auth hook] after hook error:', e);
+					console.error('[auth] after hook error:', e);
 				}
 				return { response: undefined, headers: null };
 			}

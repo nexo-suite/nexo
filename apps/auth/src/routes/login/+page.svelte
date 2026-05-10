@@ -7,6 +7,7 @@
 	async function signIn(provider: 'google' | 'github' | 'discord') {
 		const params = page.url.searchParams;
 		const callbackURL = params.get('redirectTo') ?? '/';
+		console.log('[auth] signIn', provider, 'callbackURL:', callbackURL);
 		// oauth_query is only forwarded for signed OIDC authorization requests
 		// (when the auth app is acting as an OAuth provider). Regular social logins
 		// must not forward query params — they aren't signed and fail verification.
