@@ -14,16 +14,20 @@ jobs:
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.2.5
+        env:
+          FINANCE_VERSION: ${{ github.ref_name }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: FINANCE_VERSION
           script: |
             set -e
             cd /home/deploy/nexo
             git pull origin main
 
-            FINANCE_VERSION=$(node -p "require('./apps/finance/package.json').version")
+            # Strip the "nexo-v" prefix from the tag (e.g. nexo-v0.3.0 → 0.3.0)
+            FINANCE_VERSION="${FINANCE_VERSION#nexo-v}"
 
             docker compose pull --ignore-pull-failures || true
             FINANCE_VERSION="$FINANCE_VERSION" docker compose --profile server up -d --build --remove-orphans
