@@ -35,4 +35,4 @@ jobs:
             # Also redeploy preview with the same main code so it stays in sync
             docker compose -f docker-compose.preview.yml \
               --env-file .env.preview \
-              up -d --build --remove-orphans
+              up -d --build
