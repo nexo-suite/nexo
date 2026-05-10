@@ -4,6 +4,17 @@
 
 	const authClient = createAuthClient();
 
+	let errorMsg = $state<string | null>(
+		(() => {
+			const e = page.url.searchParams.get('error');
+			if (!e) return null;
+			if (e === 'not_authorized')
+				return "Your email isn't on the access list. Ask the admin to add you.";
+			return 'Sign-in failed. Please try again.';
+		})()
+	);
+	let loading = $state<string | null>(null);
+
 	async function signIn(provider: 'google' | 'github' | 'discord') {
 		const params = page.url.searchParams;
 		const callbackURL = params.get('redirectTo') ?? '/';
@@ -12,11 +23,18 @@
 		// (when the auth app is acting as an OAuth provider). Regular social logins
 		// must not forward query params — they aren't signed and fail verification.
 		const isOidcRequest = params.has('client_id') && params.has('sig');
-		await authClient.signIn.social({
-			provider,
-			callbackURL,
-			...(isOidcRequest && { oauth_query: page.url.search.slice(1) })
-		});
+		errorMsg = null;
+		loading = provider;
+		try {
+			await authClient.signIn.social({
+				provider,
+				callbackURL,
+				...(isOidcRequest && { oauth_query: page.url.search.slice(1) })
+			});
+		} catch {
+			errorMsg = 'Something went wrong. Please try again.';
+			loading = null;
+		}
 	}
 </script>
 
@@ -35,8 +53,17 @@
 		<h1 class="heading">Welcome back</h1>
 		<p class="sub">Pick a provider to sign in. Your email needs to be on the list.</p>
 
+		{#if errorMsg}
+			<div class="error-banner" role="alert">{errorMsg}</div>
+		{/if}
+
 		<div class="providers">
-			<button type="button" class="provider-btn" onclick={() => signIn('google')}>
+			<button
+				type="button"
+				class="provider-btn"
+				disabled={Boolean(loading)}
+				onclick={() => signIn('google')}
+			>
 				<svg class="provider-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
 					<path
 						d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -58,7 +85,12 @@
 				Continue with Google
 			</button>
 
-			<button type="button" class="provider-btn" onclick={() => signIn('github')}>
+			<button
+				type="button"
+				class="provider-btn"
+				disabled={Boolean(loading)}
+				onclick={() => signIn('github')}
+			>
 				<svg
 					class="provider-icon"
 					viewBox="0 0 24 24"
@@ -72,7 +104,12 @@
 				Continue with GitHub
 			</button>
 
-			<button type="button" class="provider-btn" onclick={() => signIn('discord')}>
+			<button
+				type="button"
+				class="provider-btn"
+				disabled={Boolean(loading)}
+				onclick={() => signIn('discord')}
+			>
 				<svg
 					class="provider-icon"
 					viewBox="0 0 24 24"
@@ -164,6 +201,17 @@
 		font-size: 13px;
 		color: var(--color-text-muted);
 		margin: 0 0 24px;
+		line-height: 1.5;
+	}
+
+	.error-banner {
+		margin: 0 0 16px;
+		padding: 10px 14px;
+		border-radius: var(--radius-md);
+		border: 1px solid color-mix(in oklab, #ef4444 30%, transparent);
+		background: color-mix(in oklab, #ef4444 8%, transparent);
+		color: #ef4444;
+		font-size: 13px;
 		line-height: 1.5;
 	}
 
