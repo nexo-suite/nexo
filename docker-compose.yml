@@ -69,6 +69,7 @@ services:
       dockerfile: apps/landing/Dockerfile
       args:
         PUBLIC_FINANCE_URL: https://finance.krieger2501.de
+        PUBLIC_FINANCE_VERSION: ${FINANCE_VERSION}
     restart: unless-stopped
 
   bot:

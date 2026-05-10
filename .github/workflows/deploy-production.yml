@@ -24,6 +24,7 @@ jobs:
             git pull origin main
 
             export $(grep -v '^#' .env | xargs)
+            export FINANCE_VERSION=$(node -p "require('./apps/finance/package.json').version")
 
             docker compose pull --ignore-pull-failures || true
             docker compose --profile server up -d --build --remove-orphans
