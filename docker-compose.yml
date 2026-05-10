@@ -51,6 +51,8 @@ services:
     build:
       context: .
       dockerfile: apps/finance/Dockerfile
+      args:
+        PUBLIC_APP_VERSION: ${APP_VERSION}
     restart: unless-stopped
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -69,7 +71,7 @@ services:
       dockerfile: apps/landing/Dockerfile
       args:
         PUBLIC_FINANCE_URL: https://finance.krieger2501.de
-        PUBLIC_FINANCE_VERSION: ${FINANCE_VERSION}
+        PUBLIC_APP_VERSION: ${APP_VERSION}
     restart: unless-stopped
 
   bot:

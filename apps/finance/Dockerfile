@@ -11,9 +11,8 @@ COPY vite.shared.ts ./
 COPY packages/db ./packages/db
 COPY apps/finance ./apps/finance
 
-ARG PUBLIC_APP_VERSION
-RUN ver="${PUBLIC_APP_VERSION:-$(node -p "require('./apps/finance/package.json').version")}" && \
-    echo "PUBLIC_APP_VERSION=$ver" > apps/finance/.env
+ARG PUBLIC_APP_VERSION=0.0.0
+RUN echo "PUBLIC_APP_VERSION=$PUBLIC_APP_VERSION" > apps/finance/.env
 RUN pnpm --filter=@nexo/finance run build
 
 FROM node:24-alpine
