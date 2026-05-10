@@ -23,11 +23,10 @@ jobs:
             cd /home/deploy/nexo
             git pull origin main
 
-            export $(grep -v '^#' .env | xargs)
-            export FINANCE_VERSION=$(node -p "require('./apps/finance/package.json').version")
+            FINANCE_VERSION=$(node -p "require('./apps/finance/package.json').version")
 
             docker compose pull --ignore-pull-failures || true
-            docker compose --profile server up -d --build --remove-orphans
+            FINANCE_VERSION="$FINANCE_VERSION" docker compose --profile server up -d --build --remove-orphans
 
             # Also redeploy preview with the same main code so it stays in sync
             docker compose -f docker-compose.preview.yml \
