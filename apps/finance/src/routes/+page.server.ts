@@ -19,7 +19,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const nowMs = now.getTime();
 
 	// First day and last day of the current calendar month
-	const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 	const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0); // last day
 	const daysInMonth = monthEnd.getDate();
 
@@ -57,8 +56,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 					const interval = recurrence === 'quarterly' ? 3 : recurrence === 'half-yearly' ? 6 : 12;
 					// Use startingMonth to anchor the cycle if provided, otherwise anchor to today's month
 					const anchorMonth = startingMonth ? parseInt(startingMonth, 10) - 1 : now.getMonth();
-					const monthDiff =
-						(d.getFullYear() - now.getFullYear()) * 12 + d.getMonth() - anchorMonth;
+					const monthDiff = (d.getFullYear() - now.getFullYear()) * 12 + d.getMonth() - anchorMonth;
 					if (monthDiff % interval !== 0) break;
 					const resolved = resolveMonthlyDate(d.getFullYear(), d.getMonth(), dayOfMonth);
 					if (toDateStr(resolved) === dayStr) count++;
@@ -100,7 +98,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 			let candidate: Date | null = null;
 			if (recurrence === 'monthly') {
 				candidate = resolveMonthlyDate(year, month, dayOfMonth);
-			} else if (recurrence === 'quarterly' || recurrence === 'half-yearly' || recurrence === 'yearly') {
+			} else if (
+				recurrence === 'quarterly' ||
+				recurrence === 'half-yearly' ||
+				recurrence === 'yearly'
+			) {
 				const interval = recurrence === 'quarterly' ? 3 : recurrence === 'half-yearly' ? 6 : 12;
 				const monthsSinceToday = (year - today.getFullYear()) * 12 + month - today.getMonth();
 				if (monthsSinceToday % interval === 0) {
@@ -137,13 +139,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.flatMap((e) => {
 			const next = nextRecurringDate(e.recurrence, e.dayOfMonth, now.getTime());
 			if (!next) return [];
-			return [{
-				id: e.id,
-				label: e.name,
-				amount: Number(e.amount),
-				date: toDateStr(next),
-				type: 'expense' as const
-			}];
+			return [
+				{
+					id: e.id,
+					label: e.name,
+					amount: Number(e.amount),
+					date: toDateStr(next),
+					type: 'expense' as const
+				}
+			];
 		});
 
 	const upcoming: UpcomingEvent[] = [
