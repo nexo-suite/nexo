@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.0](https://github.com/krieger2501/nexo/compare/nexo-v0.6.0...nexo-v0.7.0) (2026-05-11)
+
+
+### Features
+
+* **admin:** mobile-responsive layout with bottom tab bar ([b2ae4ae](https://github.com/krieger2501/nexo/commit/b2ae4ae078d33cfc35bf296913af8ebd9995eaad))
+
+
+### Bug Fixes
+
+* add admin to preview stack and Caddyfile ([6e7dde7](https://github.com/krieger2501/nexo/commit/6e7dde79ea3ed434baf86f90c1670880b8d03eb0))
+* reload Caddy config after production deploy ([cb679f6](https://github.com/krieger2501/nexo/commit/cb679f640971b9d51ccbfb917ace8cecd89913dd))
+
 ## [0.6.0](https://github.com/krieger2501/nexo/compare/nexo-v0.5.0...nexo-v0.6.0) (2026-05-11)
 
 
