@@ -48,7 +48,7 @@
 	>
 		<div
 			class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-lg"
-			style="background-color: var(--color-expense)18;"
+			style="background-color: color-mix(in oklab, var(--color-expense) 10%, transparent);"
 		>
 			{once ? (isPaid ? '✅' : '🗓️') : (CATEGORY_ICONS[expense.category] ?? '📌')}
 		</div>

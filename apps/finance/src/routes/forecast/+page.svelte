@@ -1,13 +1,13 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/layout/PageHeader.svelte';
 	import { resolveMonthlyDate, toDateStr } from '$lib/dateUtils';
+	import { formatCurrency } from '$lib/utils';
 
 	import { SvelteDate } from 'svelte/reactivity';
 
 	let { data } = $props();
 
-	const fmt = (n: number) =>
-		new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n);
+	const fmt = (n: number) => formatCurrency(n, data.settings.currency);
 
 	const fmtDate = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
@@ -107,6 +107,7 @@
 
 	const minBalance = $derived(Math.min(...forecast().map((p) => p.balance)));
 	const endBalance = $derived(forecast()[forecast().length - 1]?.balance ?? currentBalance);
+	const firstNegativeDate = $derived(forecast().find((p) => p.balance < 0)?.date ?? null);
 </script>
 
 <div class="pb-6">
@@ -146,7 +147,7 @@
 	{#if minBalance < 0}
 		<div class="mx-4 mb-4 rounded-lg border border-expense/30 bg-expense/5 px-4 py-3">
 			<p class="text-xs font-medium text-expense">
-				⚠️ Balance dips below zero. Lowest: {fmt(minBalance)}
+				⚠️ Balance goes negative{firstNegativeDate ? ` on ${fmtDate(firstNegativeDate)}` : ''}. Lowest: {fmt(minBalance)}
 			</p>
 		</div>
 	{/if}

@@ -40,6 +40,7 @@
 	const settledDebts = $derived(data.debts.filter((d: Debt) => d.paid));
 
 	let showSettled = $state(false);
+	let confirmClearSettled = $state(false);
 
 	function openNew() {
 		editing = null;
@@ -119,17 +120,54 @@
 
 	{#if settledDebts.length > 0}
 		<div class="px-4">
-			<button
-				type="button"
-				onclick={() => (showSettled = !showSettled)}
-				class="flex w-full items-center justify-between py-2 text-xs font-semibold tracking-widest text-neutral uppercase"
-			>
-				Settled ({settledDebts.length})
-				<ChevronDown
-					size={14}
-					class="transition-transform duration-200 {showSettled ? 'rotate-180' : ''}"
-				/>
-			</button>
+			<div class="flex items-center justify-between py-2">
+				<button
+					type="button"
+					onclick={() => (showSettled = !showSettled)}
+					class="flex items-center gap-1 text-xs font-semibold tracking-widest text-neutral uppercase"
+				>
+					Settled ({settledDebts.length})
+					<ChevronDown
+						size={14}
+						class="transition-transform duration-200 {showSettled ? 'rotate-180' : ''}"
+					/>
+				</button>
+				{#if !confirmClearSettled}
+					<button
+						type="button"
+						onclick={() => (confirmClearSettled = true)}
+						class="text-xs text-neutral hover:text-expense transition-colors"
+					>
+						Clear all
+					</button>
+				{:else}
+					<div class="flex items-center gap-2">
+						<span class="text-xs text-neutral">Remove {settledDebts.length} settled?</span>
+						<form
+							method="POST"
+							action="?/clearSettled"
+							use:enhance={() => {
+								return async ({ update }) => {
+									confirmClearSettled = false;
+									showSettled = false;
+									await update();
+								};
+							}}
+						>
+							<button type="submit" class="text-xs font-semibold text-expense hover:underline">
+								Yes
+							</button>
+						</form>
+						<button
+							type="button"
+							onclick={() => (confirmClearSettled = false)}
+							class="text-xs text-neutral hover:underline"
+						>
+							Cancel
+						</button>
+					</div>
+				{/if}
+			</div>
 			{#if showSettled}
 				<div class="mt-2 space-y-2">
 					{#each settledDebts as debt (debt.id)}

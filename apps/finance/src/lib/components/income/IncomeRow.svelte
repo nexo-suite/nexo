@@ -23,7 +23,7 @@
 >
 	<div
 		class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-lg"
-		style="background-color: var(--color-income)18;"
+		style="background-color: color-mix(in oklab, var(--color-income) 10%, transparent);"
 	>
 		{income.received ? '✅' : '⏳'}
 	</div>

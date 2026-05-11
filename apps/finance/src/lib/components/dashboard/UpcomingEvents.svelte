@@ -30,7 +30,7 @@
 					>
 						<div
 							class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-							style="background-color: {cfg.color}15; color: {cfg.color};"
+							style="background-color: color-mix(in oklab, {cfg.color} 10%, transparent); color: {cfg.color};"
 						>
 							<cfg.icon size={14} stroke-width={2} />
 						</div>
@@ -44,6 +44,13 @@
 					</li>
 				{/each}
 			</ul>
+		</div>
+	</section>
+{:else}
+	<section>
+		<p class="mb-2 text-xs font-semibold tracking-widest text-neutral uppercase">Upcoming</p>
+		<div class="flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3.5 shadow-sm">
+			<p class="text-sm text-neutral">Nothing due in the next 30 days.</p>
 		</div>
 	</section>
 {/if}

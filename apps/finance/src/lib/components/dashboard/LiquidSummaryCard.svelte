@@ -40,11 +40,11 @@
 
 	<div class="mt-6 grid grid-cols-3 gap-2 border-t border-white/15 pt-5">
 		<div>
-			<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">Monthly In</p>
+			<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">This Month In</p>
 			<p class="mt-1 text-base font-semibold text-white">{fmt(monthlyIncome)}</p>
 		</div>
 		<div>
-			<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">Monthly Out</p>
+			<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">This Month Out</p>
 			<p class="mt-1 text-base font-semibold text-white">{fmt(monthlyExpenses)}</p>
 		</div>
 		<div>

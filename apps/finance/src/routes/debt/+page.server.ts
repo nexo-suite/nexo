@@ -1,5 +1,5 @@
 import { db, debts } from '@nexo/db';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, and } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
@@ -38,7 +38,12 @@ export const actions: Actions = {
 		const userId = locals.user!.id;
 		const d = await request.formData();
 		const id = d.get('id') as string;
-		await db.delete(debts).where(eq(debts.id, id) && eq(debts.userId, userId));
+		await db.delete(debts).where(and(eq(debts.id, id), eq(debts.userId, userId)));
+		return { success: true };
+	},
+	clearSettled: async ({ locals }) => {
+		const userId = locals.user!.id;
+		await db.delete(debts).where(and(eq(debts.userId, userId), eq(debts.paid, true)));
 		return { success: true };
 	}
 };

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronRight } from 'lucide-svelte';
+	import { ChevronRight, ArrowUpRight, ArrowDownLeft } from 'lucide-svelte';
 	import { formatCurrency } from '$lib/utils';
 	import type { Debt } from '$lib/types';
 
@@ -16,10 +16,14 @@
          hover:border-debt/30 {debt.paid ? 'opacity-50' : ''}"
 >
 	<div
-		class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-		style="background-color: var(--color-debt)18; color: var(--color-debt);"
+		class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+		style="background-color: color-mix(in oklab, var(--color-debt) 12%, transparent); color: var(--color-debt);"
 	>
-		{debt.direction === 'owe' ? 'OUT' : 'IN'}
+		{#if debt.direction === 'owe'}
+			<ArrowUpRight size={18} stroke-width={2} />
+		{:else}
+			<ArrowDownLeft size={18} stroke-width={2} />
+		{/if}
 	</div>
 	<div class="min-w-0 flex-1">
 		<p class="truncate text-sm font-medium">{debt.counterparty}</p>
