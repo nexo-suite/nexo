@@ -47,3 +47,19 @@ jobs:
 
       - name: Tests
         run: pnpm test
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [admin, auth, finance, landing]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build ${{ matrix.app }}
+        run: docker build -f apps/${{ matrix.app }}/Dockerfile -t nexo-${{ matrix.app }}:ci .
