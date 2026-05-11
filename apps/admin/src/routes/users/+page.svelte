@@ -112,8 +112,8 @@
 						{/if}
 					</div>
 					<div class="user-meta">
-						<span class="badge {entry.type === 'invited' ? 'badge-invited' : 'badge-active'}">
-							{entry.type === 'invited' ? 'Invited' : 'Active'}
+						<span class="badge {entry.type === 'invited' ? 'badge-invited' : entry.allowed ? 'badge-active' : 'badge-blocked'}">
+							{entry.type === 'invited' ? 'Invited' : entry.allowed ? 'Active' : 'Blocked'}
 						</span>
 						{#if entry.apps.length > 0}
 							<div class="app-chips">
@@ -444,6 +444,11 @@
 		color: var(--color-text-subtle);
 	}
 
+	.badge-blocked {
+		background: color-mix(in oklab, #f59e0b 12%, transparent);
+		color: #b45309;
+	}
+
 	.app-chips {
 		display: flex;
 		gap: 3px;
@@ -540,6 +545,15 @@
 
 		.close-btn {
 			display: none;
+		}
+
+		.btn-danger-ghost {
+			width: 100%;
+			justify-content: center;
+			padding: 10px 16px;
+			border: 1px solid color-mix(in oklab, var(--color-danger) 35%, transparent);
+			border-radius: var(--radius-md);
+			background: var(--color-danger-muted);
 		}
 	}
 
@@ -646,7 +660,7 @@
 
 	.app-columns {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: 1fr;
 		gap: 16px;
 	}
 
@@ -731,6 +745,7 @@
 	.detail-danger {
 		margin-top: auto;
 		padding-top: 20px;
+		border-top: 1px solid var(--color-border-subtle);
 	}
 
 	.confirm-box {

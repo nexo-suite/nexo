@@ -1,6 +1,7 @@
 import { error, redirect, type Handle } from '@sveltejs/kit';
 import { getAuth } from '$lib/server/auth';
-import { initDb } from '@nexo/db';
+import { initDb, db, userAppAccess } from '@nexo/db';
+import { and, eq } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
 import { logger } from '$lib/server/logger';
@@ -47,6 +48,19 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const redirectTo = encodeURIComponent(`${financeURL}${event.url.pathname}${event.url.search}`);
 		logger.info('→ auth login, redirectTo:', decodeURIComponent(redirectTo));
 		redirect(303, `${auth.options.baseURL}/login?redirectTo=${redirectTo}`);
+	}
+
+	if (event.locals.user && !event.url.pathname.startsWith('/auth')) {
+		const access = await db
+			.select()
+			.from(userAppAccess)
+			.where(and(eq(userAppAccess.userId, event.locals.user.id), eq(userAppAccess.app, 'finance')))
+			.limit(1);
+
+		if (access.length === 0) {
+			logger.info('→ no finance access for', event.locals.user.email);
+			redirect(303, `${auth.options.baseURL}/not-authorized-app?app=finance`);
+		}
 	}
 
 	return resolve(event);
