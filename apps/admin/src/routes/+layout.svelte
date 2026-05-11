@@ -39,6 +39,21 @@
 	<main class="main-content">
 		{@render children()}
 	</main>
+
+	<!-- Mobile bottom tab bar -->
+	<nav class="bottom-bar">
+		{#each navItems as item (item.href)}
+			<a href={item.href} class="bottom-tab {isActive(item.href) ? 'active' : ''}">
+				<item.icon size={20} />
+				<span class="bottom-tab-label">{item.label}</span>
+			</a>
+		{/each}
+		<div class="bottom-user">
+			<div class="user-avatar-sm">
+				{data.user?.name?.[0]?.toUpperCase() ?? '?'}
+			</div>
+		</div>
+	</nav>
 </div>
 
 <style>
@@ -162,5 +177,78 @@
 		min-width: 0;
 		padding: 32px 40px;
 		overflow: hidden;
+	}
+
+	/* Bottom tab bar — hidden on desktop */
+	.bottom-bar {
+		display: none;
+	}
+
+	.user-avatar-sm {
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		background: var(--color-accent-muted);
+		color: var(--color-accent);
+		font-size: 11px;
+		font-weight: 700;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.bottom-tab {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 3px;
+		flex: 1;
+		padding: 6px 0;
+		text-decoration: none;
+		color: var(--color-text-subtle);
+		border-radius: var(--radius-md);
+		transition: color var(--duration-fast) var(--ease-out);
+	}
+
+	.bottom-tab.active {
+		color: var(--color-accent);
+	}
+
+	.bottom-tab-label {
+		font-size: 10px;
+		font-weight: 600;
+	}
+
+	.bottom-user {
+		display: flex;
+		align-items: center;
+		padding: 0 4px;
+	}
+
+	@media (max-width: 640px) {
+		.sidebar {
+			display: none;
+		}
+
+		.main-content {
+			padding: 20px 16px calc(var(--bottom-bar-height) + 16px);
+			overflow: visible;
+		}
+
+		.bottom-bar {
+			display: flex;
+			align-items: center;
+			position: fixed;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			height: var(--bottom-bar-height);
+			background: var(--color-surface-1);
+			border-top: 1px solid var(--color-border-default);
+			padding: 0 12px;
+			gap: 4px;
+			z-index: 40;
+		}
 	}
 </style>
