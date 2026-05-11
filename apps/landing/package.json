@@ -20,9 +20,9 @@
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.59.1",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
-		"@tailwindcss/vite": "^4.2.4",
-		"@types/node": "^22.19.17",
-		"knip": "^6.12.1",
+		"@tailwindcss/vite": "^4.3.0",
+		"@types/node": "catalog:",
+		"knip": "^6.12.2",
 		"npm-run-all2": "^8.0.4",
 		"prettier": "^3.8.3",
 		"prettier-plugin-svelte": "^3.5.1",
@@ -30,7 +30,7 @@
 		"sort-package-json": "^3.6.1",
 		"svelte": "^5.55.5",
 		"svelte-check": "^4.4.8",
-		"tailwindcss": "^4.2.4",
+		"tailwindcss": "^4.3.0",
 		"typescript": "^6.0.3",
 		"vite": "^8.0.11"
 	}
