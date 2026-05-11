@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { X, Plus, UserPlus } from 'lucide-svelte';
+	import { X, Plus, UserPlus, ChevronLeft } from 'lucide-svelte';
 
 	let { data, form } = $props();
 
@@ -137,6 +137,10 @@
 	<!-- RIGHT: detail pane -->
 	<div class="detail-pane {selectedEntry ? 'open' : ''}">
 		{#if selectedEntry}
+			<button type="button" class="back-btn" onclick={closeDetail}>
+				<ChevronLeft size={18} />
+				Back
+			</button>
 			<div class="detail-header">
 				<div class="detail-avatar {selectedEntry.type === 'invited' ? 'invited' : ''}">
 					{initials(selectedEntry)}
@@ -272,8 +276,10 @@
 		overflow: hidden;
 	}
 
-	.workspace:has(.detail-pane.open) {
-		grid-template-columns: 1fr 380px;
+	@media (min-width: 641px) {
+		.workspace:has(.detail-pane.open) {
+			grid-template-columns: 1fr 380px;
+		}
 	}
 
 	/* LEFT pane */
@@ -477,6 +483,64 @@
 		opacity: 1;
 		overflow-y: auto;
 		padding-left: 24px;
+	}
+
+	/* Back button — hidden on desktop */
+	.back-btn {
+		display: none;
+	}
+
+	/* Mobile layout */
+	@media (max-width: 640px) {
+		.workspace {
+			display: block;
+			height: auto;
+			overflow: visible;
+		}
+
+		.list-pane {
+			padding-right: 0;
+			overflow-y: visible;
+		}
+
+		.detail-pane {
+			position: fixed;
+			inset: 0;
+			z-index: 50;
+			background: var(--color-bg-0);
+			border-left: none;
+			opacity: 1;
+			transform: translateX(100%);
+			transition: transform var(--duration-base) var(--ease-out);
+			overflow-y: auto;
+			padding: 0 20px calc(var(--bottom-bar-height) + 20px);
+			display: flex;
+			flex-direction: column;
+		}
+
+		.detail-pane.open {
+			transform: translateX(0);
+			border-left: none;
+			padding-left: 20px;
+		}
+
+		.back-btn {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			padding: 16px 0 12px;
+			background: none;
+			border: none;
+			font-size: 14px;
+			font-weight: 600;
+			color: var(--color-accent);
+			cursor: pointer;
+			font-family: inherit;
+		}
+
+		.close-btn {
+			display: none;
+		}
 	}
 
 	.detail-empty {
