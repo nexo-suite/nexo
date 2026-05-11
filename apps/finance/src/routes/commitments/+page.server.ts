@@ -11,7 +11,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		db
 			.select()
 			.from(expenses)
-			.where(and(eq(expenses.userId, userId), eq(expenses.recurrence, 'once'), eq(expenses.active, true)))
+			.where(
+				and(eq(expenses.userId, userId), eq(expenses.recurrence, 'once'), eq(expenses.active, true))
+			)
 			.orderBy(asc(expenses.dueDate)),
 		db
 			.select()
@@ -107,7 +109,10 @@ export const actions: Actions = {
 		const userId = locals.user!.id;
 		const d = await request.formData();
 		const id = d.get('id') as string;
-		await db.update(debts).set({ paid: true }).where(and(eq(debts.id, id), eq(debts.userId, userId)));
+		await db
+			.update(debts)
+			.set({ paid: true })
+			.where(and(eq(debts.id, id), eq(debts.userId, userId)));
 		return { success: true };
 	}
 };

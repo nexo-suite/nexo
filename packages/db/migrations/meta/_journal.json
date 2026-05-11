@@ -1,27 +1,27 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1778061816470,
-      "tag": "0000_tidy_blackheart",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1746786000000,
-      "tag": "0001_add_account_id_to_debts",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1778434172037,
-      "tag": "0002_burly_wallow",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1778061816470,
+			"tag": "0000_tidy_blackheart",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1746786000000,
+			"tag": "0001_add_account_id_to_debts",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1778434172037,
+			"tag": "0002_burly_wallow",
+			"breakpoints": true
+		}
+	]
 }

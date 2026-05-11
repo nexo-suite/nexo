@@ -136,7 +136,7 @@
 					<button
 						type="button"
 						onclick={() => (confirmClearSettled = true)}
-						class="text-xs text-neutral hover:text-expense transition-colors"
+						class="text-xs text-neutral transition-colors hover:text-expense"
 					>
 						Clear all
 					</button>
