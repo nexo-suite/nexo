@@ -49,7 +49,9 @@
 {:else}
 	<section>
 		<p class="mb-2 text-xs font-semibold tracking-widest text-neutral uppercase">Upcoming</p>
-		<div class="flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3.5 shadow-sm">
+		<div
+			class="flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3.5 shadow-sm"
+		>
 			<p class="text-sm text-neutral">Nothing due in the next 30 days.</p>
 		</div>
 	</section>

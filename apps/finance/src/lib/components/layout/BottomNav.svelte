@@ -1,6 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Home, CreditCard, BarChart2, Layers, Receipt, TrendingUp, Users, Bookmark } from 'lucide-svelte';
+	import {
+		Home,
+		CreditCard,
+		BarChart2,
+		Layers,
+		Receipt,
+		TrendingUp,
+		Users,
+		Bookmark
+	} from 'lucide-svelte';
 
 	const topLeft = [
 		{ href: '/', label: 'Home', icon: Home },
@@ -46,10 +55,7 @@
 <!-- Backdrop to catch outside taps -->
 {#if popoverOpen}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="fixed inset-0 z-40"
-		onpointerdown={handleBackdropPointer}
-	></div>
+	<div class="fixed inset-0 z-40" onpointerdown={handleBackdropPointer}></div>
 {/if}
 
 <nav

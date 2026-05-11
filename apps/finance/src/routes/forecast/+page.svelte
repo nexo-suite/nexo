@@ -147,7 +147,8 @@
 	{#if minBalance < 0}
 		<div class="mx-4 mb-4 rounded-lg border border-expense/30 bg-expense/5 px-4 py-3">
 			<p class="text-xs font-medium text-expense">
-				⚠️ Balance goes negative{firstNegativeDate ? ` on ${fmtDate(firstNegativeDate)}` : ''}. Lowest: {fmt(minBalance)}
+				⚠️ Balance goes negative{firstNegativeDate ? ` on ${fmtDate(firstNegativeDate)}` : ''}.
+				Lowest: {fmt(minBalance)}
 			</p>
 		</div>
 	{/if}

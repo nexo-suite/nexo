@@ -84,9 +84,7 @@
 	}
 
 	// ── Derived ───────────────────────────────────────────────────────────────
-	const accountMap = $derived(
-		new Map(data.accounts.map((a: Account) => [a.id, a]))
-	);
+	const accountMap = $derived(new Map(data.accounts.map((a: Account) => [a.id, a])));
 
 	const totalCommitted = $derived(
 		data.expenses.reduce((s: number, e: Expense) => s + e.amount, 0) +
@@ -95,9 +93,7 @@
 				.reduce((s: number, d: Debt) => s + d.amount, 0)
 	);
 
-	const unallocatedExpenses = $derived(
-		data.expenses.filter((e: Expense) => !e.accountId)
-	);
+	const unallocatedExpenses = $derived(data.expenses.filter((e: Expense) => !e.accountId));
 	const unallocatedDebts = $derived(
 		data.debts.filter((d: Debt) => !(d as Debt & { accountId?: string | null }).accountId)
 	);
@@ -121,9 +117,7 @@
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-2">
 								{#if account.color}
-									<span
-										class="h-2.5 w-2.5 rounded-full"
-										style="background-color: {account.color};"
+									<span class="h-2.5 w-2.5 rounded-full" style="background-color: {account.color};"
 									></span>
 								{:else}
 									<Wallet size={14} class="text-neutral" />
@@ -169,9 +163,7 @@
 	<!-- One-time expenses -->
 	<div class="px-4">
 		<div class="mb-2 flex items-center justify-between">
-			<p class="text-xs font-semibold tracking-widest text-neutral uppercase">
-				Upcoming Expenses
-			</p>
+			<p class="text-xs font-semibold tracking-widest text-neutral uppercase">Upcoming Expenses</p>
 			<button
 				type="button"
 				onclick={openNewExpense}
@@ -196,7 +188,8 @@
 					>
 						<div
 							class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-							style="background-color: color-mix(in oklab, var(--color-expense) 12%, transparent); color: var(--color-expense);"						>
+							style="background-color: color-mix(in oklab, var(--color-expense) 12%, transparent); color: var(--color-expense);"
+						>
 							{expense.category.slice(0, 3).toUpperCase()}
 						</div>
 						<div class="min-w-0 flex-1">
@@ -212,15 +205,14 @@
 								{/if}
 								{#if acc}
 									·
-									<span
-										class="font-medium"
-										style="color: {acc.color ?? 'var(--color-accent)'}"
-									>{acc.name}</span>
+									<span class="font-medium" style="color: {acc.color ?? 'var(--color-accent)'}"
+										>{acc.name}</span
+									>
 								{/if}
 							</p>
 						</div>
 						<div class="flex items-center gap-1">
-							<p class="text-sm font-semibold tabular-nums text-expense">{fmt(expense.amount)}</p>
+							<p class="text-sm font-semibold text-expense tabular-nums">{fmt(expense.amount)}</p>
 							<ChevronRight size={14} class="text-neutral" />
 						</div>
 					</button>
@@ -230,7 +222,8 @@
 
 		{#if unallocatedExpenses.length > 0}
 			<p class="mt-2 text-xs text-neutral">
-				{unallocatedExpenses.length} expense{unallocatedExpenses.length === 1 ? '' : 's'} not linked to an account
+				{unallocatedExpenses.length} expense{unallocatedExpenses.length === 1 ? '' : 's'} not linked to
+				an account
 			</p>
 		{/if}
 	</div>
@@ -284,10 +277,9 @@
 								{/if}
 								{#if acc}
 									·
-									<span
-										class="font-medium"
-										style="color: {acc.color ?? 'var(--color-accent)'}"
-									>{acc.name}</span>
+									<span class="font-medium" style="color: {acc.color ?? 'var(--color-accent)'}"
+										>{acc.name}</span
+									>
 								{/if}
 							</p>
 						</div>
@@ -340,7 +332,10 @@
 					}}
 				>
 					<input type="hidden" name="id" value={editingExpense?.id} />
-					<button type="submit" class="w-full rounded-lg bg-expense py-3 text-sm font-semibold text-white">
+					<button
+						type="submit"
+						class="w-full rounded-lg bg-expense py-3 text-sm font-semibold text-white"
+					>
 						Yes, delete
 					</button>
 				</form>
@@ -378,7 +373,9 @@
 						/>
 					</div>
 					<div>
-						<label for="exp-amount" class="mb-1 block text-xs font-medium text-neutral">Amount</label>
+						<label for="exp-amount" class="mb-1 block text-xs font-medium text-neutral"
+							>Amount</label
+						>
 						<input
 							id="exp-amount"
 							name="amount"
@@ -405,7 +402,12 @@
 						<label for="exp-account" class="mb-1 block text-xs font-medium text-neutral">
 							Account (optional)
 						</label>
-						<select id="exp-account" name="account_id" bind:value={expenseForm.account_id} class="input">
+						<select
+							id="exp-account"
+							name="account_id"
+							bind:value={expenseForm.account_id}
+							class="input"
+						>
 							<option value="">— unallocated —</option>
 							{#each data.accounts as acc (acc.id)}
 								<option value={acc.id}>{acc.name}</option>
@@ -425,7 +427,10 @@
 						/>
 					</div>
 				</div>
-				<button type="submit" class="mt-5 w-full rounded-lg bg-expense py-3 text-sm font-semibold text-white">
+				<button
+					type="submit"
+					class="mt-5 w-full rounded-lg bg-expense py-3 text-sm font-semibold text-white"
+				>
 					{editingExpense ? 'Save Changes' : 'Create Expense'}
 				</button>
 				{#if editingExpense}
@@ -462,7 +467,10 @@
 					}}
 				>
 					<input type="hidden" name="id" value={editingDebt?.id} />
-					<button type="submit" class="w-full rounded-lg bg-debt py-3 text-sm font-semibold text-white">
+					<button
+						type="submit"
+						class="w-full rounded-lg bg-debt py-3 text-sm font-semibold text-white"
+					>
 						Yes, delete
 					</button>
 				</form>
@@ -490,8 +498,15 @@
 				{/if}
 				<div class="space-y-3">
 					<div>
-						<label for="dbt-direction" class="mb-1 block text-xs font-medium text-neutral">Direction</label>
-						<select id="dbt-direction" name="direction" bind:value={debtForm.direction} class="input">
+						<label for="dbt-direction" class="mb-1 block text-xs font-medium text-neutral"
+							>Direction</label
+						>
+						<select
+							id="dbt-direction"
+							name="direction"
+							bind:value={debtForm.direction}
+							class="input"
+						>
 							<option value="owe">I owe them</option>
 							<option value="owed">They owe me</option>
 						</select>
@@ -509,7 +524,9 @@
 						/>
 					</div>
 					<div>
-						<label for="dbt-amount" class="mb-1 block text-xs font-medium text-neutral">Amount</label>
+						<label for="dbt-amount" class="mb-1 block text-xs font-medium text-neutral"
+							>Amount</label
+						>
 						<input
 							id="dbt-amount"
 							name="amount"
@@ -536,7 +553,12 @@
 						<label for="dbt-account" class="mb-1 block text-xs font-medium text-neutral">
 							Account (optional)
 						</label>
-						<select id="dbt-account" name="account_id" bind:value={debtForm.account_id} class="input">
+						<select
+							id="dbt-account"
+							name="account_id"
+							bind:value={debtForm.account_id}
+							class="input"
+						>
 							<option value="">— unallocated —</option>
 							{#each data.accounts as acc (acc.id)}
 								<option value={acc.id}>{acc.name}</option>
@@ -556,7 +578,10 @@
 						/>
 					</div>
 				</div>
-				<button type="submit" class="mt-5 w-full rounded-lg bg-debt py-3 text-sm font-semibold text-white">
+				<button
+					type="submit"
+					class="mt-5 w-full rounded-lg bg-debt py-3 text-sm font-semibold text-white"
+				>
 					{editingDebt ? 'Save Changes' : 'Create Debt'}
 				</button>
 				{#if editingDebt}
