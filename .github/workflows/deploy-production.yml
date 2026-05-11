@@ -32,6 +32,10 @@ jobs:
             docker compose pull --ignore-pull-failures || true
             APP_VERSION="$APP_VERSION" docker compose --profile server up -d --build --remove-orphans
 
+            # Reload Caddy config in case Caddyfile changed (bind-mount means Docker
+            # won't recreate the container just because the file on disk changed)
+            docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+
             # Also redeploy preview with the same main code so it stays in sync
             docker compose -f docker-compose.preview.yml \
               --env-file .env.preview \
