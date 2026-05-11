@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.8.0](https://github.com/krieger2501/nexo/compare/nexo-v0.7.0...nexo-v0.8.0) (2026-05-11)
+
+
+### Features
+
+* **admin:** app display labels, filter separator, add Gym + Pomodoro ([e68df41](https://github.com/krieger2501/nexo/commit/e68df41cddbf0081cd7f6fba7a89ce8ed7328e5a))
+* **admin:** redesign user detail view + list filters ([8ed804d](https://github.com/krieger2501/nexo/commit/8ed804de42b411f80f6b43b5ffbaff11783b6caf))
+* app access enforcement + admin UI polish ([de6580c](https://github.com/krieger2501/nexo/commit/de6580c8357ec533ed23e0f47e61a1675ab49782))
+* draggable bottom sheet + admin PWA safe-area fixes ([39d10dc](https://github.com/krieger2501/nexo/commit/39d10dcde510d91f12a6458c2a98f232b50b13a9))
+* grouped list filters + funny app access messages ([714d757](https://github.com/krieger2501/nexo/commit/714d7579e6874289b0fa3724dab0eaac6c2f0847))
+* transactional emails, app icons, and admin access UX ([9bd360b](https://github.com/krieger2501/nexo/commit/9bd360b9d983cb41009fb5ea51c06d3604247eae))
+
+
+### Bug Fixes
+
+* auth no-zoom, app filter All chip, subtitle breakdown ([728c1dc](https://github.com/krieger2501/nexo/commit/728c1dc5e6082efa4434864f88e2c62094255e03))
+* lint issues and bot caddy file ([cd905fa](https://github.com/krieger2501/nexo/commit/cd905fa3a88dd5a0d8995595e80d4395338f48cc))
+
 ## [0.7.0](https://github.com/krieger2501/nexo/compare/nexo-v0.6.0...nexo-v0.7.0) (2026-05-11)
 
 
