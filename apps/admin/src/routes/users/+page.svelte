@@ -16,6 +16,10 @@
 	let filterStatus = $state<'all' | 'active' | 'invited' | 'blocked'>('all');
 	let filterApp = $state<string>('all');
 
+	function appLabel(id: string): string {
+		return data.knownApps.find((a) => a.id === id)?.label ?? id;
+	}
+
 	const selectedEntry = $derived(
 		selectedEmail ? (data.entries.find((e) => e.email === selectedEmail) ?? null) : null
 	);
@@ -135,13 +139,19 @@
 				<div class="filter-group">
 					<span class="filter-group-label">Status</span>
 					<div class="filter-chips">
-						{#each (['all', 'active', 'invited', 'blocked'] as const) as s (s)}
+						<button
+							type="button"
+							class="filter-chip {filterStatus === 'all' ? 'active' : ''}"
+							onclick={() => (filterStatus = 'all')}
+						>All</button>
+						<span class="filter-sep">|</span>
+						{#each (['active', 'invited', 'blocked'] as const) as s (s)}
 							<button
 								type="button"
 								class="filter-chip {filterStatus === s ? 'active' : ''}"
 								onclick={() => (filterStatus = s)}
 							>
-								{s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+								{s.charAt(0).toUpperCase() + s.slice(1)}
 							</button>
 						{/each}
 					</div>
@@ -150,13 +160,13 @@
 					<div class="filter-group">
 						<span class="filter-group-label">App</span>
 						<div class="filter-chips">
-							{#each data.knownApps as app (app)}
+							{#each data.knownApps as app (app.id)}
 								<button
 									type="button"
-									class="filter-chip app {filterApp === app ? 'active' : ''}"
-									onclick={() => (filterApp = filterApp === app ? 'all' : app)}
+									class="filter-chip app {filterApp === app.id ? 'active' : ''}"
+									onclick={() => (filterApp = filterApp === app.id ? 'all' : app.id)}
 								>
-									{app}
+									{app.label}
 								</button>
 							{/each}
 						</div>
@@ -186,7 +196,7 @@
 						{#if entry.apps.length > 0}
 							<div class="app-chips">
 								{#each entry.apps as app (app)}
-									<span class="app-chip">{app}</span>
+									<span class="app-chip">{appLabel(app)}</span>
 								{/each}
 							</div>
 						{/if}
@@ -241,23 +251,23 @@
 					<p class="section-label">App Access</p>
 
 					<div class="access-list">
-						{#each data.knownApps as app (app)}
-							{@const granted = selectedEntry.apps.includes(app)}
+						{#each data.knownApps as app (app.id)}
+							{@const granted = selectedEntry.apps.includes(app.id)}
 							<div class="access-row">
 								<div class="access-app-info">
 									<span class="access-app-dot {granted ? 'granted' : ''}"></span>
-									<span class="access-app-name">{app}</span>
+									<span class="access-app-name">{app.label}</span>
 								</div>
 								{#if granted}
 									<form method="POST" action="?/revokeAccess" use:enhance={() => async ({ update }) => { await update({ reset: false }); }}>
 										<input type="hidden" name="userId" value={selectedEntry?.id} />
-										<input type="hidden" name="app" value={app} />
+										<input type="hidden" name="app" value={app.id} />
 										<button type="submit" class="access-btn revoke">Revoke</button>
 									</form>
 								{:else}
 									<form method="POST" action="?/grantAccess" use:enhance={() => async ({ update }) => { await update({ reset: false }); }}>
 										<input type="hidden" name="userId" value={selectedEntry?.id} />
-										<input type="hidden" name="app" value={app} />
+										<input type="hidden" name="app" value={app.id} />
 										<button type="submit" class="access-btn grant">Grant</button>
 									</form>
 								{/if}
@@ -440,6 +450,14 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 6px;
+		align-items: center;
+	}
+
+	.filter-sep {
+		color: var(--color-border-strong);
+		font-size: 12px;
+		user-select: none;
+		line-height: 1;
 	}
 
 	.filter-chip {
