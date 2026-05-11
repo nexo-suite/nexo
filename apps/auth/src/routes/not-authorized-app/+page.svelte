@@ -1,5 +1,19 @@
 <script lang="ts">
 	let { data } = $props();
+
+	const appMessages: Record<string, { heading: string; sub: string }> = {
+		finance: {
+			heading: 'Your wallet stays closed 💸',
+			sub: "Looks like you haven't been granted access to Finance yet. Ask Kevin nicely and maybe he'll let you in."
+		}
+	};
+
+	const msg = $derived(
+		appMessages[data.app] ?? {
+			heading: `No access to ${data.app}`,
+			sub: `Your account hasn't been granted access to ${data.app}. Contact the admin to request access.`
+		}
+	);
 </script>
 
 <svelte:head>
@@ -13,11 +27,8 @@
 			<span class="brand-name">Nexo</span>
 		</div>
 
-		<h1 class="heading">No access to {data.app}</h1>
-		<p class="sub">
-			Your account hasn't been granted access to <strong>{data.app}</strong>. Contact the admin to
-			request access.
-		</p>
+		<h1 class="heading">{msg.heading}</h1>
+		<p class="sub">{msg.sub}</p>
 
 		<a href="/login" class="back-link">
 			<svg
@@ -96,7 +107,6 @@
 		letter-spacing: -0.02em;
 		color: var(--color-text-primary);
 		margin: 0 0 6px;
-		text-transform: capitalize;
 	}
 
 	.sub {

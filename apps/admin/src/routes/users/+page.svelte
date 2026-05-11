@@ -131,25 +131,37 @@
 					bind:value={searchQuery}
 				/>
 			</div>
-			<div class="filter-chips">
-				{#each (['all', 'active', 'invited', 'blocked'] as const) as s (s)}
-					<button
-						type="button"
-						class="filter-chip {filterStatus === s ? 'active' : ''}"
-						onclick={() => (filterStatus = s)}
-					>
-						{s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-					</button>
-				{/each}
-				{#each data.knownApps as app (app)}
-					<button
-						type="button"
-						class="filter-chip app {filterApp === app ? 'active' : ''}"
-						onclick={() => (filterApp = filterApp === app ? 'all' : app)}
-					>
-						{app}
-					</button>
-				{/each}
+			<div class="filter-groups">
+				<div class="filter-group">
+					<span class="filter-group-label">Status</span>
+					<div class="filter-chips">
+						{#each (['all', 'active', 'invited', 'blocked'] as const) as s (s)}
+							<button
+								type="button"
+								class="filter-chip {filterStatus === s ? 'active' : ''}"
+								onclick={() => (filterStatus = s)}
+							>
+								{s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+							</button>
+						{/each}
+					</div>
+				</div>
+				{#if data.knownApps.length > 0}
+					<div class="filter-group">
+						<span class="filter-group-label">App</span>
+						<div class="filter-chips">
+							{#each data.knownApps as app (app)}
+								<button
+									type="button"
+									class="filter-chip app {filterApp === app ? 'active' : ''}"
+									onclick={() => (filterApp = filterApp === app ? 'all' : app)}
+								>
+									{app}
+								</button>
+							{/each}
+						</div>
+					</div>
+				{/if}
 			</div>
 		</div>
 
@@ -400,6 +412,28 @@
 
 	.search-input:focus {
 		border-color: var(--color-accent);
+	}
+
+	.filter-groups {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.filter-group {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.filter-group-label {
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--color-text-faint);
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		white-space: nowrap;
+		min-width: 36px;
 	}
 
 	.filter-chips {
