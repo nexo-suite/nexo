@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0](https://github.com/krieger2501/nexo/compare/nexo-v0.4.0...nexo-v0.5.0) (2026-05-11)
+
+
+### Features
+
+* **finance:** commitments page with fund allocation and grouped nav ([618db40](https://github.com/krieger2501/nexo/commit/618db40b878b877719a2b6f7e7364d7905277422))
+
+
+### Bug Fixes
+
+* **finance:** UX audit fixes and dashboard improvements ([beea1c8](https://github.com/krieger2501/nexo/commit/beea1c88ab4e9f2a920014a2b7003aedeb4a7dad))
+* remove invalid packageManager field from renovate.json ([07d4bc4](https://github.com/krieger2501/nexo/commit/07d4bc497b4f321d39cb6463432b0183ad14ed02))
+* remove unused monthStart variable ([2f8fbee](https://github.com/krieger2501/nexo/commit/2f8fbee934819d02cc3465372ca05497a24ebe32))
+
 ## [0.4.0](https://github.com/krieger2501/nexo/compare/nexo-v0.3.2...nexo-v0.4.0) (2026-05-10)
 
 
