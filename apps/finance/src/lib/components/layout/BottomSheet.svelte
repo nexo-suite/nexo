@@ -14,12 +14,18 @@
 	let sheetEl = $state<HTMLDivElement | null>(null);
 	let dragY = $state(0);
 	let isDragging = $state(false);
+	let dismissing = $state(false);
 	let startY = 0;
 	let startTime = 0;
 
 	function close() {
-		open = false;
-		dragY = 0;
+		dismissing = true;
+		dragY = sheetEl?.offsetHeight ?? 300;
+		setTimeout(() => {
+			open = false;
+			dismissing = false;
+			dragY = 0;
+		}, 320);
 	}
 
 	function onKeydown(e: KeyboardEvent) {
@@ -54,15 +60,18 @@
 		}
 	}
 
-	const backdropOpacity = $derived(
-		sheetEl ? 1 - (dragY / (sheetEl.offsetHeight * 0.6)) * 0.6 : 1
-	);
+	const backdropOpacity = $derived(sheetEl ? 1 - (dragY / (sheetEl.offsetHeight * 0.6)) * 0.6 : 1);
 </script>
 
 <svelte:window onkeydown={onKeydown} />
 
 {#if open}
-	<div class="sheet-backdrop fixed inset-0 z-50 flex flex-col justify-end" role="dialog" aria-modal="true" aria-label={title}>
+	<div
+		class="sheet-backdrop fixed inset-0 z-50 flex flex-col justify-end"
+		role="dialog"
+		aria-modal="true"
+		aria-label={title}
+	>
 		<!-- Backdrop -->
 		<button
 			type="button"
@@ -78,7 +87,9 @@
 			bind:this={sheetEl}
 			role="presentation"
 			class="sheet-panel relative rounded-t-3xl bg-surface shadow-2xl"
-			style="transform: translateY({dragY}px); transition: {isDragging ? 'none' : 'transform 300ms cubic-bezier(0.32, 0.72, 0, 1)'};"
+			style="transform: translateY({dragY}px); transition: {isDragging
+				? 'none'
+				: 'transform 300ms cubic-bezier(0.32, 0.72, 0, 1)'};"
 			onpointerdown={onPointerDown}
 			onpointermove={onPointerMove}
 			onpointerup={onPointerUp}

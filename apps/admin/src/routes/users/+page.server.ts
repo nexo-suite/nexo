@@ -1,8 +1,14 @@
 import { db, allowedEmails, users, userAppAccess } from '@nexo/db';
-import { eq, and } from 'drizzle-orm';
+import { sendAccessGrantedEmail, sendInviteEmail } from '@nexo/email';
+import { eq, and, inArray } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
+import { env as publicEnv } from '$env/dynamic/public';
+import { env as privateEnv } from '$env/dynamic/private';
 import { KNOWN_APPS } from '$lib/apps';
 import type { PageServerLoad, Actions } from './$types';
+
+const LANDING_URL = () => publicEnv.PUBLIC_LANDING_URL ?? 'https://krieger2501.de';
+const RESEND_KEY = () => privateEnv.RESEND_API_KEY ?? '';
 
 export const load: PageServerLoad = async () => {
 	const [emailList, userList, accessList] = await Promise.all([
@@ -19,11 +25,9 @@ export const load: PageServerLoad = async () => {
 		accessMap.set(row.userId, apps);
 	}
 
-	// Merge: signed-in users who are on the whitelist, plus invited-only entries
 	const knownUserEmails = new Set(userList.map((u) => u.email));
 
 	const entries = [
-		// Signed-in users (may or may not be on whitelist)
 		...userList.map((u) => ({
 			type: 'user' as const,
 			id: u.id,
@@ -34,7 +38,6 @@ export const load: PageServerLoad = async () => {
 			allowed: emailSet.has(u.email),
 			apps: accessMap.get(u.id) ?? []
 		})),
-		// Invited-only emails (never signed in)
 		...emailList
 			.filter((e) => !knownUserEmails.has(e.email))
 			.map((e) => ({
@@ -64,6 +67,9 @@ export const actions: Actions = {
 		} catch {
 			return fail(500, { addError: 'Failed to add email.' });
 		}
+		sendInviteEmail({ apiKey: RESEND_KEY(), to: email, landingUrl: LANDING_URL() }).catch((e) =>
+			console.error('invite email failed:', e)
+		);
 		return { addSuccess: true };
 	},
 
@@ -75,23 +81,54 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	grantAccess: async ({ request }) => {
+	updateAccess: async ({ request }) => {
 		const data = await request.formData();
 		const userId = data.get('userId') as string;
-		const app = data.get('app') as string;
-		if (!userId || !app) return fail(400, { error: 'Missing params.' });
-		await db.insert(userAppAccess).values({ userId, app }).onConflictDoNothing();
-		return { success: true };
-	},
+		if (!userId) return fail(400, { error: 'Missing userId.' });
 
-	revokeAccess: async ({ request }) => {
-		const data = await request.formData();
-		const userId = data.get('userId') as string;
-		const app = data.get('app') as string;
-		if (!userId || !app) return fail(400, { error: 'Missing params.' });
-		await db
-			.delete(userAppAccess)
-			.where(and(eq(userAppAccess.userId, userId), eq(userAppAccess.app, app)));
+		// Desired set comes as repeated "apps" fields (empty form = no fields = empty array)
+		const desiredApps = data.getAll('apps') as string[];
+
+		// Current set from DB
+		const currentRows = await db
+			.select()
+			.from(userAppAccess)
+			.where(eq(userAppAccess.userId, userId));
+		const currentApps = currentRows.map((r) => r.app);
+
+		const toGrant = desiredApps.filter((a) => !currentApps.includes(a));
+		const toRevoke = currentApps.filter((a) => !desiredApps.includes(a));
+
+		if (toGrant.length > 0) {
+			await db
+				.insert(userAppAccess)
+				.values(toGrant.map((app) => ({ userId, app })))
+				.onConflictDoNothing();
+		}
+		if (toRevoke.length > 0) {
+			await db
+				.delete(userAppAccess)
+				.where(and(eq(userAppAccess.userId, userId), inArray(userAppAccess.app, toRevoke)));
+		}
+
+		// Send one email for all newly granted apps
+		if (toGrant.length > 0) {
+			const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+			if (user) {
+				const grantedAppInfos = toGrant.map((id) => ({
+					id,
+					label: KNOWN_APPS.find((a) => a.id === id)?.label ?? id
+				}));
+				sendAccessGrantedEmail({
+					apiKey: RESEND_KEY(),
+					to: user.email,
+					name: user.name ?? user.email,
+					apps: grantedAppInfos,
+					landingUrl: LANDING_URL()
+				}).catch((e) => console.error('access email failed:', e));
+			}
+		}
+
 		return { success: true };
 	}
 };

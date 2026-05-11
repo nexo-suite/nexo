@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { X, UserPlus, ChevronLeft, Search } from 'lucide-svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	let { data, form } = $props();
 
@@ -10,6 +11,13 @@
 	let showInviteForm = $state(false);
 	let inviteEmail = $state('');
 	let confirmRemove = $state(false);
+	let pendingApps = new SvelteSet<string>();
+
+	function resetPendingApps(apps: string[]) {
+		pendingApps.clear();
+		for (const a of apps) pendingApps.add(a);
+	}
+	let accessSaved = $state(false);
 
 	// Filters
 	let searchQuery = $state('');
@@ -22,6 +30,12 @@
 
 	const selectedEntry = $derived(
 		selectedEmail ? (data.entries.find((e) => e.email === selectedEmail) ?? null) : null
+	);
+
+	const accessDirty = $derived(
+		selectedEntry?.type === 'user' &&
+			(selectedEntry.apps.some((a) => !pendingApps.has(a)) ||
+				[...pendingApps].some((a) => !selectedEntry.apps.includes(a)))
 	);
 
 	const filteredEntries = $derived(() => {
@@ -43,11 +57,15 @@
 	function openDetail(entry: Entry) {
 		selectedEmail = entry.email;
 		confirmRemove = false;
+		accessSaved = false;
+		resetPendingApps(entry.apps);
 	}
 
 	function closeDetail() {
 		selectedEmail = null;
 		confirmRemove = false;
+		accessSaved = false;
+		resetPendingApps([]);
 	}
 
 	function initials(entry: Entry): string {
@@ -75,7 +93,11 @@
 		new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 </script>
 
-<svelte:window onkeydown={(e) => { if (e.key === 'Escape') closeDetail(); }} />
+<svelte:window
+	onkeydown={(e) => {
+		if (e.key === 'Escape') closeDetail();
+	}}
+/>
 
 <div class="workspace">
 	<!-- LEFT: user list -->
@@ -84,7 +106,8 @@
 			<div>
 				<h1 class="page-title">Users</h1>
 				<p class="page-subtitle">
-					{data.entries.length} total &middot; {data.entries.filter((e) => e.type === 'user').length} created &middot; {data.entries.filter((e) => e.type === 'invited').length} invited
+					{data.entries.length} total &middot; {data.entries.filter((e) => e.type === 'user')
+						.length} created &middot; {data.entries.filter((e) => e.type === 'invited').length} invited
 				</p>
 			</div>
 			<button type="button" class="btn-primary" onclick={() => (showInviteForm = !showInviteForm)}>
@@ -117,7 +140,9 @@
 					autocomplete="off"
 				/>
 				<button type="submit" class="btn-primary">Add</button>
-				<button type="button" class="btn-ghost" onclick={() => (showInviteForm = false)}>Cancel</button>
+				<button type="button" class="btn-ghost" onclick={() => (showInviteForm = false)}
+					>Cancel</button
+				>
 				{#if form?.addError}
 					<span class="error-text">{form.addError}</span>
 				{/if}
@@ -142,10 +167,10 @@
 						<button
 							type="button"
 							class="filter-chip {filterStatus === 'all' ? 'active' : ''}"
-							onclick={() => (filterStatus = 'all')}
-						>All</button>
+							onclick={() => (filterStatus = 'all')}>All</button
+						>
 						<span class="filter-sep">|</span>
-						{#each (['active', 'invited', 'blocked'] as const) as s (s)}
+						{#each ['active', 'invited', 'blocked'] as const as s (s)}
 							<button
 								type="button"
 								class="filter-chip {filterStatus === s ? 'active' : ''}"
@@ -163,8 +188,8 @@
 							<button
 								type="button"
 								class="filter-chip {filterApp === 'all' ? 'active' : ''}"
-								onclick={() => (filterApp = 'all')}
-							>All</button>
+								onclick={() => (filterApp = 'all')}>All</button
+							>
 							<span class="filter-sep">|</span>
 							{#each data.knownApps as app (app.id)}
 								<button
@@ -212,7 +237,11 @@
 
 			{#if filteredEntries().length === 0}
 				<div class="empty-state">
-					<p>{data.entries.length === 0 ? 'No users yet. Invite someone to get started.' : 'No users match the current filters.'}</p>
+					<p>
+						{data.entries.length === 0
+							? 'No users yet. Invite someone to get started.'
+							: 'No users match the current filters.'}
+					</p>
 				</div>
 			{/if}
 		</div>
@@ -251,59 +280,130 @@
 				</button>
 			</div>
 
-			<!-- App access section (signed-in users only) -->
+			<!-- App access + actions (signed-in users only) -->
 			{#if selectedEntry.type === 'user'}
-				<div class="detail-section">
-					<p class="section-label">App Access</p>
+				<form
+					method="POST"
+					action="?/updateAccess"
+					use:enhance={() =>
+						async ({ update }) => {
+							await update({ reset: false });
+							accessSaved = true;
+							setTimeout(() => (accessSaved = false), 2000);
+						}}
+				>
+					<input type="hidden" name="userId" value={selectedEntry.id} />
+					{#each [...pendingApps] as app (app)}
+						<input type="hidden" name="apps" value={app} />
+					{/each}
 
-					<div class="access-list">
-						{#each data.knownApps as app (app.id)}
-							{@const granted = selectedEntry.apps.includes(app.id)}
-							<div class="access-row">
-								<div class="access-app-info">
-									<span class="access-app-dot {granted ? 'granted' : ''}"></span>
-									<span class="access-app-name">{app.label}</span>
-								</div>
-								{#if granted}
-									<form method="POST" action="?/revokeAccess" use:enhance={() => async ({ update }) => { await update({ reset: false }); }}>
-										<input type="hidden" name="userId" value={selectedEntry?.id} />
-										<input type="hidden" name="app" value={app.id} />
-										<button type="submit" class="access-btn revoke">Revoke</button>
-									</form>
-								{:else}
-									<form method="POST" action="?/grantAccess" use:enhance={() => async ({ update }) => { await update({ reset: false }); }}>
-										<input type="hidden" name="userId" value={selectedEntry?.id} />
-										<input type="hidden" name="app" value={app.id} />
-										<button type="submit" class="access-btn grant">Grant</button>
-									</form>
-								{/if}
-							</div>
-						{/each}
+					<div class="detail-section">
+						<p class="section-label">App Access</p>
+						<div class="access-list">
+							{#each data.knownApps as app (app.id)}
+								{@const granted = pendingApps.has(app.id)}
+								<label class="access-row">
+									<div class="access-app-info">
+										<span class="access-app-dot {granted ? 'granted' : ''}"></span>
+										<span class="access-app-name">{app.label}</span>
+									</div>
+									<button
+										type="button"
+										class="toggle {granted ? 'on' : 'off'}"
+										aria-pressed={granted}
+										aria-label="{granted ? 'Revoke' : 'Grant'} {app.label} access"
+										onclick={() => {
+											if (granted) pendingApps.delete(app.id);
+											else pendingApps.add(app.id);
+											accessSaved = false;
+										}}
+									>
+										<span class="toggle-thumb"></span>
+									</button>
+								</label>
+							{/each}
+						</div>
 					</div>
-				</div>
-			{/if}
 
-			<!-- Danger zone -->
-			<div class="detail-danger">
-				{#if !confirmRemove}
-					<button type="button" class="btn-danger-outline" onclick={() => (confirmRemove = true)}>
-						Remove from whitelist
-					</button>
-				{:else}
+					<!-- Actions row -->
+					<div class="actions-row">
+						<button type="submit" class="btn-primary btn-save" disabled={!accessDirty}>
+							{accessSaved ? '✓ Saved' : 'Save access'}
+						</button>
+					</div>
+				</form>
+
+				<div class="danger-row">
+					{#if !confirmRemove}
+						<button
+							type="button"
+							class="btn-danger-outline"
+							onclick={() => (confirmRemove = true)}
+						>
+							Remove from whitelist
+						</button>
+					{/if}
+				</div>
+
+				{#if confirmRemove}
 					<div class="confirm-box">
 						<p class="confirm-text">
-							Remove <strong>{selectedEntry.email}</strong> from the access list? They won't be able to sign in.
+							Remove <strong>{selectedEntry.email}</strong> from the access list? They won't be able to
+							sign in.
 						</p>
 						<div class="confirm-actions">
-							<form method="POST" action="?/removeEmail" use:enhance={() => async ({ update }) => { closeDetail(); await update(); }}>
+							<form
+								method="POST"
+								action="?/removeEmail"
+								use:enhance={() =>
+									async ({ update }) => {
+										closeDetail();
+										await update();
+									}}
+							>
 								<input type="hidden" name="email" value={selectedEntry.email} />
 								<button type="submit" class="btn-danger">Yes, remove</button>
 							</form>
-							<button type="button" class="btn-ghost" onclick={() => (confirmRemove = false)}>Cancel</button>
+							<button type="button" class="btn-ghost" onclick={() => (confirmRemove = false)}
+								>Cancel</button
+							>
 						</div>
 					</div>
 				{/if}
-			</div>
+			{:else}
+				<!-- Invited-only: just the whitelist removal -->
+				<div class="detail-danger">
+					{#if !confirmRemove}
+						<button type="button" class="btn-danger-outline" onclick={() => (confirmRemove = true)}>
+							Remove from whitelist
+						</button>
+					{:else}
+						<div class="confirm-box">
+							<p class="confirm-text">
+								Remove <strong>{selectedEntry.email}</strong> from the access list? They won't be able
+								to sign in.
+							</p>
+							<div class="confirm-actions">
+								<form
+									method="POST"
+									action="?/removeEmail"
+									use:enhance={() =>
+										async ({ update }) => {
+											closeDetail();
+											await update();
+										}}
+								>
+									<input type="hidden" name="email" value={selectedEntry.email} />
+									<button type="submit" class="btn-danger">Yes, remove</button>
+								</form>
+								<button type="button" class="btn-ghost" onclick={() => (confirmRemove = false)}
+									>Cancel</button
+								>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/if}
 		{:else}
 			<div class="detail-empty">
 				<p>Select a user to view details.</p>
@@ -778,6 +878,7 @@
 		border: 1px solid var(--color-border-subtle);
 		border-radius: var(--radius-md);
 		gap: 12px;
+		cursor: default;
 	}
 
 	.access-app-info {
@@ -792,6 +893,7 @@
 		border-radius: 50%;
 		background: var(--color-border-strong);
 		flex-shrink: 0;
+		transition: background var(--duration-fast) var(--ease-out);
 	}
 
 	.access-app-dot.granted {
@@ -802,40 +904,65 @@
 		font-size: 13px;
 		font-weight: 500;
 		color: var(--color-text-primary);
-		text-transform: capitalize;
 	}
 
-	.access-btn {
-		font-size: 12px;
-		font-weight: 600;
-		padding: 4px 12px;
-		border-radius: var(--radius-md);
+	/* Toggle switch */
+	.toggle {
+		position: relative;
+		width: 36px;
+		height: 20px;
+		border-radius: 999px;
 		border: none;
 		cursor: pointer;
-		font-family: inherit;
+		flex-shrink: 0;
+		padding: 0;
 		transition: background var(--duration-fast) var(--ease-out);
-		white-space: nowrap;
 	}
 
-	.access-btn.grant {
-		background: var(--color-accent-muted);
-		color: var(--color-accent);
+	.toggle.off {
+		background: var(--color-border-strong);
 	}
 
-	.access-btn.grant:hover {
-		background: color-mix(in oklab, var(--color-accent) 20%, transparent);
+	.toggle.on {
+		background: var(--color-accent);
 	}
 
-	.access-btn.revoke {
-		background: var(--color-danger-muted);
-		color: var(--color-danger);
+	.toggle-thumb {
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		background: #fff;
+		transition: transform var(--duration-fast) var(--ease-out);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 	}
 
-	.access-btn.revoke:hover {
-		background: color-mix(in oklab, var(--color-danger) 18%, transparent);
+	.toggle.on .toggle-thumb {
+		transform: translateX(16px);
 	}
 
-	/* ── Danger zone ────────────────────────────────────────────── */
+	/* Actions row */
+	.actions-row {
+		margin-bottom: 12px;
+	}
+
+	.btn-save {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.btn-save:disabled {
+		opacity: 0.4;
+		cursor: default;
+	}
+
+	.danger-row {
+		margin-bottom: 16px;
+	}
+
+	/* ── Danger zone (invited-only path) ───────────────────────── */
 	.detail-danger {
 		margin-top: auto;
 		padding-top: 20px;
@@ -847,7 +974,7 @@
 		align-items: center;
 		justify-content: center;
 		width: 100%;
-		padding: 9px 16px;
+		padding: 8px 16px;
 		background: transparent;
 		color: var(--color-danger);
 		border: 1px solid color-mix(in oklab, var(--color-danger) 30%, transparent);

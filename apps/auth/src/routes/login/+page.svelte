@@ -46,7 +46,7 @@
 	<div class="login-card">
 		<!-- Brand mark -->
 		<div class="brand">
-			<span class="brand-mark"></span>
+			<img src="/favicon.svg" alt="Nexo" class="brand-mark" />
 			<span class="brand-name">Nexo</span>
 		</div>
 
@@ -163,23 +163,8 @@
 
 	.brand-mark {
 		display: block;
-		width: 22px;
-		height: 22px;
-		border-radius: 6px;
-		background: linear-gradient(
-			135deg,
-			var(--color-accent),
-			color-mix(in oklab, var(--color-accent) 50%, #000)
-		);
-		box-shadow: 0 2px 8px color-mix(in oklab, var(--color-accent) 25%, transparent);
-		position: relative;
-	}
-	.brand-mark::after {
-		content: '';
-		position: absolute;
-		inset: 4px;
-		border-radius: 3px;
-		background: linear-gradient(135deg, rgb(255 255 255 / 0.24), transparent 60%);
+		width: 24px;
+		height: 24px;
 	}
 
 	.brand-name {
