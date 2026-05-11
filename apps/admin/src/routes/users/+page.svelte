@@ -84,7 +84,7 @@
 			<div>
 				<h1 class="page-title">Users</h1>
 				<p class="page-subtitle">
-					{data.entries.length} total &middot; {data.entries.filter((e) => e.type === 'user').length} signed in
+					{data.entries.length} total &middot; {data.entries.filter((e) => e.type === 'user').length} created &middot; {data.entries.filter((e) => e.type === 'invited').length} invited
 				</p>
 			</div>
 			<button type="button" class="btn-primary" onclick={() => (showInviteForm = !showInviteForm)}>
@@ -160,6 +160,12 @@
 					<div class="filter-group">
 						<span class="filter-group-label">App</span>
 						<div class="filter-chips">
+							<button
+								type="button"
+								class="filter-chip {filterApp === 'all' ? 'active' : ''}"
+								onclick={() => (filterApp = 'all')}
+							>All</button>
+							<span class="filter-sep">|</span>
 							{#each data.knownApps as app (app.id)}
 								<button
 									type="button"
