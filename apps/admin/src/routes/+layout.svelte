@@ -232,7 +232,7 @@
 		}
 
 		.main-content {
-			padding: 20px 16px calc(var(--bottom-bar-height) + 16px);
+			padding: 20px 16px calc(var(--bottom-bar-height) + env(safe-area-inset-bottom) + 16px);
 			overflow: visible;
 		}
 
@@ -243,10 +243,10 @@
 			bottom: 0;
 			left: 0;
 			right: 0;
-			height: var(--bottom-bar-height);
+			height: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom));
 			background: var(--color-surface-1);
 			border-top: 1px solid var(--color-border-default);
-			padding: 0 12px;
+			padding: 0 12px env(safe-area-inset-bottom);
 			gap: 4px;
 			z-index: 40;
 		}

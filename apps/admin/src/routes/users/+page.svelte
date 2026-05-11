@@ -513,7 +513,7 @@
 			transform: translateX(100%);
 			transition: transform var(--duration-base) var(--ease-out);
 			overflow-y: auto;
-			padding: 0 20px calc(var(--bottom-bar-height) + 20px);
+			padding: 0 20px calc(var(--bottom-bar-height) + env(safe-area-inset-bottom) + 20px);
 			display: flex;
 			flex-direction: column;
 		}
