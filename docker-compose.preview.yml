@@ -36,6 +36,8 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
+      FINANCE_URL: https://finance.preview.krieger2501.de
+      ADMIN_URL: https://admin.preview.krieger2501.de
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
@@ -59,6 +61,25 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
+      PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
+    depends_on:
+      migrate_preview:
+        condition: service_completed_successfully
+
+  admin_preview:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    restart: unless-stopped
+    ports:
+      - '4003:3000'
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
+      PUBLIC_ADMIN_URL: https://admin.preview.krieger2501.de
+      PROTOCOL_HEADER: x-forwarded-proto
+      HOST_HEADER: x-forwarded-host
     depends_on:
       migrate_preview:
         condition: service_completed_successfully

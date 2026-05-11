@@ -28,6 +28,10 @@ finance.preview.krieger2501.de {
 	reverse_proxy localhost:4002
 }
 
+admin.preview.krieger2501.de {
+	reverse_proxy localhost:4003
+}
+
 # Bot
 bot.krieger2501.de {
 	reverse_proxy localhost:3003
