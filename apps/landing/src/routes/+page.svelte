@@ -12,7 +12,7 @@
 	type App = {
 		id: 'finance' | 'gym' | 'time' | 'pomodoro';
 		name: string;
-		monogram: string;
+		icon: string;
 		status: 'live' | 'soon' | 'planned';
 		desc: string;
 		href: string;
@@ -23,7 +23,7 @@
 		{
 			id: 'finance',
 			name: 'Finance',
-			monogram: 'F',
+			icon: '/icon-finance.svg',
 			status: 'live',
 			desc: 'Track accounts, categorize spend, and see where the month went. No banks involved.',
 			href: env.PUBLIC_FINANCE_URL ?? '#',
@@ -32,7 +32,7 @@
 		{
 			id: 'gym',
 			name: 'Gym',
-			monogram: 'G',
+			icon: '/icon-gym.svg',
 			status: 'soon',
 			desc: 'Log lifts, supersets, and PRs. Plate math without doing plate math.',
 			href: '#',
@@ -41,7 +41,7 @@
 		{
 			id: 'time',
 			name: 'Time',
-			monogram: 'T',
+			icon: '/favicon.svg',
 			status: 'planned',
 			desc: 'What did the week actually go to? Per-project timers with a weekly receipt.',
 			href: '#',
@@ -50,7 +50,7 @@
 		{
 			id: 'pomodoro',
 			name: 'Pomodoro',
-			monogram: 'P',
+			icon: '/favicon.svg',
 			status: 'planned',
 			desc: "25 on, 5 off. Opinionated, doesn't argue with you.",
 			href: '#',
@@ -123,7 +123,7 @@
 <nav class="border-border-subtle bg-bg-0/80 sticky top-0 z-40 border-b backdrop-blur-md">
 	<div class="mx-auto flex h-14 max-w-[1100px] items-center justify-between px-6">
 		<div class="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight">
-			<span class="brand-mark"></span>
+			<img src="/favicon.svg" alt="Nexo" class="brand-mark" />
 			Nexo
 		</div>
 		<div class="text-text-muted flex gap-5 text-sm">
@@ -173,7 +173,7 @@
 					}}
 				>
 					<div class="flex items-center justify-between">
-						<div class="icon-tile">{app.monogram}</div>
+						<div class="icon-tile"><img src={app.icon} alt={app.name} class="icon-tile-img" /></div>
 						{#if app.status === 'live'}
 							<span class="status-pill status-pill--live"><span class="dot"></span>Live</span>
 						{:else if app.status === 'soon'}
@@ -250,7 +250,7 @@
 									Step {activeStep + 1}: {steps[activeStep].title}
 								</p>
 							{:else}
-								<div class="home-icon-new">F</div>
+								<div class="home-icon-new"><img src="/icon-finance.svg" alt="Finance" /></div>
 								<p class="mt-2 text-center text-[11px] font-medium" style="color:#f4f4f5">
 									Finance
 								</p>
@@ -307,23 +307,9 @@
 
 <style>
 	.brand-mark {
-		width: 20px;
-		height: 20px;
-		border-radius: 5px;
-		background: linear-gradient(
-			135deg,
-			var(--color-accent),
-			color-mix(in oklab, var(--color-accent) 50%, #000)
-		);
-		box-shadow: 0 2px 8px color-mix(in oklab, var(--color-accent) 25%, transparent);
-		position: relative;
-	}
-	.brand-mark::after {
-		content: '';
-		position: absolute;
-		inset: 3px;
-		border-radius: 2px;
-		background: linear-gradient(135deg, rgb(255 255 255 / 0.22), transparent 60%);
+		width: 22px;
+		height: 22px;
+		display: block;
 	}
 
 	.hero-bg {
@@ -437,17 +423,17 @@
 		border-radius: var(--radius-md);
 		display: grid;
 		place-items: center;
-		background: color-mix(in oklab, var(--color-accent) 10%, var(--color-surface-1));
-		border: 1px solid color-mix(in oklab, var(--color-accent) 25%, var(--color-border-default));
-		color: color-mix(in oklab, var(--color-accent) 80%, #000);
-		font-family: var(--font-mono);
-		font-weight: 500;
-		font-size: 20px;
+		overflow: hidden;
+		background: var(--color-surface-1);
+		border: 1px solid var(--color-border-default);
+	}
+	.icon-tile-img {
+		width: 100%;
+		height: 100%;
+		display: block;
 	}
 	.card.locked .icon-tile {
-		background: var(--color-bg-2);
-		color: var(--color-text-faint);
-		border-color: var(--color-border-subtle);
+		opacity: 0.5;
 	}
 
 	.status-pill {
@@ -572,19 +558,12 @@
 		width: 60px;
 		height: 60px;
 		border-radius: 13px;
-		display: grid;
-		place-items: center;
-		background: linear-gradient(
-			135deg,
-			var(--color-accent),
-			color-mix(in oklab, var(--color-accent) 50%, #000)
-		);
-		box-shadow:
-			0 0 16px color-mix(in oklab, var(--color-accent) 35%, transparent),
-			inset 0 1px 0 rgb(255 255 255 / 0.15);
-		color: #fff;
-		font-family: var(--font-mono);
-		font-weight: 600;
-		font-size: 24px;
+		overflow: hidden;
+		box-shadow: 0 0 16px color-mix(in oklab, var(--color-accent) 35%, transparent);
+	}
+	.home-icon-new img {
+		width: 100%;
+		height: 100%;
+		display: block;
 	}
 </style>

@@ -3,6 +3,7 @@ packages:
   - 'packages/*'
 allowBuilds:
   esbuild: false
+  sharp: true
 
 catalog:
   '@types/node': '^24.12.3'

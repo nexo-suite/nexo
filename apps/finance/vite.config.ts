@@ -12,7 +12,7 @@ export default mergeConfig(
 			sveltekit() as PluginOption,
 			SvelteKitPWA({
 				registerType: 'autoUpdate',
-				includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icons/*.png'],
+				includeAssets: ['favicon.svg', 'favicon.png', 'apple-touch-icon.png', 'icons/*.png'],
 				manifest: {
 					id: '/',
 					name: 'Finance — Nexo',
@@ -25,6 +25,7 @@ export default mergeConfig(
 					scope: '/',
 					start_url: '/',
 					icons: [
+						{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
 						{ src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
 						{
 							src: '/icons/icon-192x192.png',

@@ -13,7 +13,13 @@
 <div class="admin-shell">
 	<aside class="sidebar">
 		<div class="sidebar-brand">
-			<span class="brand-mark"></span>
+			<svg class="brand-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Nexo Admin">
+				<rect width="100" height="100" rx="22" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>
+				<rect x="26" y="26" width="22" height="22" rx="3" fill="#16a34a"/>
+				<rect x="52" y="26" width="22" height="22" rx="3" fill="none" stroke="#18181b" stroke-width="3"/>
+				<rect x="26" y="52" width="22" height="22" rx="3" fill="none" stroke="#18181b" stroke-width="3"/>
+				<rect x="52" y="52" width="22" height="22" rx="3" fill="none" stroke="#18181b" stroke-width="3"/>
+			</svg>
 			<span class="brand-name">Nexo Admin</span>
 		</div>
 
@@ -48,11 +54,6 @@
 				<span class="bottom-tab-label">{item.label}</span>
 			</a>
 		{/each}
-		<div class="bottom-user">
-			<div class="user-avatar-sm">
-				{data.user?.name?.[0]?.toUpperCase() ?? '?'}
-			</div>
-		</div>
 	</nav>
 </div>
 
@@ -85,15 +86,8 @@
 
 	.brand-mark {
 		display: block;
-		width: 20px;
-		height: 20px;
-		border-radius: 5px;
-		background: linear-gradient(
-			135deg,
-			var(--color-accent),
-			color-mix(in oklab, var(--color-accent) 50%, #000)
-		);
-		box-shadow: 0 2px 6px color-mix(in oklab, var(--color-accent) 25%, transparent);
+		width: 22px;
+		height: 22px;
 		flex-shrink: 0;
 	}
 
@@ -184,20 +178,6 @@
 		display: none;
 	}
 
-	.user-avatar-sm {
-		width: 28px;
-		height: 28px;
-		border-radius: 50%;
-		background: var(--color-accent-muted);
-		color: var(--color-accent);
-		font-size: 11px;
-		font-weight: 700;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-	}
-
 	.bottom-tab {
 		display: flex;
 		flex-direction: column;
@@ -218,12 +198,6 @@
 	.bottom-tab-label {
 		font-size: 10px;
 		font-weight: 600;
-	}
-
-	.bottom-user {
-		display: flex;
-		align-items: center;
-		padding: 0 4px;
 	}
 
 	@media (max-width: 640px) {
