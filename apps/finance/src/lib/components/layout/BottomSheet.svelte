@@ -14,16 +14,13 @@
 	let sheetEl = $state<HTMLDivElement | null>(null);
 	let dragY = $state(0);
 	let isDragging = $state(false);
-	let dismissing = $state(false);
 	let startY = 0;
 	let startTime = 0;
 
 	function close() {
-		dismissing = true;
 		dragY = sheetEl?.offsetHeight ?? 300;
 		setTimeout(() => {
 			open = false;
-			dismissing = false;
 			dragY = 0;
 		}, 320);
 	}
