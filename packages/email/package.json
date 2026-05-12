@@ -15,9 +15,9 @@
 		"type:check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@react-email/components": "^1.0.12",
 		"react": "^19.2.6",
 		"react-dom": "^19.2.6",
+		"react-email": "^6.1.1",
 		"resend": "^6.12.3"
 	},
 	"devDependencies": {
@@ -26,7 +26,6 @@
 		"@types/react": "^19.1.4",
 		"@types/react-dom": "^19.1.5",
 		"prettier": "^3.8.3",
-		"react-email": "^6.1.1",
 		"sort-package-json": "^3.6.1",
 		"typescript": "^6.0.3"
 	}
