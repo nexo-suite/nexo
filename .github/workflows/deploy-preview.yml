@@ -36,9 +36,7 @@ jobs:
 
             export PUBLIC_APP_VERSION=pr-${{ inputs.pr_number }}
 
-            docker network create nexo-preview 2>/dev/null || true
-
-            docker compose -f docker-compose.preview.yml \
+            docker compose --profile preview \
               --env-file .env.preview \
               up -d --build
 

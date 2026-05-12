@@ -29,14 +29,17 @@ jobs:
             # Strip the "nexo-v" prefix from the tag (e.g. nexo-v0.3.0 → 0.3.0)
             APP_VERSION="${APP_VERSION#nexo-v}"
 
-            docker compose pull --ignore-pull-failures || true
-            APP_VERSION="$APP_VERSION" docker compose --profile server up -d --build --remove-orphans
+            # Deploy production + server (Caddy, bot)
+            APP_VERSION="$APP_VERSION" docker compose \
+              --profile production --profile server \
+              --env-file .env \
+              up -d --build
 
-            # Reload Caddy config in case Caddyfile changed (bind-mount means Docker
-            # won't recreate the container just because the file on disk changed)
+            # Reload Caddy config in case Caddyfile changed
             docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 
-            # Also redeploy preview with the same main code so it stays in sync
-            docker compose -f docker-compose.preview.yml \
+            # Redeploy preview so it stays on the latest main code
+            docker compose \
+              --profile preview \
               --env-file .env.preview \
               up -d --build

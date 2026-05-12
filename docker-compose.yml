@@ -1,14 +1,16 @@
-name: nexo-prod
+name: nexo
 
 networks:
   production:
     name: nexo-production
   preview:
     name: nexo-preview
-    external: true
 
 services:
+  # ── Production ────────────────────────────────────────────────────────────────
+
   postgres:
+    profiles: [production]
     image: postgres:17
     restart: unless-stopped
     networks: [production]
@@ -25,6 +27,7 @@ services:
       retries: 5
 
   migrate:
+    profiles: [production]
     build:
       context: .
       dockerfile: packages/db/Dockerfile
@@ -37,6 +40,7 @@ services:
     restart: on-failure
 
   auth:
+    profiles: [production]
     build:
       context: .
       dockerfile: apps/auth/Dockerfile
@@ -61,6 +65,7 @@ services:
         condition: service_completed_successfully
 
   admin:
+    profiles: [production]
     build:
       context: .
       dockerfile: apps/admin/Dockerfile
@@ -80,6 +85,7 @@ services:
         condition: service_completed_successfully
 
   finance:
+    profiles: [production]
     build:
       context: .
       dockerfile: apps/finance/Dockerfile
@@ -99,6 +105,7 @@ services:
         condition: service_completed_successfully
 
   landing:
+    profiles: [production]
     build:
       context: .
       dockerfile: apps/landing/Dockerfile
@@ -110,6 +117,125 @@ services:
     environment:
       PUBLIC_FINANCE_URL: https://finance.krieger2501.de
       PUBLIC_APP_VERSION: ${APP_VERSION}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # ── Preview ───────────────────────────────────────────────────────────────────
+
+  postgres_preview:
+    profiles: [preview]
+    image: postgres:17
+    restart: unless-stopped
+    networks: [preview]
+    volumes:
+      - pgdata_preview:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: nexo
+      POSTGRES_USER: nexo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nexo']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate_preview:
+    profiles: [preview]
+    build:
+      context: .
+      dockerfile: packages/db/Dockerfile
+    networks: [preview]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      postgres_preview:
+        condition: service_healthy
+    restart: on-failure
+
+  auth_preview:
+    profiles: [preview]
+    build:
+      context: .
+      dockerfile: apps/auth/Dockerfile
+    restart: unless-stopped
+    networks: [preview]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
+      FINANCE_URL: https://finance.preview.krieger2501.de
+      ADMIN_URL: https://admin.preview.krieger2501.de
+      PROTOCOL_HEADER: x-forwarded-proto
+      HOST_HEADER: x-forwarded-host
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+    depends_on:
+      migrate_preview:
+        condition: service_completed_successfully
+
+  admin_preview:
+    profiles: [preview]
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    restart: unless-stopped
+    networks: [preview]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
+      PUBLIC_ADMIN_URL: https://admin.preview.krieger2501.de
+      PUBLIC_LANDING_URL: https://preview.krieger2501.de
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      PROTOCOL_HEADER: x-forwarded-proto
+      HOST_HEADER: x-forwarded-host
+    depends_on:
+      migrate_preview:
+        condition: service_completed_successfully
+
+  finance_preview:
+    profiles: [preview]
+    build:
+      context: .
+      dockerfile: apps/finance/Dockerfile
+      args:
+        PUBLIC_APP_VERSION: ${PUBLIC_APP_VERSION:-preview}
+    restart: unless-stopped
+    networks: [preview]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
+      PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
+      PROTOCOL_HEADER: x-forwarded-proto
+      HOST_HEADER: x-forwarded-host
+    depends_on:
+      migrate_preview:
+        condition: service_completed_successfully
+
+  landing_preview:
+    profiles: [preview]
+    build:
+      context: .
+      dockerfile: apps/landing/Dockerfile
+      args:
+        PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
+        PUBLIC_APP_VERSION: ${PUBLIC_APP_VERSION:-preview}
+    restart: unless-stopped
+    networks: [preview]
+    environment:
+      PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
+      PUBLIC_APP_VERSION: ${PUBLIC_APP_VERSION:-preview}
+    depends_on:
+      migrate_preview:
+        condition: service_completed_successfully
+
+  # ── Server-only (Caddy + bot) ─────────────────────────────────────────────────
 
   bot:
     profiles: [server]
@@ -147,5 +273,6 @@ services:
 
 volumes:
   pgdata:
+  pgdata_preview:
   caddy_data:
   caddy_config:
