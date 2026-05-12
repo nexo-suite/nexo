@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.3](https://github.com/krieger2501/nexo/compare/nexo-v0.8.2...nexo-v0.8.3) (2026-05-12)
+
+
+### Bug Fixes
+
+* auth .well-known handlers pass event.request; update docs and CI pipeline ([2dd9557](https://github.com/krieger2501/nexo/commit/2dd955751e40497c55d3963286fa9905b8358d6c))
+
 ## [0.8.2](https://github.com/krieger2501/nexo/compare/nexo-v0.8.1...nexo-v0.8.2) (2026-05-12)
 
 
