@@ -1,4 +1,4 @@
-import { render } from '@react-email/components';
+import { render } from 'react-email';
 import * as React from 'react';
 import { Resend } from 'resend';
 import AccessGrantedEmail, { subject as accessSubject } from './templates/AccessGrantedEmail.js';
