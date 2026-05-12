@@ -28,9 +28,10 @@ jobs:
 
             # Strip the "nexo-v" prefix from the tag (e.g. nexo-v0.3.0 → 0.3.0)
             APP_VERSION="${APP_VERSION#nexo-v}"
+            export APP_VERSION
 
             # Deploy production + server (Caddy, bot)
-            APP_VERSION="$APP_VERSION" docker compose \
+            docker compose \
               --profile production --profile server \
               --env-file .env \
               up -d --build
