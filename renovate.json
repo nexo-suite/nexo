@@ -12,6 +12,11 @@
 	},
 	"packageRules": [
 		{
+			"description": "react-email — npm deprecated flag is a false positive, package is actively maintained",
+			"matchPackageNames": ["@react-email/components", "react-email"],
+			"suppressNotifications": ["deprecationWarningIssues"]
+		},
+		{
 			"description": "SvelteKit ecosystem — always move together",
 			"groupName": "SvelteKit ecosystem",
 			"matchPackageNames": [
