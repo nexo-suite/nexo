@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { page } from '$app/state';
 	import { ChevronLeft, Activity, FileText, Search, SlidersHorizontal } from 'lucide-svelte';
 
@@ -67,8 +68,8 @@
 	let fieldPickerOpen = $state(false);
 	let expandedIdx = $state<number | null>(null);
 	let copiedIdx = $state<number | null>(null);
-	let allMetaKeys = $state(new Set<string>());
-	let visibleColumns = $state(new Set(['ts', 'level', 'service', 'msg']));
+	let allMetaKeys = new SvelteSet<string>();
+	let visibleColumns = new SvelteSet(['ts', 'level', 'service', 'msg']);
 
 	const FIXED_COLS = ['ts', 'level', 'service', 'msg'];
 	const extraColumns = $derived([...visibleColumns].filter((c) => !FIXED_COLS.includes(c)));
@@ -150,7 +151,7 @@
 			for (const k of Object.keys(entry.meta)) allMetaKeys.add(k);
 			if (lines.length > 2000) {
 				lines = lines.slice(-2000);
-				const rebuilt = new Set<string>();
+				const rebuilt = new SvelteSet<string>();
 				for (const l of lines) for (const k of Object.keys(l.meta)) rebuilt.add(k);
 				allMetaKeys = rebuilt;
 			}
@@ -337,7 +338,7 @@
 							{#if fieldPickerOpen}
 								<div class="field-picker-panel">
 									<span class="picker-label">Columns</span>
-									{#each FIXED_COLS as key}
+									{#each FIXED_COLS as key (key)}
 										<label class="field-toggle">
 											<input
 												type="checkbox"
@@ -350,7 +351,7 @@
 									{#if allMetaKeys.size > 0}
 										<div class="picker-divider"></div>
 										<span class="picker-label">Meta</span>
-										{#each [...allMetaKeys] as key}
+										{#each [...allMetaKeys] as key (key)}
 											<label class="field-toggle">
 												<input
 													type="checkbox"
@@ -407,7 +408,7 @@
 							{#if visibleColumns.has('msg')}
 								<span class="col col-msg">{entry.msg || entry.raw}</span>
 							{/if}
-							{#each extraColumns as key}
+							{#each extraColumns as key (key)}
 								<span class="col col-extra" data-key={key}>
 									{entry.meta[key] !== undefined ? String(entry.meta[key]) : ''}
 								</span>
@@ -429,7 +430,7 @@
 										{/if}
 										<span class="kv-key">msg</span>
 										<span class="kv-val kv-msg">{entry.msg}</span>
-										{#each Object.entries(entry.meta) as [k, v]}
+										{#each Object.entries(entry.meta) as [k, v] (k)}
 											<span class="kv-key">{k}</span>
 											<span class="kv-val"
 												>{typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)}</span
@@ -442,6 +443,7 @@
 								</div>
 								<div class="detail-footer">
 									<button
+										type="button"
 										class="copy-raw-btn"
 										onclick={(e) => {
 											e.stopPropagation();
