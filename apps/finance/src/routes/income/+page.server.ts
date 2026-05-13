@@ -1,6 +1,7 @@
 import { db, income } from '@nexo/db';
 import { eq, asc, and } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
+import { logger } from '$lib/server/logger';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -28,10 +29,19 @@ export const actions: Actions = {
 			received: d.get('received') === 'true'
 		};
 		if (!payload.name) return fail(400, { error: 'Name is required' });
-		if (id) {
-			await db.update(income).set(payload).where(eq(income.id, id));
-		} else {
-			await db.insert(income).values({ ...payload, userId });
+		try {
+			if (id) {
+				await db.update(income).set(payload).where(eq(income.id, id));
+			} else {
+				await db.insert(income).values({ ...payload, userId });
+			}
+		} catch (e) {
+			logger.error('db error', {
+				action: 'save-income',
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
 		}
 		return { success: true };
 	},
@@ -39,7 +49,16 @@ export const actions: Actions = {
 		const userId = locals.user!.id;
 		const d = await request.formData();
 		const id = d.get('id') as string;
-		await db.delete(income).where(and(eq(income.id, id), eq(income.userId, userId)));
+		try {
+			await db.delete(income).where(and(eq(income.id, id), eq(income.userId, userId)));
+		} catch (e) {
+			logger.error('db error', {
+				action: 'remove-income',
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
+		}
 		return { success: true };
 	}
 };

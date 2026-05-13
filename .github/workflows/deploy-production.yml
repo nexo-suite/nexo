@@ -24,7 +24,9 @@ jobs:
           script: |
             set -e
             cd /home/deploy/nexo
-            git pull origin main
+            git fetch --prune origin
+            git checkout -f main
+            git reset --hard origin/main
 
             # Strip the "nexo-v" prefix from the tag (e.g. nexo-v0.3.0 → 0.3.0)
             APP_VERSION="${APP_VERSION#nexo-v}"

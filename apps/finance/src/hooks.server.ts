@@ -24,6 +24,8 @@ function isAllowedOrigin(origin: string): boolean {
 export const handle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/_app/')) return resolve(event);
 
+	event.locals.correlationId = crypto.randomUUID().slice(0, 8);
+
 	// Custom CSRF check
 	const { method, headers } = event.request;
 	if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
@@ -40,13 +42,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const auth = getAuth();
 	const session = await auth.api.getSession({ headers: event.request.headers });
-	logger.info('getSession:', session?.user?.email ?? 'null', '—', event.url.pathname);
+	logger.info('getSession', { email: session?.user?.email ?? null, path: event.url.pathname });
 	event.locals.user = session?.user ?? null;
 
 	if (!event.locals.user && !event.url.pathname.startsWith('/auth')) {
 		const financeURL = publicEnv.PUBLIC_FINANCE_URL ?? `${event.url.protocol}//${event.url.host}`;
 		const redirectTo = encodeURIComponent(`${financeURL}${event.url.pathname}${event.url.search}`);
-		logger.info('→ auth login, redirectTo:', decodeURIComponent(redirectTo));
+		logger.warn('auth required', { path: event.url.pathname });
 		redirect(303, `${auth.options.baseURL}/login?redirectTo=${redirectTo}`);
 	}
 
@@ -58,7 +60,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			.limit(1);
 
 		if (access.length === 0) {
-			logger.info('→ no finance access for', event.locals.user.email);
+			logger.warn('app access denied', { email: event.locals.user.email, app: 'finance' });
 			redirect(303, `${auth.options.baseURL}/not-authorized-app?app=finance`);
 		}
 	}

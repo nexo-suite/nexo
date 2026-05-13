@@ -10,9 +10,23 @@
 			if (!e) return null;
 			if (e === 'not_authorized')
 				return "Your email isn't on the access list. Ask the admin to add you.";
+			if (e === 'server_error')
+				return 'Something went wrong on our end. Please try again in a moment.';
 			return 'Sign-in failed. Please try again.';
 		})()
 	);
+	const errorId = $derived(
+		errorMsg && page.url.searchParams.get('error') === 'server_error'
+			? (page.url.searchParams.get('id') ?? null)
+			: null
+	);
+	let copied = $state(false);
+	async function copyId() {
+		if (!errorId) return;
+		await navigator.clipboard.writeText(errorId);
+		copied = true;
+		setTimeout(() => (copied = false), 2000);
+	}
 	let loading = $state<string | null>(null);
 
 	async function signIn(provider: 'google' | 'github' | 'discord') {
@@ -54,7 +68,18 @@
 		<p class="sub">Pick a provider to sign in. Your email needs to be on the list.</p>
 
 		{#if errorMsg}
-			<div class="error-banner" role="alert">{errorMsg}</div>
+			<div class="error-banner" role="alert">
+				<p>{errorMsg}</p>
+				{#if errorId}
+					<p class="error-id-row">
+						Copy this and show it to Kevin — he'll know what to do:
+						<code class="error-id">{errorId}</code>
+						<button type="button" class="copy-btn" onclick={copyId}>
+							{copied ? 'Copied!' : 'Copy'}
+						</button>
+					</p>
+				{/if}
+			</div>
 		{/if}
 
 		<div class="providers">
@@ -198,6 +223,44 @@
 		color: #ef4444;
 		font-size: 13px;
 		line-height: 1.5;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.error-id-row {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 12px;
+		color: color-mix(in oklab, #ef4444 70%, currentColor);
+		flex-wrap: wrap;
+	}
+
+	.error-id {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.06em;
+		background: color-mix(in oklab, #ef4444 12%, transparent);
+		border-radius: var(--radius-sm, 4px);
+		padding: 1px 5px;
+	}
+
+	.copy-btn {
+		font-size: 11px;
+		font-weight: 600;
+		font-family: var(--font-mono);
+		padding: 2px 8px;
+		border-radius: var(--radius-sm, 4px);
+		border: 1px solid color-mix(in oklab, #ef4444 30%, transparent);
+		background: color-mix(in oklab, #ef4444 10%, transparent);
+		color: #ef4444;
+		cursor: pointer;
+		transition: background var(--duration-fast, 120ms) ease-out;
+	}
+
+	.copy-btn:hover {
+		background: color-mix(in oklab, #ef4444 18%, transparent);
 	}
 
 	.providers {

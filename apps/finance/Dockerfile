@@ -3,12 +3,14 @@ WORKDIR /app
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/db/package.json ./packages/db/
+COPY packages/logger/package.json ./packages/logger/
 COPY apps/finance/package.json ./apps/finance/
 RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
 RUN pnpm install --frozen-lockfile
 
 COPY vite.shared.ts ./
 COPY packages/db ./packages/db
+COPY packages/logger ./packages/logger
 COPY apps/finance ./apps/finance
 
 ARG PUBLIC_APP_VERSION=0.0.0
@@ -22,6 +24,7 @@ RUN addgroup -S app && adduser -S app -G app
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/db/package.json ./packages/db/
+COPY packages/logger/package.json ./packages/logger/
 COPY apps/finance/package.json ./apps/finance/
 RUN pnpm install --frozen-lockfile --prod
 

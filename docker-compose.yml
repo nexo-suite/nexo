@@ -46,6 +46,20 @@ services:
       dockerfile: apps/auth/Dockerfile
     restart: unless-stopped
     networks: [production]
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3100/loki/api/v1/push'
+        mode: non-blocking
+        max-buffer-size: 4m
+        loki-pipeline-stages: |
+          - json:
+              expressions:
+                level: level
+                service: service
+          - labels:
+              level:
+              service:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
@@ -71,6 +85,22 @@ services:
       dockerfile: apps/admin/Dockerfile
     restart: unless-stopped
     networks: [production]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3100/loki/api/v1/push'
+        mode: non-blocking
+        max-buffer-size: 4m
+        loki-pipeline-stages: |
+          - json:
+              expressions:
+                level: level
+                service: service
+          - labels:
+              level:
+              service:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
@@ -93,6 +123,20 @@ services:
         PUBLIC_APP_VERSION: ${APP_VERSION:-dev}
     restart: unless-stopped
     networks: [production]
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3100/loki/api/v1/push'
+        mode: non-blocking
+        max-buffer-size: 4m
+        loki-pipeline-stages: |
+          - json:
+              expressions:
+                level: level
+                service: service
+          - labels:
+              level:
+              service:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
@@ -114,6 +158,12 @@ services:
         PUBLIC_APP_VERSION: ${APP_VERSION:-dev}
     restart: unless-stopped
     networks: [production]
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3100/loki/api/v1/push'
+        mode: non-blocking
+        max-buffer-size: 4m
     environment:
       PUBLIC_FINANCE_URL: https://finance.krieger2501.de
       PUBLIC_APP_VERSION: ${APP_VERSION:-dev}
@@ -185,6 +235,8 @@ services:
       dockerfile: apps/admin/Dockerfile
     restart: unless-stopped
     networks: [preview]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       DATABASE_URL: ${DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
@@ -237,6 +289,32 @@ services:
 
   # ── Server-only (Caddy + bot) ─────────────────────────────────────────────────
 
+  loki:
+    profiles: [server]
+    image: grafana/loki:3.4.2
+    restart: unless-stopped
+    command: -config.file=/etc/loki/config.yaml
+    networks: [production]
+    ports:
+      - '3100:3100'
+    volumes:
+      - loki_data:/loki
+      - ./loki/config.yaml:/etc/loki/config.yaml:ro
+
+  grafana:
+    profiles: [server]
+    image: grafana/grafana:11.5.0
+    restart: unless-stopped
+    networks: [production]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      GF_SERVER_ROOT_URL: https://grafana.krieger2501.de
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on: [loki]
+
   bot:
     profiles: [server]
     build:
@@ -244,6 +322,12 @@ services:
       dockerfile: apps/bot/Dockerfile
     restart: unless-stopped
     networks: [production]
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3100/loki/api/v1/push'
+        mode: non-blocking
+        max-buffer-size: 4m
     ports:
       - '3003:3003'
     environment:
@@ -259,6 +343,12 @@ services:
     image: caddy:2
     restart: unless-stopped
     networks: [production, preview]
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3100/loki/api/v1/push'
+        mode: non-blocking
+        max-buffer-size: 4m
     ports:
       - '80:80'
       - '443:443'
@@ -270,5 +360,7 @@ services:
 volumes:
   pgdata:
   pgdata_preview:
+  loki_data:
+  grafana_data:
   caddy_data:
   caddy_config:

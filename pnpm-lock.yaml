@@ -74,6 +74,9 @@ importers:
       '@nexo/email':
         specifier: workspace:*
         version: link:../../packages/email
+      '@nexo/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       better-auth:
         specifier: ^1.6.10
         version: 1.6.10(@sveltejs/kit@2.59.1(@sveltejs/vite-plugin-svelte@7.1.2(svelte@5.55.5(@typescript-eslint/types@8.59.2))(vite@8.0.11(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)))(svelte@5.55.5(@typescript-eslint/types@8.59.2))(typescript@6.0.3)(vite@8.0.11(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)))(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(kysely@0.28.17)(postgres@3.4.9))(next@16.2.3(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(svelte@5.55.5(@typescript-eslint/types@8.59.2))(vitest@4.1.5)
@@ -120,6 +123,9 @@ importers:
       '@nexo/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@nexo/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       better-auth:
         specifier: ^1.6.10
         version: 1.6.10(@sveltejs/kit@2.59.1(@sveltejs/vite-plugin-svelte@7.1.2(svelte@5.55.5(@typescript-eslint/types@8.59.2))(vite@8.0.11(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)))(svelte@5.55.5(@typescript-eslint/types@8.59.2))(typescript@6.0.3)(vite@8.0.11(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)))(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(kysely@0.28.17)(postgres@3.4.9))(next@16.2.3(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(svelte@5.55.5(@typescript-eslint/types@8.59.2))(vitest@4.1.5)
@@ -185,6 +191,9 @@ importers:
       '@nexo/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@nexo/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       better-auth:
         specifier: ^1.6.10
         version: 1.6.10(@sveltejs/kit@2.59.1(@sveltejs/vite-plugin-svelte@7.1.2(svelte@5.55.5(@typescript-eslint/types@8.59.2))(vite@8.0.11(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)))(svelte@5.55.5(@typescript-eslint/types@8.59.2))(typescript@6.0.3)(vite@8.0.11(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)))(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(kysely@0.28.17)(postgres@3.4.9))(next@16.2.3(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(svelte@5.55.5(@typescript-eslint/types@8.59.2))(vitest@4.1.5)
@@ -329,6 +338,12 @@ importers:
       '@types/react-dom':
         specifier: ^19.1.5
         version: 19.2.3(@types/react@19.2.14)
+
+  packages/logger:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.3
 
 packages:
 

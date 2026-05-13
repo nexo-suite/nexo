@@ -24,6 +24,8 @@ function isAllowedOrigin(origin: string): boolean {
 export const handle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/_app/')) return resolve(event);
 
+	event.locals.correlationId = crypto.randomUUID().slice(0, 8);
+
 	const { method, headers } = event.request;
 	if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
 		const origin = headers.get('origin');

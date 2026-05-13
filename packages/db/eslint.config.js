@@ -15,7 +15,8 @@ export default defineConfig(
 	prettier,
 	{
 		languageOptions: {
-			globals: { ...globals.node }
+			globals: { ...globals.node },
+			parserOptions: { tsconfigRootDir: import.meta.dirname }
 		},
 		rules: {
 			'no-undef': 'off',

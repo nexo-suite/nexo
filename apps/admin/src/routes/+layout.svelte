@@ -1,13 +1,27 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/state';
-	import { Users } from 'lucide-svelte';
+	import { Users, Server } from 'lucide-svelte';
 
 	let { data, children } = $props();
 
-	const navItems = [{ href: '/users', label: 'Users', icon: Users }];
+	const navItems = [
+		{ href: '/users', label: 'Users', icon: Users },
+		{ href: '/services', label: 'Services', icon: Server }
+	];
 
 	const isActive = (href: string) => page.url.pathname.startsWith(href);
+
+	type ActionForm = { correlationId?: string; error?: string; addError?: string } | null;
+	const errorId = $derived((page.form as ActionForm)?.correlationId ?? null);
+
+	let copied = $state(false);
+	async function copyId() {
+		if (!errorId) return;
+		await navigator.clipboard.writeText(errorId);
+		copied = true;
+		setTimeout(() => (copied = false), 2000);
+	}
 </script>
 
 <div class="admin-shell">
@@ -76,6 +90,21 @@
 	</aside>
 
 	<main class="main-content">
+		{#if errorId}
+			<div class="error-toast" role="alert">
+				<div class="error-toast-body">
+					<p class="error-toast-title">Something went wrong</p>
+					<p class="error-toast-sub">
+						Copy this code and show it to Kevin — he'll know what to do: <code class="error-id"
+							>{errorId}</code
+						>
+					</p>
+				</div>
+				<button type="button" class="error-toast-copy" onclick={copyId}>
+					{copied ? 'Copied!' : 'Copy'}
+				</button>
+			</div>
+		{/if}
 		{@render children()}
 	</main>
 
@@ -206,6 +235,63 @@
 		overflow: hidden;
 	}
 
+	.error-toast {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 20px;
+		padding: 12px 16px;
+		border-radius: var(--radius-lg);
+		border: 1px solid color-mix(in oklab, #ef4444 30%, transparent);
+		background: color-mix(in oklab, #ef4444 6%, transparent);
+	}
+
+	.error-toast-body {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.error-toast-title {
+		font-size: 13px;
+		font-weight: 600;
+		color: #ef4444;
+	}
+
+	.error-toast-sub {
+		margin-top: 2px;
+		font-size: 12px;
+		color: color-mix(in oklab, #ef4444 70%, var(--color-text-subtle));
+	}
+
+	.error-id {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.06em;
+		background: color-mix(in oklab, #ef4444 10%, transparent);
+		border-radius: var(--radius-sm);
+		padding: 1px 5px;
+	}
+
+	.error-toast-copy {
+		flex-shrink: 0;
+		font-size: 11px;
+		font-weight: 600;
+		font-family: var(--font-mono);
+		padding: 4px 10px;
+		border-radius: var(--radius-md);
+		border: 1px solid color-mix(in oklab, #ef4444 30%, transparent);
+		background: color-mix(in oklab, #ef4444 10%, transparent);
+		color: #ef4444;
+		cursor: pointer;
+		transition:
+			background var(--duration-fast) var(--ease-out),
+			color var(--duration-fast) var(--ease-out);
+	}
+
+	.error-toast-copy:hover {
+		background: color-mix(in oklab, #ef4444 18%, transparent);
+	}
+
 	/* Bottom tab bar — hidden on desktop */
 	.bottom-bar {
 		display: none;
@@ -234,13 +320,20 @@
 	}
 
 	@media (max-width: 640px) {
+		.admin-shell {
+			height: 100dvh;
+			overflow: hidden;
+		}
+
 		.sidebar {
 			display: none;
 		}
 
 		.main-content {
-			padding: 20px 16px calc(var(--bottom-bar-height) + env(safe-area-inset-bottom) + 16px);
-			overflow: visible;
+			overflow-y: auto;
+			height: 100%;
+			padding: calc(env(safe-area-inset-top) + 20px) 16px
+				calc(var(--bottom-bar-height) + env(safe-area-inset-bottom) + 16px);
 		}
 
 		.bottom-bar {

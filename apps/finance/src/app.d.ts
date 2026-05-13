@@ -7,6 +7,7 @@ declare global {
 		}
 		interface Locals {
 			user: User | null;
+			correlationId: string;
 		}
 		interface PageData {
 			user?: User | null;

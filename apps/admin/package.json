@@ -16,6 +16,7 @@
 	"dependencies": {
 		"@nexo/db": "workspace:*",
 		"@nexo/email": "workspace:*",
+		"@nexo/logger": "workspace:*",
 		"better-auth": "^1.6.10",
 		"drizzle-orm": "^0.45.2",
 		"lucide-svelte": "^1.0.1"

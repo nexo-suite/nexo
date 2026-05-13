@@ -21,6 +21,8 @@
 		"docker:db": "docker compose --profile production up postgres -d",
 		"docker:down": "docker compose --profile production down",
 		"docker:logs": "docker compose logs -f",
+		"docker:observe": "docker compose --profile server up loki grafana -d",
+		"docker:observe:down": "docker compose --profile server down loki grafana",
 		"docker:up": "docker compose --profile production up --build",
 		"docker:up:prod": "docker compose --profile server -f docker-compose.yml up -d --build",
 		"docker:up:server": "docker compose --profile server up --build",

@@ -57,11 +57,12 @@ function createAuth() {
 			after: async (ctx: any) => {
 				try {
 					const path = ctx.request?.url ? new URL(ctx.request.url).pathname : '';
-					logger.info('after-hook path:', path);
+					logger.info('after-hook', { path });
 					if (!path.includes('/callback')) return { response: undefined, headers: null };
 
 					const email = ctx.context?.newSession?.user?.email;
-					logger.info('callback — email:', email ?? '(none)');
+					const provider = ctx.context?.newSession?.account?.providerId ?? null;
+					logger.info('oauth callback', { email: email ?? null, provider });
 					if (!email) return { response: undefined, headers: null };
 
 					const [allowed] = await db
@@ -70,10 +71,8 @@ function createAuth() {
 						.where(eq(allowedEmails.email, email))
 						.limit(1);
 
-					logger.info('allowedEmails check:', email, '→', allowed ? 'allowed' : 'BLOCKED');
-
 					if (!allowed) {
-						logger.info('deleting session for blocked user');
+						logger.warn('access denied', { email });
 						const token = ctx.context?.newSession?.session?.token;
 						if (token) {
 							await db.delete(sessions).where(eq(sessions.token, token));
@@ -87,7 +86,7 @@ function createAuth() {
 						};
 					}
 				} catch (e) {
-					logger.error('after hook error:', e);
+					logger.error('after hook error', { error: String(e) });
 				}
 				return { response: undefined, headers: null };
 			}

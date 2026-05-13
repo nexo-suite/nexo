@@ -20,7 +20,7 @@ export default defineConfig(
 		},
 		rules: {
 			'no-undef': 'off',
-			'no-console': ['warn', { allow: ['info', 'warn', 'error'] }],
+			'no-console': 'off',
 			'no-debugger': 'error',
 			eqeqeq: ['error', 'always', { null: 'ignore' }],
 			'no-implicit-coercion': 'error',

@@ -37,6 +37,9 @@ const config: KnipConfig = {
 		},
 		'packages/email': {
 			project: ['src/**/*.{ts,tsx}']
+		},
+		'packages/logger': {
+			project: ['src/**/*.ts']
 		}
 	}
 };

@@ -7,6 +7,6 @@ import { logger } from '$lib/server/logger';
 // redirects the user back here. We just bounce them to the app root.
 export const GET: RequestHandler = ({ url }) => {
 	const next = url.searchParams.get('next') ?? '/';
-	logger.info('auth/callback next:', next);
+	logger.info('auth/callback', { next });
 	redirect(303, next);
 };

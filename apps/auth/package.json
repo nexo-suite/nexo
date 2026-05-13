@@ -16,6 +16,7 @@
 	"dependencies": {
 		"@better-auth/oauth-provider": "^1.6.10",
 		"@nexo/db": "workspace:*",
+		"@nexo/logger": "workspace:*",
 		"better-auth": "^1.6.10",
 		"drizzle-orm": "^0.45.2",
 		"postgres": "^3.4.9"

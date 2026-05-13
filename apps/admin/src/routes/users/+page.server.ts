@@ -4,6 +4,7 @@ import { eq, and, inArray } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 import { env as publicEnv } from '$env/dynamic/public';
 import { env as privateEnv } from '$env/dynamic/private';
+import { logger } from '$lib/server/logger';
 import { KNOWN_APPS } from '$lib/apps';
 import type { PageServerLoad, Actions } from './$types';
 
@@ -56,7 +57,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	addEmail: async ({ request }) => {
+	addEmail: async ({ request, locals }) => {
 		const data = await request.formData();
 		const email = (data.get('email') as string)?.trim().toLowerCase();
 		if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -64,8 +65,13 @@ export const actions: Actions = {
 		}
 		try {
 			await db.insert(allowedEmails).values({ email }).onConflictDoNothing();
-		} catch {
-			return fail(500, { addError: 'Failed to add email.' });
+		} catch (e) {
+			logger.error('db error', {
+				action: 'add-email',
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { addError: 'Failed to add email.', correlationId: locals.correlationId });
 		}
 		sendInviteEmail({ apiKey: RESEND_KEY(), to: email, landingUrl: LANDING_URL() }).catch((e) =>
 			console.error('invite email failed:', e)
@@ -73,15 +79,24 @@ export const actions: Actions = {
 		return { addSuccess: true };
 	},
 
-	removeEmail: async ({ request }) => {
+	removeEmail: async ({ request, locals }) => {
 		const data = await request.formData();
 		const email = (data.get('email') as string)?.trim().toLowerCase();
 		if (!email) return fail(400, { error: 'Missing email.' });
-		await db.delete(allowedEmails).where(eq(allowedEmails.email, email));
+		try {
+			await db.delete(allowedEmails).where(eq(allowedEmails.email, email));
+		} catch (e) {
+			logger.error('db error', {
+				action: 'remove-email',
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { error: 'Failed to remove email.', correlationId: locals.correlationId });
+		}
 		return { success: true };
 	},
 
-	updateAccess: async ({ request }) => {
+	updateAccess: async ({ request, locals }) => {
 		const data = await request.formData();
 		const userId = data.get('userId') as string;
 		if (!userId) return fail(400, { error: 'Missing userId.' });
@@ -90,25 +105,41 @@ export const actions: Actions = {
 		const desiredApps = data.getAll('apps') as string[];
 
 		// Current set from DB
-		const currentRows = await db
-			.select()
-			.from(userAppAccess)
-			.where(eq(userAppAccess.userId, userId));
+		let currentRows: { app: string }[];
+		try {
+			currentRows = await db.select().from(userAppAccess).where(eq(userAppAccess.userId, userId));
+		} catch (e) {
+			logger.error('db error', {
+				action: 'update-access-read',
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { error: 'Failed to update access.', correlationId: locals.correlationId });
+		}
 		const currentApps = currentRows.map((r) => r.app);
 
 		const toGrant = desiredApps.filter((a) => !currentApps.includes(a));
 		const toRevoke = currentApps.filter((a) => !desiredApps.includes(a));
 
-		if (toGrant.length > 0) {
-			await db
-				.insert(userAppAccess)
-				.values(toGrant.map((app) => ({ userId, app })))
-				.onConflictDoNothing();
-		}
-		if (toRevoke.length > 0) {
-			await db
-				.delete(userAppAccess)
-				.where(and(eq(userAppAccess.userId, userId), inArray(userAppAccess.app, toRevoke)));
+		try {
+			if (toGrant.length > 0) {
+				await db
+					.insert(userAppAccess)
+					.values(toGrant.map((app) => ({ userId, app })))
+					.onConflictDoNothing();
+			}
+			if (toRevoke.length > 0) {
+				await db
+					.delete(userAppAccess)
+					.where(and(eq(userAppAccess.userId, userId), inArray(userAppAccess.app, toRevoke)));
+			}
+		} catch (e) {
+			logger.error('db error', {
+				action: 'update-access-write',
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { error: 'Failed to update access.', correlationId: locals.correlationId });
 		}
 
 		// Send one email for all newly granted apps
