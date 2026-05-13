@@ -46,7 +46,7 @@
 	const imageShort = $derived(container.Config.Image.split('/').pop() ?? container.Config.Image);
 	const restartPolicy = $derived(container.HostConfig.RestartPolicy.Name);
 
-	// ── Logs ─────────────────────────────────────────────────────────────────
+	// ── Log types ─────────────────────────────────────────────────────────────
 	interface LogEntry {
 		ts: string;
 		level: string;
@@ -57,16 +57,37 @@
 		structured: boolean;
 	}
 
+	// ── Log state ─────────────────────────────────────────────────────────────
 	let lines = $state<LogEntry[]>([]);
 	let logBox = $state<HTMLElement | null>(null);
 	let es: EventSource | null = null;
 	let autoScroll = $state(true);
 	let logFilter = $state<'all' | 'info' | 'warn' | 'error'>('all');
 	let search = $state('');
-	let viewMode = $state<'structured' | 'raw'>('structured');
-	let visibleFields = $state({ ts: true, level: true, service: true, meta: true });
 	let fieldPickerOpen = $state(false);
+	let expandedIdx = $state<number | null>(null);
+	let copiedIdx = $state<number | null>(null);
+	let allMetaKeys = $state(new Set<string>());
+	let visibleColumns = $state(new Set(['ts', 'level', 'service', 'msg']));
 
+	const FIXED_COLS = ['ts', 'level', 'service', 'msg'];
+	const extraColumns = $derived([...visibleColumns].filter((c) => !FIXED_COLS.includes(c)));
+
+	function toggleColumn(key: string) {
+		if (visibleColumns.has(key)) {
+			visibleColumns.delete(key);
+		} else {
+			visibleColumns.add(key);
+		}
+	}
+
+	async function copyRaw(idx: number, raw: string) {
+		await navigator.clipboard.writeText(raw);
+		copiedIdx = idx;
+		setTimeout(() => (copiedIdx = null), 2000);
+	}
+
+	// ── Log parsers ───────────────────────────────────────────────────────────
 	function parseLine(raw: string): LogEntry {
 		try {
 			const obj = JSON.parse(raw) as Record<string, unknown>;
@@ -120,19 +141,19 @@
 		}
 	}
 
-	function formatMeta(meta: Record<string, unknown>): string {
-		return Object.entries(meta)
-			.map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : String(v)}`)
-			.join(' · ');
-	}
-
 	function connect() {
 		es?.close();
 		es = new EventSource(`/services/${name}/logs`);
 		es.onmessage = (e: MessageEvent) => {
 			const entry = parseLine(JSON.parse(e.data as string) as string);
 			lines.push(entry);
-			if (lines.length > 2000) lines = lines.slice(-2000);
+			for (const k of Object.keys(entry.meta)) allMetaKeys.add(k);
+			if (lines.length > 2000) {
+				lines = lines.slice(-2000);
+				const rebuilt = new Set<string>();
+				for (const l of lines) for (const k of Object.keys(l.meta)) rebuilt.add(k);
+				allMetaKeys = rebuilt;
+			}
 			if (autoScroll && logBox) logBox.scrollTop = logBox.scrollHeight;
 		};
 		es.onerror = () => es?.close();
@@ -152,6 +173,13 @@
 	function onLogScroll() {
 		if (!logBox) return;
 		autoScroll = logBox.scrollHeight - logBox.scrollTop - logBox.clientHeight < 40;
+	}
+
+	function handleRowKey(e: KeyboardEvent, i: number) {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			expandedIdx = expandedIdx === i ? null : i;
+		}
 	}
 </script>
 
@@ -284,8 +312,62 @@
 	<!-- Logs -->
 	{#if activeTab === 'logs'}
 		<div class="logs-panel">
+			<!-- Toolbar -->
 			<div class="log-toolbar">
-				<div class="log-filters">
+				<div class="toolbar-top">
+					<div class="log-search">
+						<Search size={11} strokeWidth={2.5} />
+						<input
+							type="text"
+							bind:value={search}
+							placeholder="Search logs…"
+							class="search-input"
+						/>
+					</div>
+					<div class="toolbar-end">
+						<div class="field-picker-wrap">
+							<button
+								type="button"
+								class="ctrl-btn {fieldPickerOpen ? 'active' : ''}"
+								onclick={() => (fieldPickerOpen = !fieldPickerOpen)}
+							>
+								<SlidersHorizontal size={11} strokeWidth={2.5} />
+								Fields
+							</button>
+							{#if fieldPickerOpen}
+								<div class="field-picker-panel">
+									<span class="picker-label">Columns</span>
+									{#each FIXED_COLS as key}
+										<label class="field-toggle">
+											<input
+												type="checkbox"
+												checked={visibleColumns.has(key)}
+												onchange={() => toggleColumn(key)}
+											/>
+											{key}
+										</label>
+									{/each}
+									{#if allMetaKeys.size > 0}
+										<div class="picker-divider"></div>
+										<span class="picker-label">Meta</span>
+										{#each [...allMetaKeys] as key}
+											<label class="field-toggle">
+												<input
+													type="checkbox"
+													checked={visibleColumns.has(key)}
+													onchange={() => toggleColumn(key)}
+												/>
+												{key}
+											</label>
+										{/each}
+									{/if}
+								</div>
+							{/if}
+						</div>
+						<span class="log-count">{filteredLines.length} lines</span>
+					</div>
+				</div>
+				<div class="toolbar-bottom">
 					{#each ['all', 'info', 'warn', 'error'] as const as f (f)}
 						<button
 							type="button"
@@ -294,96 +376,82 @@
 						>
 					{/each}
 				</div>
-
-				<div class="log-search">
-					<Search size={11} strokeWidth={2.5} />
-					<input type="text" bind:value={search} placeholder="Search logs…" class="search-input" />
-				</div>
-
-				<div class="log-toolbar-right">
-					{#if viewMode === 'structured'}
-						<div class="field-picker-wrap">
-							<button
-								type="button"
-								class="toolbar-btn {fieldPickerOpen ? 'active' : ''}"
-								onclick={() => (fieldPickerOpen = !fieldPickerOpen)}
-							>
-								<SlidersHorizontal size={11} strokeWidth={2.5} />
-								Fields
-							</button>
-							{#if fieldPickerOpen}
-								<div class="field-picker-panel">
-									<label class="field-toggle">
-										<input type="checkbox" bind:checked={visibleFields.ts} />
-										Timestamp
-									</label>
-									<label class="field-toggle">
-										<input type="checkbox" bind:checked={visibleFields.level} />
-										Level
-									</label>
-									<label class="field-toggle">
-										<input type="checkbox" bind:checked={visibleFields.service} />
-										Service
-									</label>
-									<label class="field-toggle">
-										<input type="checkbox" bind:checked={visibleFields.meta} />
-										Meta
-									</label>
-								</div>
-							{/if}
-						</div>
-					{/if}
-
-					<div class="view-toggle">
-						<button
-							type="button"
-							class="view-btn {viewMode === 'structured' ? 'active' : ''}"
-							onclick={() => (viewMode = 'structured')}>Structured</button
-						>
-						<button
-							type="button"
-							class="view-btn {viewMode === 'raw' ? 'active' : ''}"
-							onclick={() => (viewMode = 'raw')}>Raw</button
-						>
-					</div>
-
-					<span class="log-count">{filteredLines.length} lines</span>
-				</div>
 			</div>
 
-			<div class="log-box {viewMode}" bind:this={logBox} onscroll={onLogScroll}>
+			<!-- Log stream -->
+			<div class="log-box" bind:this={logBox} onscroll={onLogScroll}>
 				{#if filteredLines.length === 0}
 					<div class="log-empty">
 						{search ? 'No lines match your search.' : 'Waiting for logs…'}
 					</div>
 				{/if}
 				{#each filteredLines as entry, i (i)}
-					<div class="log-entry level-{entry.level}">
-						{#if viewMode === 'raw'}
-							<span class="log-line-num">{i + 1}</span>
-							<span class="log-msg raw">{entry.raw}</span>
-						{:else}
-							<div class="log-header-row">
-								{#if visibleFields.ts}
-									<span class="log-ts">{shortTs(entry.ts)}</span>
-								{/if}
-								{#if entry.structured}
-									{#if visibleFields.level}
-										<span class="log-level">{entry.level}</span>
-									{/if}
-									{#if visibleFields.service && entry.service}
-										<span class="log-service">{entry.service}</span>
-									{/if}
-								{/if}
-							</div>
-							{#if entry.structured}
-								<span class="log-msg">{entry.msg}</span>
-								{#if visibleFields.meta && Object.keys(entry.meta).length > 0}
-									<span class="log-meta">{formatMeta(entry.meta)}</span>
-								{/if}
-							{:else}
-								<span class="log-msg raw">{entry.msg}</span>
+					<div
+						class="log-row level-{entry.level}"
+						class:is-expanded={expandedIdx === i}
+						onclick={() => (expandedIdx = expandedIdx === i ? null : i)}
+						onkeydown={(e) => handleRowKey(e, i)}
+						role="button"
+						tabindex="0"
+					>
+						<div class="row-main">
+							{#if visibleColumns.has('ts')}
+								<span class="col col-ts">{shortTs(entry.ts)}</span>
 							{/if}
+							{#if visibleColumns.has('level') && entry.structured}
+								<span class="col col-level">{entry.level}</span>
+							{/if}
+							{#if visibleColumns.has('service') && entry.structured && entry.service}
+								<span class="col col-service">{entry.service}</span>
+							{/if}
+							{#if visibleColumns.has('msg')}
+								<span class="col col-msg">{entry.msg || entry.raw}</span>
+							{/if}
+							{#each extraColumns as key}
+								<span class="col col-extra" data-key={key}>
+									{entry.meta[key] !== undefined ? String(entry.meta[key]) : ''}
+								</span>
+							{/each}
+						</div>
+						{#if expandedIdx === i}
+							<div class="row-detail">
+								<div class="kv-grid">
+									{#if entry.ts}
+										<span class="kv-key">ts</span>
+										<span class="kv-val">{entry.ts}</span>
+									{/if}
+									{#if entry.structured}
+										<span class="kv-key">level</span>
+										<span class="kv-val kv-lv-{entry.level}">{entry.level}</span>
+										{#if entry.service}
+											<span class="kv-key">service</span>
+											<span class="kv-val kv-service">{entry.service}</span>
+										{/if}
+										<span class="kv-key">msg</span>
+										<span class="kv-val kv-msg">{entry.msg}</span>
+										{#each Object.entries(entry.meta) as [k, v]}
+											<span class="kv-key">{k}</span>
+											<span class="kv-val"
+												>{typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)}</span
+											>
+										{/each}
+									{:else}
+										<span class="kv-key">raw</span>
+										<span class="kv-val">{entry.raw}</span>
+									{/if}
+								</div>
+								<div class="detail-footer">
+									<button
+										class="copy-raw-btn"
+										onclick={(e) => {
+											e.stopPropagation();
+											copyRaw(i, entry.raw);
+										}}
+									>
+										{copiedIdx === i ? '✓ copied' : 'copy raw'}
+									</button>
+								</div>
+							</div>
 						{/if}
 					</div>
 				{/each}
@@ -565,7 +633,6 @@
 		color: #f59e0b;
 	}
 
-	/* Info section */
 	.info-section {
 		display: flex;
 		flex-direction: column;
@@ -621,7 +688,6 @@
 		font-family: var(--font-mono);
 	}
 
-	/* Health log */
 	.health-log {
 		background: var(--color-surface-1);
 		border: 1px solid var(--color-border-default);
@@ -662,26 +728,71 @@
 		flex: 1;
 	}
 
-	/* ── Logs ── */
+	/* ── Logs panel ── */
 	.logs-panel {
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
 	}
 
+	/* Toolbar */
 	.log-toolbar {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.toolbar-top {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		flex-wrap: wrap;
 	}
 
-	.log-filters {
+	.log-search {
 		display: flex;
-		gap: 4px;
+		align-items: center;
+		gap: 6px;
+		flex: 1;
+		background: var(--color-surface-1);
+		border: 1px solid var(--color-border-default);
+		border-radius: var(--radius-md);
+		padding: 5px 10px;
+		color: var(--color-text-faint);
+		transition: border-color var(--duration-fast) var(--ease-out);
+	}
+
+	.log-search:focus-within {
+		border-color: var(--color-border-strong);
+		color: var(--color-text-subtle);
+	}
+
+	.search-input {
+		flex: 1;
+		background: none;
+		border: none;
+		outline: none;
+		font-size: 12px;
+		font-family: var(--font-mono);
+		color: var(--color-text-primary);
+	}
+
+	.search-input::placeholder {
+		color: var(--color-text-faint);
+	}
+
+	.toolbar-end {
+		display: flex;
+		align-items: center;
+		gap: 8px;
 		flex-shrink: 0;
 	}
 
+	.toolbar-bottom {
+		display: flex;
+		gap: 4px;
+	}
+
+	/* Filter buttons */
 	.filter-btn {
 		font-size: 11px;
 		font-weight: 600;
@@ -709,90 +820,49 @@
 		border-color: var(--color-border-strong);
 	}
 	.filter-btn.active.filter-info {
-		background: color-mix(in oklab, var(--color-accent) 12%, transparent);
-		color: color-mix(in oklab, var(--color-accent) 80%, #000);
-		border-color: color-mix(in oklab, var(--color-accent) 30%, transparent);
+		background: color-mix(in oklab, #3b82f6 10%, transparent);
+		color: #2563eb;
+		border-color: color-mix(in oklab, #3b82f6 25%, transparent);
 	}
 	.filter-btn.active.filter-warn {
-		background: color-mix(in oklab, #f59e0b 12%, transparent);
+		background: color-mix(in oklab, #f59e0b 10%, transparent);
 		color: #b45309;
-		border-color: color-mix(in oklab, #f59e0b 30%, transparent);
+		border-color: color-mix(in oklab, #f59e0b 25%, transparent);
 	}
 	.filter-btn.active.filter-error {
-		background: color-mix(in oklab, #ef4444 12%, transparent);
+		background: color-mix(in oklab, #ef4444 10%, transparent);
 		color: #dc2626;
-		border-color: color-mix(in oklab, #ef4444 30%, transparent);
+		border-color: color-mix(in oklab, #ef4444 25%, transparent);
 	}
 
-	/* Search */
-	.log-search {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		flex: 1;
-		min-width: 160px;
-		background: var(--color-surface-1);
-		border: 1px solid var(--color-border-default);
-		border-radius: var(--radius-md);
-		padding: 4px 10px;
-		color: var(--color-text-faint);
-		transition: border-color var(--duration-fast) var(--ease-out);
-	}
-
-	.log-search:focus-within {
-		border-color: var(--color-border-strong);
-		color: var(--color-text-subtle);
-	}
-
-	.search-input {
-		flex: 1;
-		background: none;
-		border: none;
-		outline: none;
-		font-size: 12px;
-		font-family: var(--font-mono);
-		color: var(--color-text-primary);
-	}
-
-	.search-input::placeholder {
-		color: var(--color-text-faint);
-	}
-
-	/* Right side controls */
-	.log-toolbar-right {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		flex-shrink: 0;
-	}
-
-	.toolbar-btn {
+	/* Fields button + dropdown */
+	.ctrl-btn {
 		display: flex;
 		align-items: center;
 		gap: 5px;
 		font-size: 11px;
 		font-weight: 600;
 		font-family: var(--font-mono);
-		padding: 4px 10px;
+		padding: 5px 10px;
 		border-radius: var(--radius-md);
 		border: 1px solid var(--color-border-default);
 		background: var(--color-surface-1);
 		color: var(--color-text-subtle);
 		cursor: pointer;
+		white-space: nowrap;
 		transition:
 			background var(--duration-fast) var(--ease-out),
 			color var(--duration-fast) var(--ease-out),
 			border-color var(--duration-fast) var(--ease-out);
 	}
 
-	.toolbar-btn:hover,
-	.toolbar-btn.active {
+	.ctrl-btn:hover,
+	.ctrl-btn.active {
 		background: var(--color-bg-2);
 		color: var(--color-text-primary);
 		border-color: var(--color-border-strong);
 	}
 
-	/* Field picker dropdown */
 	.field-picker-wrap {
 		position: relative;
 	}
@@ -802,34 +872,54 @@
 		top: calc(100% + 6px);
 		right: 0;
 		z-index: 50;
-		background: var(--color-surface-2, var(--color-bg-1));
+		background: var(--color-surface-1);
 		border: 1px solid var(--color-border-default);
 		border-radius: var(--radius-lg);
-		padding: 8px 4px;
+		padding: 6px 4px;
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-		min-width: 130px;
+		gap: 1px;
+		box-shadow:
+			0 4px 6px -1px rgba(0, 0, 0, 0.08),
+			0 10px 30px -4px rgba(0, 0, 0, 0.12);
+		min-width: 140px;
+		max-height: 60vh;
+		overflow-y: auto;
+	}
+
+	.picker-label {
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-text-faint);
+		font-family: var(--font-mono);
+		padding: 4px 12px 2px;
+	}
+
+	.picker-divider {
+		height: 1px;
+		background: var(--color-border-subtle);
+		margin: 4px 8px;
 	}
 
 	.field-toggle {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		padding: 6px 12px;
+		padding: 5px 12px;
 		font-size: 12px;
 		font-family: var(--font-mono);
 		color: var(--color-text-subtle);
 		cursor: pointer;
-		border-radius: var(--radius-md);
+		border-radius: var(--radius-sm);
 		transition:
 			background var(--duration-fast) var(--ease-out),
 			color var(--duration-fast) var(--ease-out);
 	}
 
 	.field-toggle:hover {
-		background: var(--color-bg-2);
+		background: var(--color-bg-1);
 		color: var(--color-text-primary);
 	}
 
@@ -840,41 +930,6 @@
 		flex-shrink: 0;
 	}
 
-	/* View toggle */
-	.view-toggle {
-		display: flex;
-		border: 1px solid var(--color-border-default);
-		border-radius: var(--radius-md);
-		overflow: hidden;
-	}
-
-	.view-btn {
-		font-size: 11px;
-		font-weight: 600;
-		font-family: var(--font-mono);
-		padding: 4px 10px;
-		border: none;
-		background: var(--color-surface-1);
-		color: var(--color-text-subtle);
-		cursor: pointer;
-		transition:
-			background var(--duration-fast) var(--ease-out),
-			color var(--duration-fast) var(--ease-out);
-	}
-
-	.view-btn + .view-btn {
-		border-left: 1px solid var(--color-border-default);
-	}
-
-	.view-btn:hover {
-		color: var(--color-text-primary);
-	}
-
-	.view-btn.active {
-		background: var(--color-bg-2);
-		color: var(--color-text-primary);
-	}
-
 	.log-count {
 		font-size: 11px;
 		color: var(--color-text-faint);
@@ -882,188 +937,271 @@
 		white-space: nowrap;
 	}
 
+	/* ── Log stream box ── */
 	.log-box {
 		background: #0d0d0f;
 		border: 1px solid #1e1e24;
 		border-radius: var(--radius-lg);
-		padding: 4px 0;
 		overflow-y: auto;
+		overscroll-behavior: contain;
 		font-family: var(--font-mono);
 		font-size: 12px;
-		line-height: 1;
-		max-height: calc(100dvh - 320px);
+		max-height: calc(100dvh - 280px);
 		min-height: 300px;
 	}
 
 	.log-empty {
-		padding: 20px;
+		padding: 20px 16px;
 		color: #3f3f46;
+		font-family: var(--font-mono);
+		font-size: 12px;
 	}
 
-	.log-entry {
+	/* ── Log rows ── */
+	.log-row {
+		border-left: 3px solid transparent;
+		cursor: pointer;
+		outline: none;
+	}
+
+	.log-row:hover,
+	.log-row.is-expanded {
+		background: #111116;
+	}
+
+	.log-row:focus-visible {
+		outline: 1px solid #3b82f6;
+		outline-offset: -1px;
+	}
+
+	/* Level left-border color */
+	.log-row.level-info {
+		border-left-color: #3b82f6;
+	}
+	.log-row.level-warn {
+		border-left-color: #f59e0b;
+	}
+	.log-row.level-error {
+		border-left-color: #ef4444;
+	}
+	.log-row.level-debug {
+		border-left-color: #52525b;
+	}
+
+	/* Separator between rows */
+	.log-row + .log-row {
+		border-top: 1px solid #16161c;
+	}
+
+	/* Main collapsed row */
+	.row-main {
 		display: flex;
 		align-items: baseline;
+		padding: 4px 12px 4px 10px;
 		gap: 0;
-		padding: 3px 16px;
-		border-bottom: 1px solid transparent;
+		min-width: 0;
 	}
 
-	.log-entry:hover {
-		background: #13131a;
+	/* Shared column base */
+	.col {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		flex-shrink: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
-	.log-ts {
+	.col-ts {
 		color: #3f3f46;
-		min-width: 72px;
-		flex-shrink: 0;
-		padding-right: 12px;
 		font-size: 11px;
+		min-width: 70px;
+		padding-right: 12px;
 	}
 
-	.log-level {
-		min-width: 40px;
-		flex-shrink: 0;
-		font-weight: 700;
+	.col-level {
 		font-size: 10px;
+		font-weight: 700;
 		letter-spacing: 0.05em;
 		text-transform: uppercase;
+		min-width: 40px;
 		padding-right: 10px;
 	}
-
-	.log-entry.level-info .log-level {
+	.level-info .col-level {
 		color: #60a5fa;
 	}
-	.log-entry.level-warn .log-level {
+	.level-warn .col-level {
 		color: #fbbf24;
 	}
-	.log-entry.level-error .log-level {
+	.level-error .col-level {
 		color: #f87171;
 	}
-
-	.log-service {
-		color: #8b5cf6;
-		padding-right: 10px;
-		min-width: 60px;
-		flex-shrink: 0;
+	.level-debug .col-level {
+		color: #71717a;
 	}
 
-	.log-msg {
+	.col-service {
+		color: #a78bfa;
+		font-size: 11px;
+		min-width: 56px;
+		padding-right: 10px;
+	}
+
+	.col-msg {
 		color: #e4e4e7;
 		flex: 1;
-		padding-right: 12px;
-		white-space: pre-wrap;
-		word-break: break-all;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
-
-	.log-msg.raw {
-		color: #a1a1aa;
-	}
-	.log-entry.level-warn .log-msg {
+	.level-warn .col-msg {
 		color: #fde68a;
 	}
-	.log-entry.level-error .log-msg {
+	.level-error .col-msg {
 		color: #fca5a5;
 	}
 
-	.log-meta {
+	/* Extra meta columns: show key= prefix via CSS */
+	.col-extra {
 		color: #52525b;
 		font-size: 11px;
-		white-space: pre-wrap;
-		word-break: break-all;
+		padding-left: 10px;
+		max-width: 180px;
+		flex-shrink: 1;
 	}
-
-	/* Line numbers (raw mode) */
-	.log-line-num {
+	.col-extra::before {
+		content: attr(data-key) '=';
 		color: #3f3f46;
-		min-width: 40px;
-		text-align: right;
-		flex-shrink: 0;
-		padding-right: 14px;
-		font-size: 10px;
-		line-height: inherit;
+	}
+
+	/* ── Expanded detail panel ── */
+	.row-detail {
+		background: #0a0a0d;
+		border-top: 1px solid #1e1e26;
+		padding: 10px 12px 10px 13px;
+	}
+
+	.kv-grid {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 3px 16px;
+		margin-bottom: 10px;
+	}
+
+	.kv-key {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: #52525b;
+		white-space: nowrap;
+		align-self: start;
+		padding-top: 1px;
 		user-select: none;
-		border-right: 1px solid #1e1e24;
 	}
 
-	/* Separators between entries in raw mode */
-	.log-box.raw .log-entry {
-		border-bottom: 1px solid #1a1a22;
+	.kv-val {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: #a1a1aa;
+		word-break: break-all;
+		white-space: pre-wrap;
+		line-height: 1.5;
 	}
 
-	/* Desktop: header-row dissolves — children join parent flex row */
-	.log-header-row {
-		display: contents;
+	/* Highlighted KV values */
+	.kv-lv-info {
+		color: #60a5fa;
+	}
+	.kv-lv-warn {
+		color: #fbbf24;
+	}
+	.kv-lv-error {
+		color: #f87171;
+	}
+	.kv-service {
+		color: #a78bfa;
+	}
+	.kv-msg {
+		color: #e4e4e7;
 	}
 
-	/* ── Mobile ─────────────────────────────────────────────────────────────── */
+	.detail-footer {
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	.copy-raw-btn {
+		font-size: 11px;
+		font-family: var(--font-mono);
+		font-weight: 600;
+		padding: 3px 10px;
+		border-radius: var(--radius-md);
+		border: 1px solid #2a2a34;
+		background: transparent;
+		color: #52525b;
+		cursor: pointer;
+		transition:
+			color var(--duration-fast) var(--ease-out),
+			border-color var(--duration-fast) var(--ease-out);
+	}
+
+	.copy-raw-btn:hover {
+		color: #a1a1aa;
+		border-color: #3f3f4e;
+	}
+
+	/* ── Mobile ── */
 	@media (max-width: 640px) {
-		.log-entry {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 3px;
-			padding: 8px 12px 8px 14px;
-			border-left: 2px solid transparent;
-			border-bottom: 1px solid #1a1a22;
-		}
-
-		.log-entry.level-info {
-			border-left-color: #3b82f6;
-		}
-		.log-entry.level-warn {
-			border-left-color: #f59e0b;
-		}
-		.log-entry.level-error {
-			border-left-color: #ef4444;
-		}
-
-		.log-header-row {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-			flex-wrap: wrap;
-		}
-
-		.log-ts {
-			min-width: unset;
-			padding-right: 0;
-			font-size: 10px;
-		}
-
-		.log-level {
-			min-width: unset;
-			padding-right: 0;
-			font-size: 10px;
-		}
-
-		.log-service {
-			min-width: unset;
-			padding-right: 0;
-		}
-
-		.log-msg {
-			padding-right: 0;
-			line-height: 1.5;
-		}
-
-		.log-meta {
-			line-height: 1.4;
-		}
-
-		.log-line-num {
-			min-width: 28px;
-			font-size: 9px;
-		}
-
-		/* Open field picker to the right so it never goes off-screen */
+		/* Field picker opens left-anchored (button is on the right edge) */
 		.field-picker-panel {
-			right: auto;
-			left: 0;
+			right: 0;
+			max-width: calc(100vw - 32px);
 		}
 
-		/* Allow right-side toolbar controls to start from the left when wrapped */
-		.log-toolbar-right {
+		/* Wrap columns: msg first (full-width), then ts/service/meta on second line */
+		.row-main {
+			flex-wrap: wrap;
+			align-items: flex-start;
+			gap: 1px 0;
+			padding: 7px 10px 6px 10px;
+		}
+
+		/* Message is promoted to its own full-width first line */
+		.col-msg {
+			order: -1;
 			width: 100%;
-			justify-content: flex-start;
+			flex-basis: 100%;
+			overflow: visible;
+			text-overflow: unset;
+			white-space: pre-wrap;
+			word-break: break-word;
+			line-height: 1.45;
+			padding-bottom: 2px;
+		}
+
+		/* Level badge redundant on mobile — left border shows it */
+		.col-level {
+			display: none;
+		}
+
+		/* Smaller secondary items */
+		.col-ts {
+			font-size: 10px;
+			min-width: unset;
+			padding-right: 8px;
+			color: #2e2e36;
+		}
+
+		.col-service {
+			font-size: 10px;
+			min-width: unset;
+			padding-right: 8px;
+		}
+
+		.col-extra {
+			font-size: 10px;
+			max-width: unset;
+			padding-left: 8px;
 		}
 	}
 </style>
