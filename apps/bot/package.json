@@ -13,6 +13,7 @@
 		"type:check": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@nexo/logger": "workspace:*",
 		"@octokit/auth-app": "^7.2.2",
 		"@octokit/rest": "^21.1.1",
 		"@octokit/webhooks": "^13.9.1"

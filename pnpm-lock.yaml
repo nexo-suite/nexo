@@ -166,6 +166,9 @@ importers:
 
   apps/bot:
     dependencies:
+      '@nexo/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@octokit/auth-app':
         specifier: ^7.2.2
         version: 7.2.2

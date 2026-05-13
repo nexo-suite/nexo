@@ -2,6 +2,14 @@ import { createNodeMiddleware, Webhooks } from '@octokit/webhooks';
 import { createAppAuth } from '@octokit/auth-app';
 import { Octokit } from '@octokit/rest';
 import { createServer } from 'node:http';
+import { createLogger } from '@nexo/logger';
+
+const logger = createLogger('bot');
+
+const GH_API_VERSION = '2022-11-28';
+function makeOctokit(token: string): Octokit {
+	return new Octokit({ auth: token, headers: { 'X-GitHub-Api-Version': GH_API_VERSION } });
+}
 
 const {
 	GH_APP_ID,
@@ -21,7 +29,7 @@ if (
 	!GH_REPO_NAME ||
 	!GITHUB_TOKEN
 ) {
-	console.error('Missing required env vars');
+	logger.error('missing required env vars');
 	process.exit(1);
 }
 
@@ -30,6 +38,8 @@ if (
 type DeployStatus = 'deploying' | 'deployed';
 
 const deployState = new Map<number, { sha: string; status: DeployStatus }>();
+const creatingCommentForPR = new Set<number>();
+const triggeringDeployForPR = new Set<number>();
 
 // ── Comment templates ─────────────────────────────────────────────────────────
 
@@ -76,7 +86,8 @@ async function getInstallationOctokit(): Promise<Octokit> {
 		auth: {
 			appId: Number(GH_APP_ID),
 			privateKey: GH_APP_PRIVATE_KEY!.replace(/\\n/g, '\n')
-		}
+		},
+		headers: { 'X-GitHub-Api-Version': GH_API_VERSION }
 	});
 
 	const { data: installation } = await appOctokit.apps.getRepoInstallation({
@@ -91,7 +102,7 @@ async function getInstallationOctokit(): Promise<Octokit> {
 	});
 
 	const { token } = await auth({ type: 'installation' });
-	return new Octokit({ auth: token });
+	return makeOctokit(token);
 }
 
 async function findBotComment(
@@ -110,9 +121,10 @@ async function findBotComment(
 }
 
 async function triggerDeploy(prNumber: number, sha: string, commentId: number) {
-	const octokit = await getInstallationOctokit();
+	deployState.set(prNumber, { sha, status: 'deploying' }); // sync guard before first await
+	logger.info('deploy triggered', { prNumber, sha, commentId });
 
-	deployState.set(prNumber, { sha, status: 'deploying' });
+	const octokit = await getInstallationOctokit();
 
 	await octokit.issues.updateComment({
 		owner: GH_REPO_OWNER!,
@@ -121,7 +133,7 @@ async function triggerDeploy(prNumber: number, sha: string, commentId: number) {
 		body: DEPLOYING_COMMENT(prNumber, sha)
 	});
 
-	const patOctokit = new Octokit({ auth: GITHUB_TOKEN });
+	const patOctokit = makeOctokit(GITHUB_TOKEN!);
 	await patOctokit.actions.createWorkflowDispatch({
 		owner: GH_REPO_OWNER!,
 		repo: GH_REPO_NAME!,
@@ -133,6 +145,7 @@ async function triggerDeploy(prNumber: number, sha: string, commentId: number) {
 			comment_id: String(commentId)
 		}
 	});
+	logger.info('workflow dispatch sent', { prNumber, sha });
 }
 
 // ── Webhook handlers ──────────────────────────────────────────────────────────
@@ -140,22 +153,41 @@ async function triggerDeploy(prNumber: number, sha: string, commentId: number) {
 const webhooks = new Webhooks({ secret: GH_WEBHOOK_SECRET! });
 
 webhooks.on(['pull_request.opened', 'pull_request.reopened'], async ({ payload }) => {
-	const octokit = await getInstallationOctokit();
 	const prNumber = payload.pull_request.number;
-	const existing = await findBotComment(octokit, prNumber);
-	if (existing) return;
-	await octokit.issues.createComment({
-		owner: GH_REPO_OWNER!,
-		repo: GH_REPO_NAME!,
-		issue_number: prNumber,
-		body: IDLE_COMMENT(prNumber)
-	});
+	const event = payload.action;
+	logger.info('pr event', { event, prNumber });
+
+	if (creatingCommentForPR.has(prNumber)) {
+		logger.warn('duplicate pr event skipped', { event, prNumber });
+		return;
+	}
+	creatingCommentForPR.add(prNumber);
+	try {
+		const octokit = await getInstallationOctokit();
+		const existing = await findBotComment(octokit, prNumber);
+		if (existing) {
+			logger.info('comment already exists, skipping', { prNumber });
+			return;
+		}
+		await octokit.issues.createComment({
+			owner: GH_REPO_OWNER!,
+			repo: GH_REPO_NAME!,
+			issue_number: prNumber,
+			body: IDLE_COMMENT(prNumber)
+		});
+		logger.info('idle comment created', { prNumber });
+	} catch (e) {
+		logger.error('failed to create idle comment', { prNumber, error: String(e) });
+	} finally {
+		creatingCommentForPR.delete(prNumber);
+	}
 });
 
 // When a new commit is pushed, mark comment as stale only if something was deployed
 webhooks.on('pull_request.synchronize', async ({ payload }) => {
 	const prNumber = payload.pull_request.number;
 	const newSha = payload.pull_request.head.sha;
+	logger.info('pr synchronize', { prNumber, newSha: newSha.slice(0, 7) });
 
 	const octokit = await getInstallationOctokit();
 	const comment = await findBotComment(octokit, prNumber);
@@ -166,8 +198,14 @@ webhooks.on('pull_request.synchronize', async ({ payload }) => {
 	const isDeploying = comment.body.includes('⏳');
 	const state = deployState.get(prNumber);
 
-	if (!isDeployed && !state) return; // Never deployed
-	if (isDeploying || state?.status === 'deploying') return; // Don't interrupt in-flight
+	if (!isDeployed && !state) {
+		logger.info('pr never deployed, skipping stale update', { prNumber });
+		return;
+	}
+	if (isDeploying || state?.status === 'deploying') {
+		logger.info('deploy in progress, skipping stale update', { prNumber });
+		return;
+	}
 
 	// Extract the live SHA from the comment or state
 	const shaMatch = comment.body.match(/`([0-9a-f]{7})`/);
@@ -179,6 +217,7 @@ webhooks.on('pull_request.synchronize', async ({ payload }) => {
 		comment_id: comment.id,
 		body: STALE_COMMENT(prNumber, liveSha, newSha)
 	});
+	logger.info('comment marked stale', { prNumber, liveSha, newSha: newSha.slice(0, 7) });
 });
 
 // Checkbox tick triggers a deploy
@@ -189,20 +228,33 @@ webhooks.on('issue_comment.edited', async ({ payload }) => {
 
 	const prNumber = Number(markerMatch[1]);
 	const checked = body.includes('[x] ') || body.includes('[X] ');
+	logger.info('comment edited', { prNumber, checked });
 	if (!checked) return;
 
-	// Ignore ticks on the deploying comment (already in progress)
+	// Synchronous guards before any await
 	const state = deployState.get(prNumber);
-	if (state?.status === 'deploying') return;
+	if (state?.status === 'deploying') {
+		logger.info('deploy already in progress, ignoring checkbox tick', { prNumber });
+		return;
+	}
+	if (triggeringDeployForPR.has(prNumber)) {
+		logger.warn('duplicate deploy trigger skipped', { prNumber });
+		return;
+	}
+	triggeringDeployForPR.add(prNumber);
 
-	const octokit = await getInstallationOctokit();
-	const { data: pr } = await octokit.pulls.get({
-		owner: GH_REPO_OWNER!,
-		repo: GH_REPO_NAME!,
-		pull_number: prNumber
-	});
+	try {
+		const octokit = await getInstallationOctokit();
+		const { data: pr } = await octokit.pulls.get({
+			owner: GH_REPO_OWNER!,
+			repo: GH_REPO_NAME!,
+			pull_number: prNumber
+		});
 
-	await triggerDeploy(prNumber, pr.head.sha, payload.comment.id);
+		await triggerDeploy(prNumber, pr.head.sha, payload.comment.id);
+	} finally {
+		triggeringDeployForPR.delete(prNumber);
+	}
 });
 
 const middleware = createNodeMiddleware(webhooks, { path: '/webhook' });
@@ -214,6 +266,5 @@ createServer((req, res) => {
 	}
 	middleware(req, res);
 }).listen(Number(PORT), () => {
-	// eslint-disable-next-line no-console
-	console.log(`Bot listening on port ${PORT}`);
+	logger.info('bot started', { port: PORT });
 });
