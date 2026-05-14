@@ -4,6 +4,7 @@
 	import { userMessage } from '@nexo/errors';
 	import { ParaglideJS } from '@inlang/paraglide-sveltekit';
 	import { i18n } from '$lib/i18n';
+	import UpdatePrompt from '$lib/components/UpdatePrompt.svelte';
 
 	let { children } = $props();
 
@@ -139,6 +140,7 @@
 			</a>
 		</nav>
 	</div>
+	<UpdatePrompt />
 </ParaglideJS>
 
 <style>

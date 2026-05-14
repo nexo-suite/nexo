@@ -5,6 +5,7 @@
 	import { ParaglideJS } from '@inlang/paraglide-sveltekit';
 	import { i18n } from '$lib/i18n';
 	import BottomNav from '$lib/components/layout/BottomNav.svelte';
+	import UpdatePrompt from '$lib/components/layout/UpdatePrompt.svelte';
 
 	let { children } = $props();
 
@@ -67,6 +68,7 @@
 	{#if !isLoginPage}
 		<BottomNav />
 	{/if}
+	<UpdatePrompt />
 </ParaglideJS>
 
 <style>

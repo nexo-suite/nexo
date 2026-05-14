@@ -46,6 +46,7 @@ export default mergeConfig(
 				},
 				workbox: {
 					globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+					navigateFallback: '/offline',
 					navigateFallbackDenylist: [/^\/api\//],
 					runtimeCaching: [{ urlPattern: /^\/api\//, handler: 'NetworkOnly' }]
 				},
