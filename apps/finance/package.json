@@ -21,6 +21,8 @@
 		"@fontsource-variable/inter": "^5.2.8",
 		"@internationalized/date": "^3.12.1",
 		"@nexo/db": "workspace:*",
+		"@nexo/errors": "workspace:*",
+		"@nexo/i18n": "workspace:*",
 		"@nexo/logger": "workspace:*",
 		"better-auth": "^1.6.10",
 		"bits-ui": "^2.18.1",
@@ -31,6 +33,7 @@
 		"tailwind-variants": "^3.2.2"
 	},
 	"devDependencies": {
+		"@inlang/paraglide-sveltekit": "^0.16.1",
 		"@playwright/test": "^1.59.1",
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.59.1",

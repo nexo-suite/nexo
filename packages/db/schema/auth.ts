@@ -1,4 +1,4 @@
-import { pgSchema, text, boolean, timestamp, index, primaryKey } from 'drizzle-orm/pg-core';
+import { pgSchema, text, boolean, timestamp, date, index, primaryKey } from 'drizzle-orm/pg-core';
 
 export const authSchema = pgSchema('auth');
 
@@ -146,6 +146,17 @@ export const userAppAccess = authSchema.table(
 	(t) => [primaryKey({ columns: [t.userId, t.app] })]
 );
 
+export const userPreferences = authSchema.table('user_preferences', {
+	userId: text('user_id')
+		.primaryKey()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	language: text('language').notNull().default('auto'),
+	birthday: date('birthday'),
+	theme: text('theme').notNull().default('system'),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 export type User = typeof users.$inferSelect;
 export type AllowedEmail = typeof allowedEmails.$inferSelect;
 export type UserAppAccess = typeof userAppAccess.$inferSelect;
+export type UserPreferences = typeof userPreferences.$inferSelect;
