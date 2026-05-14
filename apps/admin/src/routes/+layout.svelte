@@ -6,6 +6,7 @@
 	import { i18n } from '$lib/i18n';
 	import UpdatePrompt from '$lib/components/UpdatePrompt.svelte';
 	import KonamiCode from '$lib/components/KonamiCode.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	let { children } = $props();
 
@@ -114,7 +115,7 @@
 						><path d="M12 3l8 4v10l-8 4-8-4V7z" /><path d="M4 7l8 4 8-4M12 11v10" /></svg
 					>
 				</div>
-				<span>Containers</span>
+				<span>{m.nav_containers()}</span>
 			</a>
 			<a href="/users" class="tab" class:active={activeTab === 'users'}>
 				<div class="tab-icon">
@@ -126,7 +127,7 @@
 						/><path d="M15 14.5c2.5 0 4 1.5 4 4" /></svg
 					>
 				</div>
-				<span>Users</span>
+				<span>{m.nav_users()}</span>
 			</a>
 			<a href="/settings" class="tab" class:active={activeTab === 'settings'}>
 				<div class="tab-icon">
@@ -137,7 +138,7 @@
 						/></svg
 					>
 				</div>
-				<span>Settings</span>
+				<span>{m.nav_settings()}</span>
 			</a>
 		</nav>
 	</div>
