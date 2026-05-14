@@ -5,6 +5,7 @@
 	import { ParaglideJS } from '@inlang/paraglide-sveltekit';
 	import { i18n } from '$lib/i18n';
 	import UpdatePrompt from '$lib/components/UpdatePrompt.svelte';
+	import KonamiCode from '$lib/components/KonamiCode.svelte';
 
 	let { children } = $props();
 
@@ -141,6 +142,7 @@
 		</nav>
 	</div>
 	<UpdatePrompt />
+	<KonamiCode />
 </ParaglideJS>
 
 <style>
