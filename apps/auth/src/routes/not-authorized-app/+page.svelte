@@ -1,23 +1,20 @@
 <script lang="ts">
+	import * as m from '$lib/paraglide/messages';
+
 	let { data } = $props();
 
-	const appMessages: Record<string, { heading: string; sub: string }> = {
-		finance: {
-			heading: 'Your wallet stays closed 💸',
-			sub: "Looks like you haven't been granted access to Finance yet. Ask Kevin nicely and maybe he'll let you in."
-		}
-	};
-
 	const msg = $derived(
-		appMessages[data.app] ?? {
-			heading: `No access to ${data.app}`,
-			sub: `Your account hasn't been granted access to ${data.app}. Contact the admin to request access.`
-		}
+		data.app === 'finance'
+			? { heading: m.no_access_finance_heading(), sub: m.no_access_finance_sub() }
+			: {
+					heading: m.no_access_generic_heading({ app: data.app }),
+					sub: m.no_access_generic_sub({ app: data.app })
+				}
 	);
 </script>
 
 <svelte:head>
-	<title>No access — Nexo</title>
+	<title>{m.no_access_title()}</title>
 </svelte:head>
 
 <main class="login-root">
@@ -40,7 +37,7 @@
 			>
 				<path d="M10 3L5 8l5 5" stroke-linecap="round" stroke-linejoin="round" />
 			</svg>
-			Back to sign in
+			{m.not_authorized_back()}
 		</a>
 	</div>
 </main>

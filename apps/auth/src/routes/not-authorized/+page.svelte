@@ -1,5 +1,9 @@
+<script lang="ts">
+	import * as m from '$lib/paraglide/messages';
+</script>
+
 <svelte:head>
-	<title>Not authorized — Nexo</title>
+	<title>{m.not_authorized_title()}</title>
 </svelte:head>
 
 <main class="login-root">
@@ -9,10 +13,8 @@
 			<span class="brand-name">Nexo</span>
 		</div>
 
-		<h1 class="heading">Access denied</h1>
-		<p class="sub">
-			Your email isn't on the list. Ask the person who runs this to add you, then try again.
-		</p>
+		<h1 class="heading">{m.not_authorized_heading()}</h1>
+		<p class="sub">{m.not_authorized_sub()}</p>
 
 		<a href="/login" class="back-link">
 			<svg
@@ -24,7 +26,7 @@
 			>
 				<path d="M10 3L5 8l5 5" stroke-linecap="round" stroke-linejoin="round" />
 			</svg>
-			Back to sign in
+			{m.not_authorized_back()}
 		</a>
 	</div>
 </main>

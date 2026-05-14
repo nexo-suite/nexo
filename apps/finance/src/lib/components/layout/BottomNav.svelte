@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import * as m from '$lib/paraglide/messages';
 	import {
 		Home,
 		CreditCard,
@@ -11,19 +12,19 @@
 		Bookmark
 	} from 'lucide-svelte';
 
-	const topLeft = [
-		{ href: '/', label: 'Home', icon: Home },
-		{ href: '/accounts', label: 'Accounts', icon: CreditCard }
-	] as const;
+	const topLeft = $derived([
+		{ href: '/', label: m.nav_home(), icon: Home },
+		{ href: '/accounts', label: m.nav_accounts(), icon: CreditCard }
+	]);
 
-	const topRight = [{ href: '/forecast', label: 'Forecast', icon: BarChart2 }] as const;
+	const topRight = $derived([{ href: '/forecast', label: m.nav_forecast(), icon: BarChart2 }]);
 
-	const groupItems = [
-		{ href: '/expenses', label: 'Expenses', icon: Receipt },
-		{ href: '/income', label: 'Income', icon: TrendingUp },
+	const groupItems = $derived([
+		{ href: '/expenses', label: m.nav_expenses(), icon: Receipt },
+		{ href: '/income', label: m.nav_income(), icon: TrendingUp },
 		{ href: '/debt', label: 'Debt', icon: Users },
 		{ href: '/commitments', label: 'Commitments', icon: Bookmark }
-	] as const;
+	]);
 
 	let popoverOpen = $state(false);
 

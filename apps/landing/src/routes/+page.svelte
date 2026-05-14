@@ -5,6 +5,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { env } from '$env/dynamic/public';
+	import * as m from '$lib/paraglide/messages';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -25,7 +26,7 @@
 			name: 'Finance',
 			icon: '/icon-finance.svg',
 			status: 'live',
-			desc: 'Track accounts, categorize spend, and see where the month went. No banks involved.',
+			desc: m.app_finance_desc(),
 			href: env.PUBLIC_FINANCE_URL ?? '#',
 			meta: `v${data.versions.finance}`
 		},
@@ -34,7 +35,7 @@
 			name: 'Gym',
 			icon: '/icon-gym.svg',
 			status: 'soon',
-			desc: 'Log lifts, supersets, and PRs. Plate math without doing plate math.',
+			desc: m.app_gym_desc(),
 			href: '#',
 			meta: 'Summer 2026'
 		},
@@ -43,38 +44,29 @@
 			name: 'Time',
 			icon: '/favicon.svg',
 			status: 'planned',
-			desc: 'What did the week actually go to? Per-project timers with a weekly receipt.',
+			desc: m.app_time_desc(),
 			href: '#',
-			meta: 'Someday'
+			meta: m.status_someday()
 		},
 		{
 			id: 'pomodoro',
 			name: 'Pomodoro',
 			icon: '/favicon.svg',
 			status: 'planned',
-			desc: "25 on, 5 off. Opinionated, doesn't argue with you.",
+			desc: m.app_pomodoro_desc(),
 			href: '#',
-			meta: 'Someday'
+			meta: m.status_someday()
 		}
 	]);
 
-	const steps = [
-		{
-			title: 'Open in Safari',
-			body: "Go to krieger2501.de on your iPhone. Has to be Safari — Chrome can't install PWAs."
-		},
-		{
-			title: 'Tap Share',
-			body: 'The little square with the arrow at the bottom. You know the one.'
-		},
-		{ title: 'Add to Home Screen', body: 'Scroll down in the sheet, tap it, then tap Add.' },
-		{
-			title: 'Done',
-			body: 'It opens standalone, no browser chrome. Looks and feels like a real app.'
-		}
-	];
+	const steps = $derived([
+		{ title: m.install_step1_title(), body: m.install_step1_body() },
+		{ title: m.install_step2_title(), body: m.install_step2_body() },
+		{ title: m.install_step3_title(), body: m.install_step3_body() },
+		{ title: m.install_step4_title(), body: m.install_step4_body() }
+	]);
 
-	const wip = ['building gym tracker', 'tweaking the forecast view', 'making it feel faster'];
+	const wip = $derived([m.wip_building_gym(), m.wip_tweaking_forecast(), m.wip_making_faster()]);
 	let wipIndex = $state(0);
 	let activeStep = $state(0);
 
@@ -115,10 +107,10 @@
 </script>
 
 <svelte:head>
-	<title>Nexo — my little corner of the internet</title>
-	<meta name="description" content="A small collection of self-hosted apps, built for me." />
+	<title>{m.site_title()}</title>
+	<meta name="description" content={m.site_description()} />
 	<meta property="og:title" content="Nexo" />
-	<meta property="og:description" content="A small collection of self-hosted apps, built for me." />
+	<meta property="og:description" content={m.site_description()} />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="https://krieger2501.de" />
 </svelte:head>
@@ -131,9 +123,9 @@
 			Nexo
 		</div>
 		<div class="text-text-muted flex gap-5 text-sm">
-			<a class="hover:text-text-primary transition-colors" href="#apps">Apps</a>
-			<a class="hover:text-text-primary transition-colors" href="#install">Install</a>
-			<a class="hover:text-text-primary transition-colors" href="#about">About</a>
+			<a class="hover:text-text-primary transition-colors" href="#apps">{m.nav_apps()}</a>
+			<a class="hover:text-text-primary transition-colors" href="#install">{m.nav_install()}</a>
+			<a class="hover:text-text-primary transition-colors" href="#about">{m.nav_about()}</a>
 		</div>
 	</div>
 </nav>
@@ -146,12 +138,11 @@
 		<p
 			class="text-text-muted mx-auto mt-5 max-w-[480px] text-[clamp(16px,1.5vw,18px)] leading-relaxed"
 		>
-			Apps I built for myself. Nothing fancy, nothing tracked. Always one tap away from your home
-			screen.
+			{m.hero_tagline()}
 		</p>
 		<div class="text-text-faint mt-6 inline-flex items-center gap-2 font-mono text-[11px]">
 			<span class="wip-dot"></span>
-			currently {wip[wipIndex]}
+			{m.currently()} {wip[wipIndex]}
 		</div>
 	</div>
 </header>
@@ -160,8 +151,8 @@
 <section id="apps" class="scroll-mt-20 py-14">
 	<div class="mx-auto max-w-[1100px] px-6">
 		<div class="reveal mb-7">
-			<h2 class="text-2xl font-semibold tracking-tight">The apps</h2>
-			<p class="text-text-muted mt-1.5 text-[15px]">Tap to open, or wait for the rest to land.</p>
+			<h2 class="text-2xl font-semibold tracking-tight">{m.apps_heading()}</h2>
+			<p class="text-text-muted mt-1.5 text-[15px]">{m.apps_sub()}</p>
 		</div>
 
 		<div class="reveal grid grid-cols-1 gap-4 sm:grid-cols-2" style="transition-delay: 60ms">
@@ -175,11 +166,11 @@
 					<div class="flex items-center justify-between">
 						<div class="icon-tile"><img src={app.icon} alt={app.name} class="icon-tile-img" /></div>
 						{#if app.status === 'live'}
-							<span class="status-pill status-pill--live"><span class="dot"></span>Live</span>
+							<span class="status-pill status-pill--live"><span class="dot"></span>{m.status_live()}</span>
 						{:else if app.status === 'soon'}
-							<span class="status-pill">In progress</span>
+							<span class="status-pill">{m.status_in_progress()}</span>
 						{:else}
-							<span class="status-pill">Someday</span>
+							<span class="status-pill">{m.status_someday()}</span>
 						{/if}
 					</div>
 					<h3 class="mt-5 text-xl font-semibold tracking-[-0.015em]">{app.name}</h3>
@@ -195,7 +186,7 @@
 
 		<div class="reveal mt-8 flex justify-center" style="transition-delay: 120ms">
 			<a href="/apps" class="cta-btn">
-				{data.user ? `Your apps, ${data.user.name.split(' ')[0]}` : 'See your apps'}
+				{data.user ? `Your apps, ${data.user.name.split(' ')[0]}` : m.see_your_apps()}
 				<svg
 					viewBox="0 0 16 16"
 					fill="none"
@@ -214,9 +205,9 @@
 <section id="install" class="scroll-mt-20 py-14">
 	<div class="mx-auto max-w-[1100px] px-6">
 		<div class="reveal mb-7">
-			<h2 class="text-2xl font-semibold tracking-tight">Add to your iPhone</h2>
+			<h2 class="text-2xl font-semibold tracking-tight">{m.install_heading()}</h2>
 			<p class="text-text-muted mt-1.5 max-w-[440px] text-[15px]">
-				It installs like a real app — standalone window, home screen icon, no browser chrome.
+				{m.install_sub()}
 			</p>
 		</div>
 
@@ -268,30 +259,28 @@
 <section id="about" class="scroll-mt-20 py-14">
 	<div class="mx-auto max-w-[1100px] px-6">
 		<div class="reveal mb-7">
-			<h2 class="text-2xl font-semibold tracking-tight">A weekend that got out of hand</h2>
+			<h2 class="text-2xl font-semibold tracking-tight">{m.about_heading()}</h2>
 			<p class="text-text-muted mt-1.5 max-w-[480px] text-[15px]">
-				I wanted a finance app that didn't sell my data. So I made one. Then I wanted a gym tracker.
-				You see where this is going.
+				{m.about_sub()}
 			</p>
 		</div>
 		<div class="reveal grid grid-cols-1 gap-4 sm:grid-cols-2" style="transition-delay: 60ms">
 			<div class="card-static">
 				<div class="text-text-faint mb-2 font-mono text-[11px] tracking-widest uppercase">
-					How it's built
+					{m.about_built_label()}
 				</div>
-				<h3 class="text-base font-semibold">SvelteKit + Tailwind on a €5/mo VPS</h3>
+				<h3 class="text-base font-semibold">{m.about_built_title()}</h3>
 				<p class="text-text-muted mt-1.5 text-[14px] leading-relaxed">
-					One repo, one set of design tokens. Each app is its own route with its own home screen
-					icon.
+					{m.about_built_desc()}
 				</p>
 			</div>
 			<div class="card-static">
 				<div class="text-text-faint mb-2 font-mono text-[11px] tracking-widest uppercase">
-					House rules
+					{m.about_rules_label()}
 				</div>
-				<h3 class="text-base font-semibold">No accounts, no ads, no rush</h3>
+				<h3 class="text-base font-semibold">{m.about_rules_title()}</h3>
 				<p class="text-text-muted mt-1.5 text-[14px] leading-relaxed">
-					Ships when it's ready. Gets edited when something bugs me. Stays small on purpose.
+					{m.about_rules_desc()}
 				</p>
 			</div>
 		</div>
@@ -301,8 +290,8 @@
 <!-- ─── FOOTER ─── -->
 <footer class="border-border-subtle text-text-faint border-t py-7 text-[12px]">
 	<div class="mx-auto flex max-w-[1100px] flex-wrap items-center justify-between gap-3 px-6">
-		<div>© 2026 Nexo · krieger2501.de</div>
-		<div class="font-mono tracking-wider uppercase">made for one</div>
+		<div>{m.footer_copy()}</div>
+		<div class="font-mono tracking-wider uppercase">{m.footer_tagline()}</div>
 	</div>
 </footer>
 
