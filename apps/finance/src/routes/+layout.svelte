@@ -6,6 +6,7 @@
 	import { i18n } from '$lib/i18n';
 	import BottomNav from '$lib/components/layout/BottomNav.svelte';
 	import UpdatePrompt from '$lib/components/layout/UpdatePrompt.svelte';
+	import KonamiCode from '$lib/components/KonamiCode.svelte';
 
 	let { children } = $props();
 
@@ -69,6 +70,7 @@
 		<BottomNav />
 	{/if}
 	<UpdatePrompt />
+	<KonamiCode />
 </ParaglideJS>
 
 <style>
