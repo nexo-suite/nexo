@@ -16,17 +16,21 @@
 	"dependencies": {
 		"@nexo/db": "workspace:*",
 		"@nexo/email": "workspace:*",
+		"@nexo/errors": "workspace:*",
+		"@nexo/i18n": "workspace:*",
 		"@nexo/logger": "workspace:*",
 		"better-auth": "^1.6.10",
 		"drizzle-orm": "^0.45.2",
 		"lucide-svelte": "^1.0.1"
 	},
 	"devDependencies": {
+		"@inlang/paraglide-sveltekit": "^0.16.1",
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.59.1",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@tailwindcss/vite": "^4.3.0",
 		"@types/node": "catalog:",
+		"@vite-pwa/sveltekit": "^1.1.0",
 		"svelte": "^5.55.5",
 		"svelte-check": "^4.4.8",
 		"tailwindcss": "^4.3.0",

@@ -6,6 +6,9 @@ build/
 dist/
 .svelte-kit/
 
+# Paraglide generated
+**/src/lib/paraglide/
+
 # Environment
 .env
 .env.preview

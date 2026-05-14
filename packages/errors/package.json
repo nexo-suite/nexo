@@ -1,0 +1,17 @@
+{
+	"name": "@nexo/errors",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@nexo/i18n": "workspace:*"
+	},
+	"scripts": {
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
+		"type:check": "tsc --noEmit"
+	}
+}

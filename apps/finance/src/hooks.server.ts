@@ -1,10 +1,12 @@
 import { error, redirect, type Handle } from '@sveltejs/kit';
+import { sequence } from '@sveltejs/kit/hooks';
 import { getAuth } from '$lib/server/auth';
 import { initDb, db, userAppAccess } from '@nexo/db';
 import { and, eq } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
 import { logger } from '$lib/server/logger';
+import { i18n } from '$lib/i18n';
 
 initDb(env.DATABASE_URL!);
 
@@ -21,7 +23,7 @@ function isAllowedOrigin(origin: string): boolean {
 	}
 }
 
-export const handle: Handle = async ({ event, resolve }) => {
+const appHandle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/_app/')) return resolve(event);
 
 	event.locals.correlationId = crypto.randomUUID().slice(0, 8);
@@ -36,7 +38,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 			contentType.includes('multipart/form-data') ||
 			contentType.includes('text/plain');
 		if (isFormSubmission && origin && !isAllowedOrigin(origin)) {
-			error(403, `Cross-site ${method} form submissions are forbidden`);
+			error(403, {
+				message: 'CSRF rejected',
+				code: 'CSRF_REJECTED',
+				correlationId: event.locals.correlationId
+			});
 		}
 	}
 
@@ -67,3 +73,5 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	return resolve(event);
 };
+
+export const handle = sequence(i18n.handle(), appHandle);
