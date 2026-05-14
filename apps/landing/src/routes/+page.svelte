@@ -162,15 +162,11 @@
 
 		<div class="reveal grid grid-cols-1 gap-4 sm:grid-cols-2" style="transition-delay: 60ms">
 			{#each apps as app (app.id)}
-				<a
-					href={app.href}
+				<div
 					data-app={app.id}
 					class="card"
 					class:locked={app.status !== 'live'}
 					onmousemove={handleCardMouseMove}
-					onclick={(e) => {
-						if (app.status !== 'live') e.preventDefault();
-					}}
 				>
 					<div class="flex items-center justify-between">
 						<div class="icon-tile"><img src={app.icon} alt={app.name} class="icon-tile-img" /></div>
@@ -188,23 +184,24 @@
 						<span class="text-text-faint font-mono text-[10px] tracking-widest uppercase"
 							>{app.meta}</span
 						>
-						{#if app.status === 'live'}
-							<span class="card-link">
-								Open
-								<svg
-									viewBox="0 0 16 16"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="1.5"
-									class="size-3.5"
-								>
-									<path d="M3 8h10M9 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
-								</svg>
-							</span>
-						{/if}
 					</div>
-				</a>
+				</div>
 			{/each}
+		</div>
+
+		<div class="reveal mt-8 flex justify-center" style="transition-delay: 120ms">
+			<a href="/apps" class="cta-btn">
+				{data.user ? `Your apps, ${data.user.name.split(' ')[0]}` : 'See your apps'}
+				<svg
+					viewBox="0 0 16 16"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.5"
+					class="cta-arrow"
+				>
+					<path d="M3 8h10M9 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
+				</svg>
+			</a>
 		</div>
 	</div>
 </section>
@@ -473,6 +470,39 @@
 	}
 	.card:hover .card-link {
 		gap: 9px;
+	}
+
+	/* — CTA button — */
+	.cta-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 12px 24px;
+		border-radius: 999px;
+		background: var(--color-accent);
+		color: #fff;
+		font-size: 14px;
+		font-weight: 600;
+		text-decoration: none;
+		transition:
+			transform var(--duration-base) var(--ease-out),
+			box-shadow var(--duration-base) var(--ease-out);
+		box-shadow: 0 4px 16px -4px color-mix(in oklab, var(--color-accent) 40%, transparent);
+	}
+	.cta-btn:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 8px 24px -6px color-mix(in oklab, var(--color-accent) 50%, transparent);
+	}
+	.cta-btn:active {
+		transform: translateY(0);
+	}
+	.cta-arrow {
+		width: 14px;
+		height: 14px;
+		transition: transform var(--duration-base) var(--ease-out);
+	}
+	.cta-btn:hover .cta-arrow {
+		transform: translateX(3px);
 	}
 
 	/* — Install steps — */

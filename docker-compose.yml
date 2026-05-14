@@ -108,6 +108,7 @@ services:
       PUBLIC_ADMIN_URL: https://admin.krieger2501.de
       PUBLIC_LANDING_URL: https://krieger2501.de
       RESEND_API_KEY: ${RESEND_API_KEY}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
       PROTOCOL_HEADER: x-forwarded-proto
       HOST_HEADER: x-forwarded-host
     depends_on:
@@ -166,7 +167,12 @@ services:
         max-buffer-size: 4m
     environment:
       PUBLIC_FINANCE_URL: https://finance.krieger2501.de
+      PUBLIC_ADMIN_URL: https://admin.krieger2501.de
+      PUBLIC_AUTH_URL: https://auth.krieger2501.de
+      PUBLIC_LANDING_URL: https://krieger2501.de
       PUBLIC_APP_VERSION: ${APP_VERSION:-dev}
+      DATABASE_URL: ${DATABASE_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -244,6 +250,7 @@ services:
       PUBLIC_ADMIN_URL: https://admin.preview.krieger2501.de
       PUBLIC_LANDING_URL: https://preview.krieger2501.de
       RESEND_API_KEY: ${RESEND_API_KEY}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
       PROTOCOL_HEADER: x-forwarded-proto
       HOST_HEADER: x-forwarded-host
     depends_on:
