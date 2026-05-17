@@ -12,7 +12,7 @@ nvm use 24
 
 # pnpm (via corepack, ships with Node)
 corepack enable
-pnpm -v   # should show 10.x
+pnpm -v   # should show 11.x
 
 # Docker Desktop — docker.com/products/docker-desktop
 docker -v
@@ -25,7 +25,7 @@ docker -v
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/YOUR_ORG/nexo
+git clone https://github.com/krieger2501/nexo
 cd nexo
 pnpm install
 ```
@@ -77,11 +77,12 @@ DISCORD_CLIENT_ID=...
 DISCORD_CLIENT_SECRET=...
 ```
 
-You also need three per-app `.env.local` files and one root `.env.local`. `.env.example` has the exact contents for each — copy the relevant block and create the file. In short:
+You also need per-app `.env.local` files. `.env.example` has the exact contents for each — copy the relevant block and create the file:
 
 - `apps/auth/.env.local` — `DATABASE_URL` (localhost), `BETTER_AUTH_SECRET`, `PUBLIC_AUTH_URL`, OAuth keys
 - `apps/finance/.env.local` — `DATABASE_URL` (localhost), `BETTER_AUTH_SECRET`, `PUBLIC_AUTH_URL`
-- `apps/landing/.env.local` — `PUBLIC_FINANCE_URL`
+- `apps/admin/.env.local` — `DATABASE_URL` (localhost), `BETTER_AUTH_SECRET`, `PUBLIC_AUTH_URL`
+- `apps/landing/.env.local` — `DATABASE_URL` (localhost), `BETTER_AUTH_SECRET`, `PUBLIC_AUTH_URL`, `PUBLIC_FINANCE_URL`
 - `.env.local` (repo root) — `DATABASE_URL` with `localhost:5433` for Drizzle CLI tools
 
 ### 4. Start Postgres and run migrations
@@ -104,7 +105,7 @@ docker exec -it nexo-postgres-1 psql -U nexo -d nexo \
 pnpm dev
 ```
 
-Turborepo starts all apps concurrently:
+Turborepo starts all SvelteKit apps concurrently (bot excluded by default):
 
 | App     | URL                   |
 | ------- | --------------------- |
@@ -114,6 +115,12 @@ Turborepo starts all apps concurrently:
 | Admin   | http://localhost:3004 |
 
 Open `http://localhost:3002` — you'll be redirected to the auth server, sign in, and land back in the finance app.
+
+To also run the bot (needs GitHub App credentials):
+
+```bash
+pnpm dev:bot
+```
 
 ---
 
@@ -126,10 +133,11 @@ pnpm docker:db   # if Postgres isn't already running
 pnpm dev         # start all dev servers
 ```
 
-Or start just the app you're working on (auth starts automatically as a dependency):
+Or start just the app you're working on:
 
 ```bash
 pnpm dev:finance
+pnpm dev:admin
 ```
 
 ### Making schema changes
@@ -156,7 +164,7 @@ Opens Drizzle Studio at `https://local.drizzle.studio` — a visual browser for 
 ### Running checks before committing
 
 ```bash
-pnpm qc   # full quality gate: format, knip, lint, type:check, build, test
+pnpm qc   # full quality gate: sort, format, sync, knip, lint, type:check, build, test
 ```
 
 Or run individual steps while developing:
@@ -166,6 +174,34 @@ pnpm type:check   # TypeScript + svelte-check
 pnpm lint         # ESLint
 pnpm format       # Prettier
 pnpm test         # Vitest unit tests
+```
+
+### Adding or updating translations
+
+Each app has `messages/{en,de,tr}.json` files. Edit the JSON directly, then run:
+
+```bash
+pnpm dev   # Paraglide recompiles messages on save
+```
+
+The generated `$lib/paraglide/messages.js` updates automatically during dev.
+
+---
+
+## Observability (local)
+
+To view structured logs in Grafana locally:
+
+```bash
+pnpm docker:observe   # starts Loki + Grafana
+```
+
+Then open `http://localhost:3100` (Grafana). The Loki datasource is pre-configured.
+
+To stop:
+
+```bash
+pnpm docker:observe:down
 ```
 
 ---
@@ -196,7 +232,8 @@ pnpm docker:down
 | Auth     | 3001       | 3001   |
 | Finance  | 3002       | 3002   |
 | Admin    | 3004       | 3004   |
-| Postgres | 5432       | 5433   |
+| Postgres | —          | 5433   |
+| Grafana  | —          | 3100   |
 
 ---
 
@@ -213,3 +250,9 @@ Your email isn't in `auth.allowed_emails`. Run the INSERT command from step 5 ab
 
 **Postgres container name doesn't match**
 The `docker exec` command uses the container name Docker assigns. If it differs, check with `docker ps` and adjust.
+
+**Paraglide messages not updating**
+The Paraglide Vite plugin recompiles on file change during dev. If messages seem stale, restart the dev server. The compiled output is `.js` only (no `.d.ts`) — `allowJs: true` in tsconfig handles type inference.
+
+**`svelte-check` errors on `$lib/paraglide/messages`**
+Ensure `allowJs: true` is in the app's `tsconfig.json`. The Paraglide plugin generates JS with JSDoc annotations, not TypeScript declarations.

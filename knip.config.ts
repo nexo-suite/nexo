@@ -14,18 +14,22 @@ const config: KnipConfig = {
 		'apps/auth': {
 			entry: SVELTE_ENTRY,
 			project: SVELTE_PROJECT,
-			ignoreDependencies: ['tailwindcss']
+			ignoreDependencies: ['@nexo/ui', 'tailwindcss']
 		},
 		'apps/admin': {
 			entry: SVELTE_ENTRY,
 			project: SVELTE_PROJECT,
-			ignoreDependencies: ['tailwindcss']
+			ignoreDependencies: ['@nexo/ui', 'tailwindcss']
 		},
 		'apps/finance': {
 			entry: SVELTE_ENTRY,
 			project: SVELTE_PROJECT,
-			ignore: ['src/lib/components/ui/**', 'src/lib/index.ts', 'src/lib/utils.ts'],
-			ignoreDependencies: ['@fontsource-variable/inter']
+			ignore: ['src/lib/index.ts', 'src/lib/utils.ts'],
+			ignoreDependencies: [
+				'@fontsource-variable/inter',
+				'@fontsource-variable/jetbrains-mono',
+				'tailwindcss'
+			]
 		},
 		'apps/bot': {
 			project: ['src/**/*.ts']

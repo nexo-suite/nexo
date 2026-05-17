@@ -8,10 +8,10 @@ One PostgreSQL 17 instance, one database (`nexo`), multiple Postgres schemas for
 
 ## Schema files
 
-| File                            | Postgres schema | Tables                                                               |
-| ------------------------------- | --------------- | -------------------------------------------------------------------- |
-| `packages/db/schema/auth.ts`    | `auth`          | `users`, `sessions`, `accounts`, `allowed_emails`, `user_app_access` |
-| `packages/db/schema/finance.ts` | `finance`       | `accounts`, `expenses`, `income`, `debts`, `user_settings`           |
+| File                            | Postgres schema | Tables                                                                                                                                                            |
+| ------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/db/schema/auth.ts`    | `auth`          | `user`, `session`, `account`, `verification`, `oauth_application`, `oauth_access_token`, `oauth_consent`, `allowed_emails`, `user_app_access`, `user_preferences` |
+| `packages/db/schema/finance.ts` | `finance`       | `accounts`, `expenses`, `income`, `debts`, `user_settings`                                                                                                        |
 
 Add new app schemas here as `packages/db/schema/<appname>.ts` and export them from `packages/db/src/index.ts`.
 
@@ -87,11 +87,13 @@ pnpm db:studio
 
 ## Schema conventions
 
-- All primary keys: `uuid('id').primaryKey().defaultRandom()`
+- Auth table IDs: `text('id').primaryKey()` (Better Auth generates string IDs)
+- Finance table IDs: `uuid('id').primaryKey().defaultRandom()`
 - All timestamps: `timestamp('...', { withTimezone: true }).notNull().defaultNow()`
-- All tables referencing users: `uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' })`
+- All user references: `text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' })`
 - Column names: `camelCase` in TypeScript, `snake_case` in Postgres (Drizzle handles the mapping)
 - Monetary amounts: `numeric('amount', { precision: 12, scale: 2 })` — always cast to `Number()` when doing arithmetic
+- Better Auth tables use their expected names (`user`, `session`, `account`) — not pluralized
 
 ---
 
@@ -131,13 +133,21 @@ Useful queries:
 -- List tables in finance schema
 \dt finance.*
 
+-- List tables in auth schema
+\dt auth.*
+
 -- Check allowed emails
 SELECT * FROM auth.allowed_emails;
 
 -- Check user app access
-SELECT u.email, a.app FROM auth.users u
+SELECT u.email, a.app FROM auth."user" u
 JOIN auth.user_app_access a ON a.user_id = u.id
 ORDER BY u.email;
+
+-- Check user preferences
+SELECT u.email, p.language, p.theme, p.birthday
+FROM auth."user" u
+JOIN auth.user_preferences p ON p.user_id = u.id;
 ```
 
 ---
