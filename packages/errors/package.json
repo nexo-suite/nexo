@@ -6,12 +6,12 @@
 	"exports": {
 		".": "./src/index.ts"
 	},
-	"dependencies": {
-		"@nexo/i18n": "workspace:*"
-	},
 	"scripts": {
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"type:check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@nexo/i18n": "workspace:*"
 	}
 }

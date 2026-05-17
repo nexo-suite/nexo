@@ -36,6 +36,34 @@
 			"when": 1778767219171,
 			"tag": "0004_worried_psylocke",
 			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1778839226643,
+			"tag": "0005_previous_exiles",
+			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1778853430614,
+			"tag": "0006_spicy_marvel_apes",
+			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1779009596598,
+			"tag": "0007_flowery_dexter_bennett",
+			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "7",
+			"when": 1779035129158,
+			"tag": "0008_productive_tomorrow_man",
+			"breakpoints": true
 		}
 	]
 }

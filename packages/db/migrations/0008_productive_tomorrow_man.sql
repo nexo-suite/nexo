@@ -1,0 +1,1 @@
+ALTER TABLE "finance"."user_settings" ADD COLUMN "session_names" jsonb DEFAULT '{}'::jsonb;

@@ -1,0 +1,1 @@
+ALTER TABLE "finance"."accounts" ADD COLUMN "emoji" text;
