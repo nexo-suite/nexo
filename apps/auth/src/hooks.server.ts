@@ -2,7 +2,8 @@ import { getAuth } from '$lib/server/auth';
 import { initDb } from '@nexo/db';
 import { env } from '$env/dynamic/private';
 import { logger } from '$lib/server/logger';
-import { i18n } from '$lib/i18n';
+import { paraglideMiddleware } from '$lib/paraglide/server.js';
+import { getTextDirection } from '$lib/paraglide/runtime.js';
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
 
@@ -40,4 +41,21 @@ const authHandle: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handle = sequence(i18n.handle(), authHandle);
+const securityHeaders: Handle = async ({ event, resolve }) => {
+	const response = await resolve(event);
+	response.headers.set('X-Frame-Options', 'DENY');
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	return response;
+};
+
+const i18nHandle: Handle = ({ event, resolve }) =>
+	paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
+		event.request = localizedRequest;
+		return resolve(event, {
+			transformPageChunk: ({ html }) =>
+				html.replace('%lang%', locale).replace('%dir%', getTextDirection(locale))
+		});
+	});
+
+export const handle = sequence(i18nHandle, authHandle, securityHeaders);

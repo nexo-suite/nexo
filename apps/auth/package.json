@@ -16,14 +16,14 @@
 	"dependencies": {
 		"@better-auth/oauth-provider": "^1.6.10",
 		"@nexo/db": "workspace:*",
-		"@nexo/i18n": "workspace:*",
 		"@nexo/logger": "workspace:*",
+		"@nexo/ui": "workspace:*",
 		"better-auth": "^1.6.10",
 		"drizzle-orm": "^0.45.2",
 		"postgres": "^3.4.9"
 	},
 	"devDependencies": {
-		"@inlang/paraglide-sveltekit": "^0.16.1",
+		"@inlang/paraglide-js": "^2.18.0",
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.59.1",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",

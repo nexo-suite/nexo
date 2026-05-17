@@ -4,13 +4,15 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/db/package.json ./packages/db/
 COPY packages/logger/package.json ./packages/logger/
+COPY packages/ui/package.json ./packages/ui/
 COPY apps/auth/package.json ./apps/auth/
 RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
 RUN pnpm install --frozen-lockfile
 
-COPY vite.shared.ts ./
+COPY vite.shared.ts tsconfig.json ./
 COPY packages/db ./packages/db
 COPY packages/logger ./packages/logger
+COPY packages/ui ./packages/ui
 COPY apps/auth ./apps/auth
 RUN pnpm --filter=@nexo/auth run build
 
@@ -22,6 +24,7 @@ RUN addgroup -S app && adduser -S app -G app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/db/package.json ./packages/db/
 COPY packages/logger/package.json ./packages/logger/
+COPY packages/ui/package.json ./packages/ui/
 COPY apps/auth/package.json ./apps/auth/
 RUN pnpm install --frozen-lockfile --prod
 

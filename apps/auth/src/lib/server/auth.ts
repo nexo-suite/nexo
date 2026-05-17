@@ -13,16 +13,20 @@ function createAuth() {
 	const trustedOrigins: string[] = [baseURL];
 	if (env.FINANCE_URL) trustedOrigins.push(env.FINANCE_URL);
 	if (env.ADMIN_URL) trustedOrigins.push(env.ADMIN_URL);
+	if (publicEnv.PUBLIC_LANDING_URL) trustedOrigins.push(publicEnv.PUBLIC_LANDING_URL);
+	const isProduction = baseURL.startsWith('https://');
 	return betterAuth({
 		secret: env.BETTER_AUTH_SECRET!,
 		baseURL,
 		trustedOrigins,
 		advanced: {
-			useSecureCookies: baseURL.startsWith('https://'),
-			crossSubDomainCookies: {
-				enabled: true,
-				domain: '.krieger2501.de'
-			}
+			useSecureCookies: isProduction,
+			...(isProduction && {
+				crossSubDomainCookies: {
+					enabled: true,
+					domain: '.krieger2501.de'
+				}
+			})
 		},
 		database: drizzleAdapter(db, {
 			provider: 'pg',
