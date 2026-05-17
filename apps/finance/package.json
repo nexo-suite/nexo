@@ -19,21 +19,19 @@
 	},
 	"dependencies": {
 		"@fontsource-variable/inter": "^5.2.8",
-		"@internationalized/date": "^3.12.1",
+		"@fontsource-variable/jetbrains-mono": "^5.2.8",
 		"@nexo/db": "workspace:*",
 		"@nexo/errors": "workspace:*",
-		"@nexo/i18n": "workspace:*",
 		"@nexo/logger": "workspace:*",
+		"@nexo/ui": "workspace:*",
 		"better-auth": "^1.6.10",
-		"bits-ui": "^2.18.1",
 		"clsx": "^2.1.1",
 		"drizzle-orm": "^0.45.2",
 		"lucide-svelte": "^1.0.1",
-		"tailwind-merge": "^3.5.0",
-		"tailwind-variants": "^3.2.2"
+		"tailwind-merge": "^3.5.0"
 	},
 	"devDependencies": {
-		"@inlang/paraglide-sveltekit": "^0.16.1",
+		"@inlang/paraglide-js": "^2.18.0",
 		"@playwright/test": "^1.59.1",
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.59.1",

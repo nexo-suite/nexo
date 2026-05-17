@@ -1,12 +1,8 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/layout/PageHeader.svelte';
-	import ExpenseRow from '$lib/components/expenses/ExpenseRow.svelte';
-	import BottomSheet from '$lib/components/layout/BottomSheet.svelte';
-	import Toggle from '$lib/components/ui/Toggle.svelte';
+	import ExpenseForm from '$lib/components/expenses/ExpenseForm.svelte';
 	import Tabs from '$lib/components/ui/Tabs.svelte';
-	import { Plus, ChevronDown } from 'lucide-svelte';
-	import { normalizeToMonthly } from '$lib/utils';
-	import { enhance } from '$app/forms';
+	import { Plus } from 'lucide-svelte';
+	import { normalizeToMonthly, formatCurrency, getIntlLocale } from '$lib/utils';
 
 	import type { Expense } from '$lib/types';
 
@@ -15,18 +11,6 @@
 	// ── Form state ───────────────────────────────────────────────────────────
 	let showForm = $state(false);
 	let editing = $state<Expense | null>(null);
-	let confirmDelete = $state(false);
-	let form = $state({
-		name: '',
-		category: 'other',
-		amount: '',
-		recurrence: 'monthly',
-		day_of_month: '',
-		due_date: '',
-		starting_month: '',
-		active: true,
-		paid: false
-	});
 
 	// ── Tab + sort/filter state ───────────────────────────────────────────────
 	type TabId = 'recurring' | 'once' | 'past';
@@ -45,45 +29,19 @@
 	}
 
 	// ── Static config ─────────────────────────────────────────────────────────
-	const categories = [
-		'housing',
-		'utilities',
-		'subscription',
-		'insurance',
-		'food',
-		'transport',
-		'other'
-	];
-	const recurrences = [
-		'once',
-		'weekly',
-		'biweekly',
-		'monthly',
-		'quarterly',
-		'half-yearly',
-		'yearly'
-	];
-	const months = [
-		'January',
-		'February',
-		'March',
-		'April',
-		'May',
-		'June',
-		'July',
-		'August',
-		'September',
-		'October',
-		'November',
-		'December'
-	];
-	const fmt = (n: number) =>
-		new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(n);
+	const fmt = (n: number) => formatCurrency(n, data.settings?.currency, data.settings?.hideCents);
+
+	const CATEGORY_EMOJI: Record<string, string> = {
+		housing: '\u{1F3E0}',
+		utilities: '\u{1F4A1}',
+		subscription: '\u{1F4FA}',
+		food: '\u{1F6D2}',
+		transport: '\u{1F686}',
+		insurance: '\u{1F6E1}️',
+		other: '\u{1F4E6}'
+	};
 
 	// ── Derived partitions ────────────────────────────────────────────────────
-	const needsMonth = $derived(['quarterly', 'half-yearly', 'yearly'].includes(form.recurrence));
-	const isOnce = $derived(form.recurrence === 'once');
-
 	const recurringExpenses = $derived(data.expenses.filter((e: Expense) => e.recurrence !== 'once'));
 	const onceExpenses = $derived(
 		data.expenses.filter((e: Expense) => e.recurrence === 'once' && e.active)
@@ -114,16 +72,16 @@
 		[...new Set(onceExpenses.map((e: Expense) => e.category))].sort() as string[]
 	);
 
-	const BREAKDOWN_LABEL: Record<string, string> = {
-		weekly: '× 52 ÷ 12',
-		biweekly: '× 26 ÷ 12',
-		monthly: '× 1',
-		quarterly: '÷ 3',
-		'half-yearly': '÷ 6',
-		yearly: '÷ 12'
+	// ── Monthly breakdown ─────────────────────────────────────────────────────
+	const RECURRENCE_ORDER = ['monthly', 'weekly', 'biweekly', 'quarterly', 'half-yearly', 'yearly'];
+	const RECURRENCE_LABELS: Record<string, string> = {
+		monthly: 'Monthly',
+		weekly: 'Weekly',
+		biweekly: 'Biweekly',
+		quarterly: 'Quarterly',
+		'half-yearly': 'Half-yearly',
+		yearly: 'Yearly'
 	};
-
-	let breakdownOpen = $state(false);
 
 	const monthlyBreakdown = $derived.by(() => {
 		const rows: { recurrence: string; label: string; raw: number; monthly: number }[] = [];
@@ -141,6 +99,8 @@
 		}
 		return rows;
 	});
+
+	// ── Filter + sort helpers ─────────────────────────────────────────────────
 	function dateVal(s: string | null, dir: 'asc' | 'desc'): number {
 		if (!s) return dir === 'asc' ? Infinity : -Infinity;
 		return new Date(s).getTime();
@@ -148,21 +108,11 @@
 
 	function pillClass(isActive: boolean): string {
 		return isActive
-			? 'shrink-0 rounded-full border border-expense bg-expense/10 px-3 py-1.5 text-xs font-medium text-expense transition-colors'
-			: 'shrink-0 rounded-full border border-border px-3 py-1.5 text-xs text-neutral transition-colors hover:border-expense/40';
+			? 'shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors border-[var(--accent-line)] bg-[var(--expense-soft)] text-[var(--expense-ink)]'
+			: 'shrink-0 rounded-full border border-border-default px-3 py-1.5 text-[11px] text-text-muted transition-colors hover:border-[var(--accent-line)]';
 	}
 
 	// ── Derived views (with sort + filter applied) ────────────────────────────
-	const RECURRENCE_ORDER = ['monthly', 'weekly', 'biweekly', 'quarterly', 'half-yearly', 'yearly'];
-	const RECURRENCE_LABELS: Record<string, string> = {
-		monthly: 'Monthly',
-		weekly: 'Weekly',
-		biweekly: 'Every two weeks',
-		quarterly: 'Quarterly',
-		'half-yearly': 'Every 6 months',
-		yearly: 'Yearly'
-	};
-
 	const recurringView = $derived.by(() => {
 		let list = recurringExpenses.slice() as Expense[];
 		if (filterStatus === 'active') list = list.filter((e) => e.active);
@@ -179,6 +129,7 @@
 			items: Expense[];
 			subtotal: number;
 			monthlyEquiv: number;
+			count: number;
 		}[] = [];
 		for (const recurrence of RECURRENCE_ORDER) {
 			const items = list.filter((e) => e.recurrence === recurrence);
@@ -189,7 +140,8 @@
 				label: RECURRENCE_LABELS[recurrence] ?? recurrence,
 				items,
 				subtotal: active.reduce((s, e) => s + e.amount, 0),
-				monthlyEquiv: active.reduce((s, e) => s + normalizeToMonthly(e.amount, e.recurrence), 0)
+				monthlyEquiv: active.reduce((s, e) => s + normalizeToMonthly(e.amount, e.recurrence), 0),
+				count: items.length
 			});
 		}
 		// catch-all for any recurrence not in the order list
@@ -202,7 +154,8 @@
 				label: 'Other',
 				items: rest,
 				subtotal: active.reduce((s, e) => s + e.amount, 0),
-				monthlyEquiv: active.reduce((s, e) => s + normalizeToMonthly(e.amount, e.recurrence), 0)
+				monthlyEquiv: active.reduce((s, e) => s + normalizeToMonthly(e.amount, e.recurrence), 0),
+				count: rest.length
 			});
 		}
 		return groups;
@@ -233,122 +186,85 @@
 		return list;
 	});
 
+	// ── Formatting helpers ────────────────────────────────────────────────────
+	function dayLabel(expense: Expense): string {
+		if (expense.dayOfMonth === 'last_working') return 'Last working day';
+		if (expense.dayOfMonth === 'second_last_working') return '2nd-last working day';
+		if (expense.dayOfMonth) return `${expense.dayOfMonth}. of month`;
+		return '';
+	}
+
+	function dueDateLabel(expense: Expense): string {
+		if (!expense.dueDate) return 'no due date';
+		return `due ${new Date(expense.dueDate).toLocaleDateString(getIntlLocale(), { day: 'numeric', month: 'short' })}`;
+	}
+
 	// ── Form handlers ─────────────────────────────────────────────────────────
 	function openNew() {
 		editing = null;
-		confirmDelete = false;
-		form = {
-			name: '',
-			category: 'other',
-			amount: '',
-			recurrence: 'monthly',
-			day_of_month: '',
-			due_date: '',
-			starting_month: '',
-			active: true,
-			paid: false
-		};
 		showForm = true;
 	}
 
 	function openEdit(expense: Expense) {
 		editing = expense;
-		confirmDelete = false;
-		const once = expense.recurrence === 'once';
-		form = {
-			name: expense.name,
-			category: expense.category,
-			amount: String(expense.amount),
-			recurrence: expense.recurrence,
-			day_of_month: expense.dayOfMonth ?? '',
-			due_date: expense.dueDate ?? '',
-			starting_month: expense.startingMonth ?? '',
-			active: expense.active,
-			paid: once ? !expense.active : false
-		};
 		showForm = true;
 	}
 </script>
 
-<div class="pb-6">
-	<div class="px-4 pt-4">
-		<PageHeader title="Expenses" user={data.user} displayName={data.settings.displayName}>
-			{#snippet actions()}
-				<button
-					type="button"
-					onclick={openNew}
-					class="bg-expense flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium text-white"
-				>
-					<Plus size={14} /> Add
-				</button>
-			{/snippet}
-		</PageHeader>
-	</div>
-
-	<div class="border-border bg-surface mx-4 mb-4 overflow-hidden rounded-lg border">
+<div class="flex flex-col gap-5 px-4 pt-5 pb-8">
+	<!-- Header -->
+	<header class="flex items-start justify-between">
+		<div>
+			<h1 class="text-text-primary text-[26px] leading-tight font-semibold tracking-tight">
+				Expenses
+			</h1>
+			<p class="text-text-subtle mt-0.5 text-[13px]">Track what goes out, on cadence.</p>
+		</div>
 		<button
 			type="button"
-			onclick={() => (breakdownOpen = !breakdownOpen)}
-			class="flex w-full items-center justify-between px-4 py-3 text-sm"
+			onclick={openNew}
+			class="bg-expense flex h-[38px] w-[38px] items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-95"
+			aria-label="Add expense"
 		>
-			<span class="text-neutral">Monthly equivalent</span>
-			<div class="flex items-center gap-2">
-				<span class="text-expense font-semibold tabular-nums">{fmt(monthlyTotal)}</span>
-				<ChevronDown
-					size={14}
-					class="text-neutral transition-transform duration-200 {breakdownOpen ? 'rotate-180' : ''}"
-				/>
-			</div>
+			<Plus size={18} strokeWidth={2.5} />
 		</button>
-		{#if breakdownOpen}
-			<div class="border-border space-y-2 border-t px-4 py-3">
-				{#each monthlyBreakdown as row (row.recurrence)}
-					<div class="flex items-center justify-between text-xs">
-						<div class="text-neutral flex min-w-0 items-center gap-2">
-							<span class="w-24 shrink-0 capitalize">{row.label}</span>
-							<span class="shrink-0 tabular-nums">{fmt(row.raw)}</span>
-							<span class="text-border shrink-0">{BREAKDOWN_LABEL[row.recurrence] ?? ''}</span>
-						</div>
-						<span class="text-expense ml-2 shrink-0 font-semibold tabular-nums"
-							>{fmt(row.monthly)}/mo</span
-						>
-					</div>
-				{/each}
-				<div class="border-border flex items-center justify-between border-t pt-2 text-xs">
-					<span class="text-neutral font-semibold">Total</span>
-					<span class="text-expense font-semibold tabular-nums">{fmt(monthlyTotal)}/mo</span>
-				</div>
-			</div>
-		{/if}
-	</div>
+	</header>
 
-	<div class="mb-3 px-4">
-		<Tabs tabs={expenseTabs} active={activeTab} onchange={switchTab} />
-	</div>
+	<!-- Tabs -->
+	<Tabs tabs={expenseTabs} active={activeTab} onchange={switchTab} />
 
+	<!-- Recurring Tab -->
 	{#if activeTab === 'recurring'}
-		<div class="flex gap-2 overflow-x-auto px-4 pt-1 pb-2 [&::-webkit-scrollbar]:hidden">
-			<button
-				type="button"
-				onclick={() => {
-					sortBy = 'amount';
-					sortDir = 'asc';
-				}}
-				class={pillClass(sortBy === 'amount' && sortDir === 'asc')}
-			>
-				Cheapest first
-			</button>
-			<button
-				type="button"
-				onclick={() => {
-					sortBy = 'amount';
-					sortDir = 'desc';
-				}}
-				class={pillClass(sortBy === 'amount' && sortDir === 'desc')}
-			>
-				Most expensive
-			</button>
-			<span class="text-border self-center text-xs">|</span>
+		<!-- Monthly Equivalent Card -->
+		<div
+			class="rounded-[var(--radius-lg)] border p-4"
+			style="background: var(--expense-soft); border-color: var(--accent-line);"
+		>
+			<div class="flex items-center justify-between">
+				<span class="mono text-[10px] tracking-wider uppercase" style="color: var(--expense-ink);">
+					Monthly Equivalent
+				</span>
+				<span class="text-[22px] font-semibold tabular-nums" style="color: var(--expense-ink);">
+					{fmt(monthlyTotal)}
+				</span>
+			</div>
+			{#if monthlyBreakdown.length > 1}
+				<div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+					{#each monthlyBreakdown as row (row.recurrence)}
+						<div class="flex items-center justify-between">
+							<span class="text-text-muted text-[11px]">{row.label}</span>
+							<span
+								class="font-mono text-[11px] font-medium tabular-nums"
+								style="color: var(--expense-ink);">{fmt(row.monthly)}</span
+							>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</div>
+
+		<!-- Filter pills -->
+		<div class="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
 			<button
 				type="button"
 				onclick={() => (filterStatus = 'all')}
@@ -370,9 +286,105 @@
 			>
 				Paused
 			</button>
+			<span class="text-text-faint self-center text-[11px]">|</span>
+			<button
+				type="button"
+				onclick={() => {
+					sortBy = 'amount';
+					sortDir = 'desc';
+				}}
+				class={pillClass(sortBy === 'amount' && sortDir === 'desc')}
+			>
+				Most expensive
+			</button>
+			<button
+				type="button"
+				onclick={() => {
+					sortBy = 'amount';
+					sortDir = 'asc';
+				}}
+				class={pillClass(sortBy === 'amount' && sortDir === 'asc')}
+			>
+				Cheapest first
+			</button>
 		</div>
+
+		<!-- Grouped list -->
+		<div class="flex flex-col gap-5">
+			{#each recurringView as group (group.recurrence)}
+				<section>
+					<!-- Group header -->
+					<div class="mb-2 flex items-baseline justify-between">
+						<span class="text-text-subtle text-[11px] font-semibold tracking-wider uppercase">
+							{group.label} &middot; {group.count}
+						</span>
+						{#if group.subtotal > 0}
+							<span class="text-text-muted font-mono text-[11px] font-medium tabular-nums">
+								{fmt(group.subtotal)}
+							</span>
+						{/if}
+					</div>
+					<!-- Line-list card -->
+					<div
+						class="divide-border-subtle border-border-default bg-surface-1 divide-y overflow-hidden rounded-[var(--radius-lg)] border"
+					>
+						{#each group.items as expense (expense.id)}
+							<button
+								type="button"
+								onclick={() => openEdit(expense)}
+								class="hover:bg-bg-1 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors {!expense.active
+									? 'opacity-55'
+									: ''}"
+							>
+								<!-- Category emoji -->
+								<div
+									class="bg-bg-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-base"
+								>
+									{CATEGORY_EMOJI[expense.category] ?? '\u{1F4E6}'}
+								</div>
+								<!-- Name + meta -->
+								<div class="min-w-0 flex-1">
+									<p
+										class="text-text-primary truncate text-[14px] font-medium {!expense.active
+											? 'line-through'
+											: ''}"
+									>
+										{expense.name}{#if !expense.active}<span class="text-text-faint font-normal">
+												&middot; paused</span
+											>{/if}
+									</p>
+									<p class="text-text-subtle text-[11px]">
+										{dayLabel(expense)}
+									</p>
+								</div>
+								<!-- Amount -->
+								<span
+									class="shrink-0 font-mono text-[14px] font-semibold tabular-nums {!expense.active
+										? 'line-through'
+										: ''}"
+									style="color: var(--expense-ink);"
+								>
+									{fmt(expense.amount)}
+								</span>
+							</button>
+						{/each}
+					</div>
+				</section>
+			{/each}
+
+			{#if recurringView.length === 0}
+				<div
+					class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
+				>
+					<p class="text-text-muted text-[13px]">No recurring expenses yet.</p>
+				</div>
+			{/if}
+		</div>
+
+		<!-- One-time Tab -->
 	{:else if activeTab === 'once'}
-		<div class="flex gap-2 overflow-x-auto px-4 pt-1 pb-2 [&::-webkit-scrollbar]:hidden">
+		<!-- Filter pills -->
+		<div class="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
 			<button
 				type="button"
 				onclick={() => {
@@ -397,16 +409,6 @@
 				type="button"
 				onclick={() => {
 					sortBy = 'amount';
-					sortDir = 'asc';
-				}}
-				class={pillClass(sortBy === 'amount' && sortDir === 'asc')}
-			>
-				Cheapest first
-			</button>
-			<button
-				type="button"
-				onclick={() => {
-					sortBy = 'amount';
 					sortDir = 'desc';
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'desc')}
@@ -414,7 +416,7 @@
 				Most expensive
 			</button>
 			{#if availableCategories.length > 1}
-				<span class="text-border self-center text-xs">|</span>
+				<span class="text-text-faint self-center text-[11px]">|</span>
 				{#each availableCategories as cat (cat)}
 					<button
 						type="button"
@@ -426,8 +428,52 @@
 				{/each}
 			{/if}
 		</div>
+
+		<!-- Line-list card -->
+		{#if onceView.length > 0}
+			<div
+				class="divide-border-subtle border-border-default bg-surface-1 divide-y overflow-hidden rounded-[var(--radius-lg)] border"
+			>
+				{#each onceView as expense (expense.id)}
+					<button
+						type="button"
+						onclick={() => openEdit(expense)}
+						class="hover:bg-bg-1 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors"
+					>
+						<div
+							class="bg-bg-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-base"
+						>
+							{CATEGORY_EMOJI[expense.category] ?? '\u{1F4E6}'}
+						</div>
+						<div class="min-w-0 flex-1">
+							<p class="text-text-primary truncate text-[14px] font-medium">
+								{expense.name}
+							</p>
+							<p class="text-text-subtle text-[11px]">
+								{dueDateLabel(expense)}
+							</p>
+						</div>
+						<span
+							class="shrink-0 font-mono text-[14px] font-semibold tabular-nums"
+							style="color: var(--expense-ink);"
+						>
+							{fmt(expense.amount)}
+						</span>
+					</button>
+				{/each}
+			</div>
+		{:else}
+			<div
+				class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
+			>
+				<p class="text-text-muted text-[13px]">No upcoming one-time expenses.</p>
+			</div>
+		{/if}
+
+		<!-- Past Tab -->
 	{:else if activeTab === 'past'}
-		<div class="flex gap-2 overflow-x-auto px-4 pt-1 pb-2 [&::-webkit-scrollbar]:hidden">
+		<!-- Filter pills -->
+		<div class="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
 			<button
 				type="button"
 				onclick={() => {
@@ -469,250 +515,53 @@
 				Lowest first
 			</button>
 		</div>
-	{/if}
 
-	<div class="mt-1 px-4">
-		{#if activeTab === 'recurring'}
-			<div class="space-y-5">
-				{#each recurringView as group (group.recurrence)}
-					<div>
-						<div class="mb-2 flex items-center justify-between">
-							<p class="text-neutral text-xs font-semibold tracking-widest uppercase">
-								{group.label}
-							</p>
-							{#if group.subtotal > 0}
-								<div class="text-right">
-									<p class="text-expense text-xs font-semibold tabular-nums">
-										{fmt(group.subtotal)}
-									</p>
-									{#if group.recurrence !== 'monthly'}
-										<p class="text-neutral text-[10px] tabular-nums">
-											{fmt(group.monthlyEquiv)}/mo
-										</p>
-									{/if}
-								</div>
-							{/if}
-						</div>
-						<div class="space-y-2">
-							{#each group.items as expense (expense.id)}
-								<ExpenseRow {expense} onEdit={openEdit} />
-							{/each}
-						</div>
-					</div>
-				{/each}
-			</div>
-			{#if recurringView.length === 0}
-				<div class="border-border rounded-xl border border-dashed p-8 text-center">
-					<p class="text-neutral text-sm">No recurring expenses.</p>
-				</div>
-			{/if}
-		{:else if activeTab === 'once'}
-			<div class="space-y-2">
-				{#each onceView as expense (expense.id)}
-					<ExpenseRow {expense} once={true} onEdit={openEdit} />
-				{/each}
-			</div>
-			{#if onceView.length === 0}
-				<div class="border-border rounded-xl border border-dashed p-8 text-center">
-					<p class="text-neutral text-sm">No upcoming one-time expenses.</p>
-				</div>
-			{/if}
-		{:else if activeTab === 'past'}
-			<div class="space-y-2">
-				{#each pastView as expense (expense.id)}
-					<ExpenseRow {expense} once={true} onEdit={openEdit} />
-				{/each}
-			</div>
-			{#if pastView.length === 0}
-				<div class="border-border rounded-xl border border-dashed p-8 text-center">
-					<p class="text-neutral text-sm">Paid expenses will appear here.</p>
-				</div>
-			{/if}
-		{/if}
-	</div>
-</div>
-
-{#if showForm}
-	<BottomSheet bind:open={showForm} title={editing ? 'Edit Expense' : 'New Expense'}>
-		{#if confirmDelete}
-			<div class="space-y-4 py-2">
-				<div class="bg-surface-muted rounded-xl px-4 py-4 text-center">
-					<p class="text-sm font-medium">Delete "{editing?.name}"?</p>
-					<p class="text-neutral mt-1 text-xs">This can't be undone.</p>
-				</div>
-				<form
-					method="POST"
-					action="?/remove"
-					use:enhance={() => {
-						return async ({ update }) => {
-							showForm = false;
-							await update();
-						};
-					}}
-				>
-					<input type="hidden" name="id" value={editing?.id} />
-					<button
-						type="submit"
-						class="bg-expense w-full rounded-lg py-3 text-sm font-semibold text-white"
-					>
-						Yes, delete
-					</button>
-				</form>
-				<button
-					type="button"
-					onclick={() => (confirmDelete = false)}
-					class="text-neutral w-full rounded-lg py-3 text-sm font-semibold"
-				>
-					Cancel
-				</button>
-			</div>
-		{:else}
-			<form
-				method="POST"
-				action="?/save"
-				use:enhance={() => {
-					return async ({ update }) => {
-						showForm = false;
-						await update();
-					};
-				}}
+		<!-- Line-list card -->
+		{#if pastView.length > 0}
+			<div
+				class="divide-border-subtle border-border-default bg-surface-1 divide-y overflow-hidden rounded-[var(--radius-lg)] border"
 			>
-				{#if editing}
-					<input type="hidden" name="id" value={editing.id} />
-				{/if}
-				<input type="hidden" name="active" value={String(isOnce ? !form.paid : form.active)} />
-				<input type="hidden" name="day_of_month" value={!isOnce ? form.day_of_month : ''} />
-				<input type="hidden" name="due_date" value={isOnce ? form.due_date : ''} />
-				<input type="hidden" name="starting_month" value={needsMonth ? form.starting_month : ''} />
-				<div class="space-y-3">
-					<div>
-						<label for="exp-name" class="text-neutral mb-1 block text-xs font-medium">Name</label>
-						<input
-							id="exp-name"
-							name="name"
-							bind:value={form.name}
-							class="input"
-							placeholder="e.g. Netflix"
-						/>
-					</div>
-					<div class="grid grid-cols-2 gap-3">
-						<div>
-							<label for="exp-category" class="text-neutral mb-1 block text-xs font-medium"
-								>Category</label
-							>
-							<select id="exp-category" name="category" bind:value={form.category} class="input">
-								{#each categories as c (c)}<option value={c}>{c}</option>{/each}
-							</select>
-						</div>
-						<div>
-							<label for="exp-recurrence" class="text-neutral mb-1 block text-xs font-medium"
-								>Recurrence</label
-							>
-							<select
-								id="exp-recurrence"
-								name="recurrence"
-								bind:value={form.recurrence}
-								class="input"
-							>
-								{#each recurrences as r (r)}<option value={r}>{r}</option>{/each}
-							</select>
-						</div>
-					</div>
-					<div>
-						<label for="exp-amount" class="text-neutral mb-1 block text-xs font-medium"
-							>Amount</label
-						>
-						<input
-							id="exp-amount"
-							name="amount"
-							bind:value={form.amount}
-							type="number"
-							step="0.01"
-							class="input"
-							placeholder="0.00"
-						/>
-					</div>
-					{#if isOnce}
-						<div>
-							<label for="exp-due" class="text-neutral mb-1 block text-xs font-medium"
-								>Due date (optional)</label
-							>
-							<input id="exp-due" bind:value={form.due_date} type="date" class="input" />
-						</div>
-						<Toggle
-							bind:checked={form.paid}
-							label="Paid"
-							id="exp-paid"
-							color="var(--color-income)"
-						/>
-					{:else}
-						<div class="grid grid-cols-2 gap-3">
-							<div>
-								<label for="exp-dom" class="text-neutral mb-1 block text-xs font-medium"
-									>Day of month</label
-								>
-								<select id="exp-dom" bind:value={form.day_of_month} class="input">
-									<option value="">— select —</option>
-									{#each Array.from({ length: 28 }, (_, i) => i + 1) as d (d)}
-										<option value={String(d)}>{d}.</option>
-									{/each}
-									<option value="last_working">Last working day</option>
-									<option value="second_last_working">2nd-last working day</option>
-								</select>
-							</div>
-							{#if needsMonth}
-								<div>
-									<label for="exp-month" class="text-neutral mb-1 block text-xs font-medium"
-										>Starting month</label
-									>
-									<select id="exp-month" bind:value={form.starting_month} class="input">
-										<option value="">— select —</option>
-										{#each months as m, i (m)}
-											<option value={String(i + 1)}>{m}</option>
-										{/each}
-									</select>
-								</div>
-							{/if}
-						</div>
-						<Toggle
-							bind:checked={form.active}
-							label="Active"
-							id="exp-active"
-							color="var(--color-expense)"
-						/>
-					{/if}
-				</div>
-				<button
-					type="submit"
-					class="bg-expense mt-5 w-full rounded-lg py-3 text-sm font-semibold text-white"
-				>
-					{editing ? 'Save Changes' : 'Create Expense'}
-				</button>
-				{#if editing}
+				{#each pastView as expense (expense.id)}
 					<button
 						type="button"
-						onclick={() => (confirmDelete = true)}
-						class="text-expense mt-2 w-full rounded-lg py-3 text-sm font-semibold"
+						onclick={() => openEdit(expense)}
+						class="hover:bg-bg-1 flex w-full items-center gap-3 px-4 py-3 text-left opacity-55 transition-colors"
 					>
-						Delete Expense
+						<div
+							class="bg-bg-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-base"
+						>
+							{CATEGORY_EMOJI[expense.category] ?? '\u{1F4E6}'}
+						</div>
+						<div class="min-w-0 flex-1">
+							<p class="text-text-primary truncate text-[14px] font-medium line-through">
+								{expense.name}
+							</p>
+							<p class="text-text-subtle text-[11px]">
+								{dueDateLabel(expense)} &middot; paid
+							</p>
+						</div>
+						<span
+							class="shrink-0 font-mono text-[14px] font-semibold tabular-nums line-through"
+							style="color: var(--expense-ink);"
+						>
+							{fmt(expense.amount)}
+						</span>
 					</button>
-				{/if}
-			</form>
+				{/each}
+			</div>
+		{:else}
+			<div
+				class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
+			>
+				<p class="text-text-muted text-[13px]">Paid expenses will appear here.</p>
+			</div>
 		{/if}
-	</BottomSheet>
-{/if}
+	{/if}
+</div>
 
-<style>
-	.input {
-		width: 100%;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-		background: var(--color-surface);
-		padding: 0.5rem 0.75rem;
-		font-size: 0.875rem;
-		outline: none;
-	}
-	.input:focus {
-		border-color: var(--color-expense);
-	}
-</style>
+<ExpenseForm
+	bind:open={showForm}
+	{editing}
+	accounts={data.accounts}
+	defaultAccountId={data.settings?.defaultAccountId}
+/>

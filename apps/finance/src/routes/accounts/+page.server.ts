@@ -36,12 +36,16 @@ export const actions: Actions = {
 			balance: String(parseFloat(d.get('balance') as string) || 0),
 			currency,
 			color: (d.get('color') as string) || null,
+			emoji: (d.get('emoji') as string) || null,
 			includeInTotal: d.get('include_in_total') === 'true'
 		};
-		if (!payload.name) return fail(400, { error: 'Name is required' });
+		if (!payload.name) return fail(400, { error: 'VALIDATION_REQUIRED' });
 		try {
 			if (id) {
-				await db.update(accounts).set(payload).where(eq(accounts.id, id));
+				await db
+					.update(accounts)
+					.set(payload)
+					.where(and(eq(accounts.id, id), eq(accounts.userId, userId)));
 			} else {
 				await db.insert(accounts).values({ ...payload, userId });
 			}

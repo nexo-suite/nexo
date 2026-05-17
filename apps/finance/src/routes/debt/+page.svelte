@@ -1,12 +1,11 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/layout/PageHeader.svelte';
-	import DebtCard from '$lib/components/debt/DebtCard.svelte';
 	import BottomSheet from '$lib/components/layout/BottomSheet.svelte';
 	import Toggle from '$lib/components/ui/Toggle.svelte';
-	import { Plus, ChevronDown } from 'lucide-svelte';
+	import { Plus, Check, ChevronRight } from 'lucide-svelte';
 	import { enhance } from '$app/forms';
 
 	import type { Debt } from '$lib/types';
+	import { getIntlLocale } from '$lib/utils';
 
 	let { data } = $props();
 
@@ -18,12 +17,31 @@
 		counterparty: '',
 		amount: '',
 		due_date: '',
+		account_id: '',
 		paid: false,
 		notes: ''
 	});
 
 	const fmt = (n: number) =>
-		new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(n);
+		new Intl.NumberFormat(getIntlLocale(), {
+			style: 'currency',
+			currency: data.settings?.currency ?? 'EUR',
+			minimumFractionDigits: data.settings?.hideCents ? 0 : 2,
+			maximumFractionDigits: data.settings?.hideCents ? 0 : 2
+		}).format(n);
+
+	const fmtDate = (d: string) =>
+		new Date(d).toLocaleDateString(getIntlLocale(), {
+			day: 'numeric',
+			month: 'short',
+			year: '2-digit'
+		});
+
+	function initials(name: string): string {
+		const parts = name.trim().split(/\s+/);
+		if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+		return name.slice(0, 2).toUpperCase();
+	}
 
 	const totalOwe = $derived(
 		data.debts
@@ -35,17 +53,22 @@
 			.filter((d: Debt) => d.direction === 'owed' && !d.paid)
 			.reduce((s: number, d: Debt) => s + d.amount, 0)
 	);
-	const oweDebts = $derived(data.debts.filter((d: Debt) => d.direction === 'owe' && !d.paid));
-	const owedDebts = $derived(data.debts.filter((d: Debt) => d.direction === 'owed' && !d.paid));
-	const settledDebts = $derived(data.debts.filter((d: Debt) => d.paid));
-
-	let showSettled = $state(false);
-	let confirmClearSettled = $state(false);
+	const iOwe = $derived(data.debts.filter((d: Debt) => d.direction === 'owe' && !d.paid));
+	const owedToMe = $derived(data.debts.filter((d: Debt) => d.direction === 'owed' && !d.paid));
+	const settled = $derived(data.debts.filter((d: Debt) => d.paid));
 
 	function openNew() {
 		editing = null;
 		confirmDelete = false;
-		form = { direction: 'owe', counterparty: '', amount: '', due_date: '', paid: false, notes: '' };
+		form = {
+			direction: 'owe',
+			counterparty: '',
+			amount: '',
+			due_date: '',
+			account_id: data.settings?.defaultAccountId ?? '',
+			paid: false,
+			notes: ''
+		};
 		showForm = true;
 	}
 
@@ -57,6 +80,7 @@
 			counterparty: debt.counterparty,
 			amount: String(debt.amount),
 			due_date: debt.dueDate ?? '',
+			account_id: debt.accountId ?? '',
 			paid: debt.paid,
 			notes: debt.notes ?? ''
 		};
@@ -64,128 +88,267 @@
 	}
 </script>
 
-<div class="pb-6">
-	<div class="px-4 pt-4">
-		<PageHeader title="Debt Tracker" user={data.user} displayName={data.settings.displayName}>
-			{#snippet actions()}
-				<button
-					type="button"
-					onclick={openNew}
-					class="bg-debt flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium text-white"
-				>
-					<Plus size={14} /> Add
-				</button>
-			{/snippet}
-		</PageHeader>
+<div class="px-4 pt-4 pb-6">
+	<!-- Header -->
+	<div class="mb-5 flex items-start justify-between">
+		<div>
+			<h1 class="text-text-primary text-[26px] leading-tight font-semibold">Debt</h1>
+			<p class="text-text-subtle mt-0.5 text-[13px]">Money in motion between friends.</p>
+		</div>
+		<button
+			type="button"
+			onclick={openNew}
+			class="bg-text-primary text-bg-0 flex h-[38px] w-[38px] items-center justify-center rounded-full"
+		>
+			<Plus size={18} stroke-width={2.5} />
+		</button>
 	</div>
 
-	<div class="mx-4 mb-4 grid grid-cols-2 gap-3">
-		<div class="border-border bg-surface rounded-lg border px-4 py-3">
-			<p class="text-neutral text-xs">I owe</p>
-			<p class="text-expense mt-0.5 text-sm font-semibold tabular-nums">
+	<!-- Totals grid -->
+	<div class="mb-6 grid grid-cols-2 gap-3">
+		<div
+			class="rounded-[var(--radius-lg)] border px-4 py-3"
+			style="background: var(--debt-soft); border-color: color-mix(in oklab, var(--color-debt) 25%, var(--color-border-default));"
+		>
+			<p class="t-label" style="color: var(--debt-ink);">I owe</p>
+			<p
+				class="mono mt-1.5 text-[22px] leading-tight font-semibold"
+				style="color: var(--debt-ink);"
+			>
 				{fmt(totalOwe)}
 			</p>
 		</div>
-		<div class="border-border bg-surface rounded-lg border px-4 py-3">
-			<p class="text-neutral text-xs">Owed to me</p>
-			<p class="text-income mt-0.5 text-sm font-semibold tabular-nums">
+		<div
+			class="rounded-[var(--radius-lg)] border px-4 py-3"
+			style="background: var(--income-soft); border-color: color-mix(in oklab, var(--color-income) 25%, var(--color-border-default));"
+		>
+			<p class="t-label" style="color: var(--income-ink);">Owed to me</p>
+			<p
+				class="mono mt-1.5 text-[22px] leading-tight font-semibold"
+				style="color: var(--income-ink);"
+			>
 				{fmt(totalOwed)}
 			</p>
 		</div>
 	</div>
 
-	{#if oweDebts.length > 0}
-		<p class="text-neutral mb-2 px-4 text-xs font-semibold tracking-widest uppercase">I Owe</p>
-		<div class="mb-4 space-y-2 px-4">
-			{#each oweDebts as debt (debt.id)}
-				<DebtCard {debt} onEdit={openEdit} />
-			{/each}
-		</div>
-	{/if}
-
-	{#if owedDebts.length > 0}
-		<p class="text-neutral mb-2 px-4 text-xs font-semibold tracking-widest uppercase">Owed to Me</p>
-		<div class="mb-4 space-y-2 px-4">
-			{#each owedDebts as debt (debt.id)}
-				<DebtCard {debt} onEdit={openEdit} />
-			{/each}
-		</div>
-	{/if}
-
-	{#if data.debts.length === 0}
-		<div class="border-border mx-4 rounded-xl border border-dashed p-8 text-center">
-			<p class="text-neutral text-sm">No debts tracked. Tap "Add" to create one.</p>
-		</div>
-	{/if}
-
-	{#if settledDebts.length > 0}
-		<div class="px-4">
-			<div class="flex items-center justify-between py-2">
-				<button
-					type="button"
-					onclick={() => (showSettled = !showSettled)}
-					class="text-neutral flex items-center gap-1 text-xs font-semibold tracking-widest uppercase"
-				>
-					Settled ({settledDebts.length})
-					<ChevronDown
-						size={14}
-						class="transition-transform duration-200 {showSettled ? 'rotate-180' : ''}"
-					/>
-				</button>
-				{#if !confirmClearSettled}
-					<button
-						type="button"
-						onclick={() => (confirmClearSettled = true)}
-						class="text-neutral hover:text-expense text-xs transition-colors"
-					>
-						Clear all
-					</button>
-				{:else}
-					<div class="flex items-center gap-2">
-						<span class="text-neutral text-xs">Remove {settledDebts.length} settled?</span>
-						<form
-							method="POST"
-							action="?/clearSettled"
-							use:enhance={() => {
-								return async ({ update }) => {
-									confirmClearSettled = false;
-									showSettled = false;
-									await update();
-								};
-							}}
+	<!-- I owe section -->
+	{#if iOwe.length > 0}
+		<p class="t-label mb-1" style="color: var(--debt-ink);">I owe</p>
+		{#each iOwe as debt (debt.id)}
+			<div
+				class="border-border-default bg-surface-1 mt-[10px] rounded-[var(--radius-lg)] border px-4 py-[14px]"
+			>
+				<!-- Row 1: avatar + name + amount -->
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-2.5">
+						<div
+							class="bg-bg-2 text-text-muted flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
 						>
-							<button type="submit" class="text-expense text-xs font-semibold hover:underline">
-								Yes
-							</button>
-						</form>
-						<button
-							type="button"
-							onclick={() => (confirmClearSettled = false)}
-							class="text-neutral text-xs hover:underline"
-						>
-							Cancel
-						</button>
+							{initials(debt.counterparty)}
+						</div>
+						<span class="text-text-primary text-[15px] font-medium">{debt.counterparty}</span>
+					</div>
+					<span class="mono text-[17px] font-semibold" style="color: var(--debt-ink);">
+						{fmt(debt.amount)}
+					</span>
+				</div>
+
+				<!-- Meta row -->
+				{#if debt.dueDate || debt.notes}
+					<div class="mt-1.5 flex items-center gap-1 pl-[36px]">
+						{#if debt.dueDate}
+							<span class="mono text-text-faint text-[12px]">{fmtDate(debt.dueDate)}</span>
+						{/if}
+						{#if debt.dueDate && debt.notes}
+							<span class="text-text-faint text-[12px]">&middot;</span>
+						{/if}
+						{#if debt.notes}
+							<span class="text-text-subtle truncate text-[12px]">{debt.notes}</span>
+						{/if}
 					</div>
 				{/if}
-			</div>
-			{#if showSettled}
-				<div class="mt-2 space-y-2">
-					{#each settledDebts as debt (debt.id)}
-						<DebtCard {debt} onEdit={openEdit} />
-					{/each}
+
+				<!-- Actions -->
+				<div class="mt-3 flex items-center gap-2 pl-[36px]">
+					<form
+						method="POST"
+						action="?/save"
+						use:enhance={() => {
+							return async ({ update }) => {
+								await update();
+							};
+						}}
+					>
+						<input type="hidden" name="id" value={debt.id} />
+						<input type="hidden" name="direction" value={debt.direction} />
+						<input type="hidden" name="counterparty" value={debt.counterparty} />
+						<input type="hidden" name="amount" value={String(debt.amount)} />
+						<input type="hidden" name="due_date" value={debt.dueDate ?? ''} />
+						<input type="hidden" name="account_id" value={debt.accountId ?? ''} />
+						<input type="hidden" name="notes" value={debt.notes ?? ''} />
+						<input type="hidden" name="paid" value="true" />
+						<button
+							type="submit"
+							class="bg-text-primary text-bg-0 rounded-[var(--radius-sm)] px-3 py-1.5 text-[12px] font-medium"
+						>
+							Mark settled
+						</button>
+					</form>
+					<button
+						type="button"
+						onclick={() => openEdit(debt)}
+						class="border-border-default text-text-muted rounded-[var(--radius-sm)] border px-3 py-1.5 text-[12px] font-medium"
+					>
+						Edit
+					</button>
 				</div>
-			{/if}
+			</div>
+		{/each}
+	{/if}
+
+	<!-- Owed to me section -->
+	{#if owedToMe.length > 0}
+		<p class="t-label mb-1 {iOwe.length > 0 ? 'mt-6' : ''}" style="color: var(--income-ink);">
+			Owed to me
+		</p>
+		{#each owedToMe as debt (debt.id)}
+			<div
+				class="border-border-default bg-surface-1 mt-[10px] rounded-[var(--radius-lg)] border px-4 py-[14px]"
+			>
+				<!-- Row 1: avatar + name + amount -->
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-2.5">
+						<div
+							class="bg-bg-2 text-text-muted flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+						>
+							{initials(debt.counterparty)}
+						</div>
+						<span class="text-text-primary text-[15px] font-medium">{debt.counterparty}</span>
+					</div>
+					<span class="mono text-[17px] font-semibold" style="color: var(--income-ink);">
+						{fmt(debt.amount)}
+					</span>
+				</div>
+
+				<!-- Meta row -->
+				{#if debt.dueDate || debt.notes}
+					<div class="mt-1.5 flex items-center gap-1 pl-[36px]">
+						{#if debt.dueDate}
+							<span class="mono text-text-faint text-[12px]">{fmtDate(debt.dueDate)}</span>
+						{/if}
+						{#if debt.dueDate && debt.notes}
+							<span class="text-text-faint text-[12px]">&middot;</span>
+						{/if}
+						{#if debt.notes}
+							<span class="text-text-subtle truncate text-[12px]">{debt.notes}</span>
+						{/if}
+					</div>
+				{/if}
+
+				<!-- Actions -->
+				<div class="mt-3 flex items-center gap-2 pl-[36px]">
+					<form
+						method="POST"
+						action="?/save"
+						use:enhance={() => {
+							return async ({ update }) => {
+								await update();
+							};
+						}}
+					>
+						<input type="hidden" name="id" value={debt.id} />
+						<input type="hidden" name="direction" value={debt.direction} />
+						<input type="hidden" name="counterparty" value={debt.counterparty} />
+						<input type="hidden" name="amount" value={String(debt.amount)} />
+						<input type="hidden" name="due_date" value={debt.dueDate ?? ''} />
+						<input type="hidden" name="account_id" value={debt.accountId ?? ''} />
+						<input type="hidden" name="notes" value={debt.notes ?? ''} />
+						<input type="hidden" name="paid" value="true" />
+						<button
+							type="submit"
+							class="bg-text-primary text-bg-0 rounded-[var(--radius-sm)] px-3 py-1.5 text-[12px] font-medium"
+						>
+							Mark settled
+						</button>
+					</form>
+					<button
+						type="button"
+						onclick={() => openEdit(debt)}
+						class="border-border-default text-text-muted rounded-[var(--radius-sm)] border px-3 py-1.5 text-[12px] font-medium"
+					>
+						Edit
+					</button>
+				</div>
+			</div>
+		{/each}
+	{/if}
+
+	<!-- Empty state -->
+	{#if data.debts.length === 0}
+		<div
+			class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
+		>
+			<p class="text-text-subtle text-[14px]">No debts tracked. Tap + to create one.</p>
 		</div>
+	{/if}
+
+	<!-- Settled section -->
+	{#if settled.length > 0}
+		<details class="mt-6">
+			<summary
+				class="text-text-subtle flex cursor-pointer list-none items-center gap-1.5 text-[12px] font-medium [&::-webkit-details-marker]:hidden"
+			>
+				<ChevronRight size={14} class="transition-transform duration-200 [[open]>&]:rotate-90" />
+				Settled &middot; {settled.length}
+			</summary>
+			<div class="mt-3 space-y-0">
+				{#each settled as debt (debt.id)}
+					<div class="border-border-subtle flex items-center gap-3 border-b py-2.5 last:border-b-0">
+						<Check size={14} class="text-text-faint shrink-0" />
+						<div class="min-w-0 flex-1">
+							<span class="text-text-muted text-[13px] font-medium">{debt.counterparty}</span>
+						</div>
+						<span class="mono text-text-faint text-[12px]">
+							{#if debt.dueDate}Settled {fmtDate(debt.dueDate)} &middot;
+							{/if}{fmt(debt.amount)}
+						</span>
+					</div>
+				{/each}
+			</div>
+			<div class="mt-3 text-center">
+				<form
+					method="POST"
+					action="?/clearSettled"
+					use:enhance={() => {
+						return async ({ update }) => {
+							await update();
+						};
+					}}
+				>
+					<button type="submit" class="text-[12px] font-medium" style="color: var(--expense-ink);">
+						Clear all settled
+					</button>
+				</form>
+			</div>
+		</details>
 	{/if}
 </div>
 
+<!-- Bottom sheet form -->
 {#if showForm}
-	<BottomSheet bind:open={showForm} title={editing ? 'Edit Debt' : 'New Debt'}>
+	<BottomSheet
+		bind:open={showForm}
+		title={editing ? 'Edit debt' : 'New debt'}
+		subtitle="Track what you owe or what's owed to you."
+	>
 		{#if confirmDelete}
 			<div class="space-y-4 py-2">
-				<div class="bg-surface-muted rounded-xl px-4 py-4 text-center">
-					<p class="text-sm font-medium">Delete debt with "{editing?.counterparty}"?</p>
-					<p class="text-neutral mt-1 text-xs">This can't be undone.</p>
+				<div class="bg-bg-1 rounded-[var(--radius-md)] px-4 py-4 text-center">
+					<p class="text-text-primary text-[14px] font-medium">
+						Delete debt with "{editing?.counterparty}"?
+					</p>
+					<p class="text-text-subtle mt-1 text-[12px]">This can't be undone.</p>
 				</div>
 				<form
 					method="POST"
@@ -200,16 +363,13 @@
 					<input type="hidden" name="id" value={editing?.id} />
 					<button
 						type="submit"
-						class="bg-debt w-full rounded-lg py-3 text-sm font-semibold text-white"
+						class="btn-primary w-full"
+						style="background: var(--color-expense);"
 					>
 						Yes, delete
 					</button>
 				</form>
-				<button
-					type="button"
-					onclick={() => (confirmDelete = false)}
-					class="text-neutral w-full rounded-lg py-3 text-sm font-semibold"
-				>
+				<button type="button" onclick={() => (confirmDelete = false)} class="btn-secondary w-full">
 					Cancel
 				</button>
 			</div>
@@ -228,46 +388,57 @@
 					<input type="hidden" name="id" value={editing.id} />
 				{/if}
 				<input type="hidden" name="paid" value={String(form.paid)} />
-				<div class="space-y-3">
-					<div>
-						<label for="dbt-direction" class="text-neutral mb-1 block text-xs font-medium"
-							>Direction</label
-						>
-						<select id="dbt-direction" name="direction" bind:value={form.direction} class="input">
-							<option value="owe">I owe them</option>
-							<option value="owed">They owe me</option>
-						</select>
-					</div>
-					<div>
-						<label for="dbt-counterparty" class="text-neutral mb-1 block text-xs font-medium"
-							>Person / entity</label
-						>
-						<input
-							id="dbt-counterparty"
-							name="counterparty"
-							bind:value={form.counterparty}
-							class="input"
-							placeholder="e.g. Alex"
-						/>
-					</div>
-					<div>
-						<label for="dbt-amount" class="text-neutral mb-1 block text-xs font-medium"
-							>Amount</label
-						>
-						<input
-							id="dbt-amount"
-							name="amount"
-							bind:value={form.amount}
-							type="number"
-							step="0.01"
-							class="input"
-							placeholder="0.00"
-						/>
-					</div>
-					<div>
-						<label for="dbt-due" class="text-neutral mb-1 block text-xs font-medium"
-							>Due date (optional)</label
-						>
+				<input type="hidden" name="account_id" value={form.account_id} />
+				<input type="hidden" name="direction" value={form.direction} />
+
+				<!-- Segmented direction control -->
+				<div class="segmented">
+					<button
+						type="button"
+						class:active={form.direction === 'owe'}
+						onclick={() => (form.direction = 'owe')}
+					>
+						I owe
+					</button>
+					<button
+						type="button"
+						class:active={form.direction === 'owed'}
+						onclick={() => (form.direction = 'owed')}
+					>
+						Owed to me
+					</button>
+				</div>
+
+				<!-- Amount -->
+				<div class="field">
+					<label for="dbt-amount">Amount</label>
+					<input
+						id="dbt-amount"
+						name="amount"
+						bind:value={form.amount}
+						type="number"
+						step="0.01"
+						class="input amount-input"
+						placeholder="0.00"
+					/>
+				</div>
+
+				<!-- Counterparty -->
+				<div class="field">
+					<label for="dbt-counterparty">Counterparty</label>
+					<input
+						id="dbt-counterparty"
+						name="counterparty"
+						bind:value={form.counterparty}
+						class="input"
+						placeholder="e.g. Eli K."
+					/>
+				</div>
+
+				<!-- Due date + Account -->
+				<div class="field-row">
+					<div class="field">
+						<label for="dbt-due">Due date</label>
 						<input
 							id="dbt-due"
 							name="due_date"
@@ -276,38 +447,50 @@
 							class="input"
 						/>
 					</div>
-					<div>
-						<label for="dbt-notes" class="text-neutral mb-1 block text-xs font-medium"
-							>Notes (optional)</label
-						>
-						<input
-							id="dbt-notes"
-							name="notes"
-							bind:value={form.notes}
-							class="input"
-							placeholder="e.g. dinner split"
-						/>
-					</div>
-					<Toggle
-						bind:checked={form.paid}
-						label="Settled / paid"
-						id="dbt-paid"
-						color="var(--color-income)"
+					{#if data.accounts.length > 0}
+						<div class="field">
+							<label for="dbt-account">Account</label>
+							<select id="dbt-account" bind:value={form.account_id} class="input">
+								<option value="">None</option>
+								{#each data.accounts as a (a.id)}
+									<option value={a.id}>{a.emoji ?? '💳'} {a.name}</option>
+								{/each}
+							</select>
+						</div>
+					{/if}
+				</div>
+
+				<!-- Notes -->
+				<div class="field">
+					<label for="dbt-notes">Notes</label>
+					<input
+						id="dbt-notes"
+						name="notes"
+						bind:value={form.notes}
+						class="input"
+						placeholder="e.g. Paid for me at the pub"
 					/>
 				</div>
-				<button
-					type="submit"
-					class="bg-debt mt-5 w-full rounded-lg py-3 text-sm font-semibold text-white"
-				>
-					{editing ? 'Save Changes' : 'Create Debt'}
-				</button>
-				{#if editing}
-					<button
-						type="button"
-						onclick={() => (confirmDelete = true)}
-						class="text-debt mt-2 w-full rounded-lg py-3 text-sm font-semibold"
+
+				<!-- Mark paid toggle -->
+				<Toggle
+					bind:checked={form.paid}
+					label="Mark paid"
+					description="Moves to settled, drops from forecast."
+					id="dbt-paid"
+				/>
+
+				<!-- Actions -->
+				<div class="actions">
+					<button type="button" class="btn-secondary" onclick={() => (showForm = false)}
+						>Cancel</button
 					>
-						Delete Debt
+					<button type="submit" class="btn-primary">Save debt</button>
+				</div>
+
+				{#if editing}
+					<button type="button" onclick={() => (confirmDelete = true)} class="btn-delete">
+						Delete this debt
 					</button>
 				{/if}
 			</form>
@@ -316,16 +499,126 @@
 {/if}
 
 <style>
+	.field {
+		margin-bottom: 12px;
+	}
+	.field label {
+		display: block;
+		font-family: var(--font-mono);
+		font-size: 10px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--color-text-subtle);
+		margin-bottom: 6px;
+	}
 	.input {
 		width: 100%;
-		border: 1px solid var(--color-border);
+		height: 44px;
+		padding: 0 14px;
+		font: inherit;
+		font-size: 15px;
+		background: var(--color-bg-1);
+		border: 1px solid var(--color-border-subtle);
 		border-radius: var(--radius-md);
-		background: var(--color-surface);
-		padding: 0.5rem 0.75rem;
-		font-size: 0.875rem;
+		color: var(--color-text-primary);
 		outline: none;
 	}
 	.input:focus {
-		border-color: var(--color-debt);
+		border-color: var(--color-text-primary);
+	}
+	.amount-input {
+		font-size: 22px;
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		font-variant-numeric: tabular-nums;
+		height: 56px;
+	}
+	.field-row {
+		display: flex;
+		gap: 10px;
+		margin-bottom: 12px;
+	}
+	.field-row .field {
+		flex: 1;
+		margin-bottom: 0;
+	}
+	.segmented {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 2px;
+		padding: 2px;
+		background: var(--color-bg-1);
+		border-radius: var(--radius-md);
+		margin-bottom: 14px;
+	}
+	.segmented button {
+		border: 0;
+		background: transparent;
+		font: inherit;
+		height: 36px;
+		font-size: 13.5px;
+		font-weight: 500;
+		color: var(--color-text-muted);
+		border-radius: 8px;
+		cursor: pointer;
+	}
+	.segmented button.active {
+		background: var(--color-surface-1);
+		color: var(--color-text-primary);
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+	}
+	.actions {
+		display: flex;
+		gap: 10px;
+		margin-top: 8px;
+	}
+	.btn-primary {
+		flex: 1;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		height: 48px;
+		font: inherit;
+		font-size: 15px;
+		font-weight: 600;
+		border-radius: var(--radius-md);
+		border: 1px solid transparent;
+		background: var(--color-accent);
+		color: #fff;
+		cursor: pointer;
+	}
+	.btn-secondary {
+		flex: 1;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		height: 48px;
+		font: inherit;
+		font-size: 15px;
+		font-weight: 600;
+		border-radius: var(--radius-md);
+		border: 1px solid var(--color-border-strong);
+		background: transparent;
+		color: var(--color-text-primary);
+		cursor: pointer;
+	}
+	.btn-delete {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		height: 44px;
+		margin-top: 4px;
+		font: inherit;
+		font-size: 15px;
+		font-weight: 500;
+		border-radius: 999px;
+		background: transparent;
+		border: none;
+		color: var(--expense-ink);
+		cursor: pointer;
+	}
+	.btn-delete:active {
+		background: var(--expense-soft);
 	}
 </style>

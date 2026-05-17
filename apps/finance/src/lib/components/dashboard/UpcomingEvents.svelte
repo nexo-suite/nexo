@@ -1,14 +1,14 @@
 <script lang="ts">
 	import type { UpcomingEvent } from '$lib/types';
 	import { ArrowDownLeft, ArrowUpRight, Users } from 'lucide-svelte';
-	import { formatCurrency } from '$lib/utils';
+	import { formatCurrency, getIntlLocale } from '$lib/utils';
 
 	let { events }: { events: UpcomingEvent[] } = $props();
 
 	const fmt = (n: number) => formatCurrency(n);
 
 	const fmtDate = (d: string) =>
-		new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+		new Date(d).toLocaleDateString(getIntlLocale(), { day: 'numeric', month: 'short' });
 
 	const typeConfig = {
 		income: { icon: ArrowDownLeft, color: 'var(--color-income)', sign: '+' },
@@ -19,14 +19,14 @@
 
 {#if events.length > 0}
 	<section>
-		<p class="text-neutral mb-2 text-xs font-semibold tracking-widest uppercase">Upcoming</p>
-		<div class="border-border bg-surface overflow-hidden rounded-2xl border shadow-sm">
+		<p class="text-text-subtle mb-2 text-xs font-semibold tracking-widest uppercase">Upcoming</p>
+		<div class="border-border-default bg-surface-1 overflow-hidden rounded-2xl border shadow-sm">
 			<ul>
 				{#each events as event, i (event.date + event.label)}
 					{@const cfg = typeConfig[event.type]}
 					<li
 						class="flex items-center gap-3.5 px-4 py-3.5
-						       {i < events.length - 1 ? 'border-border border-b' : ''}"
+						       {i < events.length - 1 ? 'border-border-default border-b' : ''}"
 					>
 						<div
 							class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -36,7 +36,7 @@
 						</div>
 						<div class="min-w-0 flex-1">
 							<p class="truncate text-sm font-medium">{event.label}</p>
-							<p class="text-neutral text-xs">{fmtDate(event.date)}</p>
+							<p class="text-text-subtle text-xs">{fmtDate(event.date)}</p>
 						</div>
 						<p class="text-sm font-semibold tabular-nums" style="color: {cfg.color};">
 							{cfg.sign}{fmt(event.amount)}
@@ -48,11 +48,11 @@
 	</section>
 {:else}
 	<section>
-		<p class="text-neutral mb-2 text-xs font-semibold tracking-widest uppercase">Upcoming</p>
+		<p class="text-text-subtle mb-2 text-xs font-semibold tracking-widest uppercase">Upcoming</p>
 		<div
-			class="border-border bg-surface flex items-center gap-3 rounded-2xl border px-4 py-3.5 shadow-sm"
+			class="border-border-default bg-surface-1 flex items-center gap-3 rounded-2xl border px-4 py-3.5 shadow-sm"
 		>
-			<p class="text-neutral text-sm">Nothing due in the next 30 days.</p>
+			<p class="text-text-subtle text-sm">Nothing due in the next 30 days.</p>
 		</div>
 	</section>
 {/if}

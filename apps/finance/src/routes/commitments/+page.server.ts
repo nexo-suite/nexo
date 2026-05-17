@@ -1,6 +1,7 @@
 import { db, accounts, expenses, debts } from '@nexo/db';
 import { eq, and, asc } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
+import { logger } from '$lib/server/logger';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -58,21 +59,42 @@ export const actions: Actions = {
 			notes: (d.get('notes') as string) || null,
 			active: true
 		};
-		if (!payload.name) return fail(400, { error: 'Name is required' });
-		if (id) {
-			await db.update(expenses).set(payload).where(eq(expenses.id, id));
-		} else {
-			await db.insert(expenses).values({ ...payload, userId });
+		if (!payload.name) return fail(400, { error: 'VALIDATION_REQUIRED' });
+		try {
+			if (id) {
+				await db
+					.update(expenses)
+					.set(payload)
+					.where(and(eq(expenses.id, id), eq(expenses.userId, userId)));
+			} else {
+				await db.insert(expenses).values({ ...payload, userId });
+			}
+		} catch (e) {
+			logger.error('db error', {
+				action: 'save-commitment-expense',
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: 'Expense saved' };
 	},
 
 	removeExpense: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const d = await request.formData();
 		const id = d.get('id') as string;
-		await db.delete(expenses).where(and(eq(expenses.id, id), eq(expenses.userId, userId)));
-		return { success: true };
+		try {
+			await db.delete(expenses).where(and(eq(expenses.id, id), eq(expenses.userId, userId)));
+		} catch (e) {
+			logger.error('db error', {
+				action: 'remove-commitment-expense',
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
+		}
+		return { success: true, toast: 'Expense deleted' };
 	},
 
 	saveDebt: async ({ request, locals }) => {
@@ -89,30 +111,60 @@ export const actions: Actions = {
 			paid: false
 		};
 		if (!payload.counterparty) return fail(400, { error: 'Counterparty is required' });
-		if (id) {
-			await db.update(debts).set(payload).where(eq(debts.id, id));
-		} else {
-			await db.insert(debts).values({ ...payload, userId });
+		try {
+			if (id) {
+				await db
+					.update(debts)
+					.set(payload)
+					.where(and(eq(debts.id, id), eq(debts.userId, userId)));
+			} else {
+				await db.insert(debts).values({ ...payload, userId });
+			}
+		} catch (e) {
+			logger.error('db error', {
+				action: 'save-commitment-debt',
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: 'Debt saved' };
 	},
 
 	removeDebt: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const d = await request.formData();
 		const id = d.get('id') as string;
-		await db.delete(debts).where(and(eq(debts.id, id), eq(debts.userId, userId)));
-		return { success: true };
+		try {
+			await db.delete(debts).where(and(eq(debts.id, id), eq(debts.userId, userId)));
+		} catch (e) {
+			logger.error('db error', {
+				action: 'remove-commitment-debt',
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
+		}
+		return { success: true, toast: 'Debt deleted' };
 	},
 
 	markDebtPaid: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const d = await request.formData();
 		const id = d.get('id') as string;
-		await db
-			.update(debts)
-			.set({ paid: true })
-			.where(and(eq(debts.id, id), eq(debts.userId, userId)));
-		return { success: true };
+		try {
+			await db
+				.update(debts)
+				.set({ paid: true })
+				.where(and(eq(debts.id, id), eq(debts.userId, userId)));
+		} catch (e) {
+			logger.error('db error', {
+				action: 'mark-debt-paid',
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
+		}
+		return { success: true, toast: 'Debt settled' };
 	}
 };

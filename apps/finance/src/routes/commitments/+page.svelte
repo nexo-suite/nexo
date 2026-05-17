@@ -1,14 +1,13 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/layout/PageHeader.svelte';
 	import BottomSheet from '$lib/components/layout/BottomSheet.svelte';
-	import { Plus, Wallet, ChevronRight, ArrowUpRight, ArrowDownLeft } from 'lucide-svelte';
+	import { Plus, ChevronRight, ArrowUpRight, ArrowDownLeft } from 'lucide-svelte';
 	import { enhance } from '$app/forms';
-	import { formatCurrency } from '$lib/utils';
+	import { formatCurrency, getIntlLocale } from '$lib/utils';
 	import type { Account, Expense, Debt } from '$lib/types';
 
 	let { data } = $props();
 
-	const fmt = formatCurrency;
+	const fmt = (n: number) => formatCurrency(n, data.settings.currency, data.settings.hideCents);
 
 	// ── Expense form ──────────────────────────────────────────────────────────
 	let showExpenseForm = $state(false);
@@ -25,7 +24,13 @@
 	function openNewExpense() {
 		editingExpense = null;
 		confirmDeleteExpense = false;
-		expenseForm = { name: '', amount: '', due_date: '', account_id: '', notes: '' };
+		expenseForm = {
+			name: '',
+			amount: '',
+			due_date: '',
+			account_id: data.settings?.defaultAccountId ?? '',
+			notes: ''
+		};
 		showExpenseForm = true;
 	}
 
@@ -63,7 +68,7 @@
 			counterparty: '',
 			amount: '',
 			due_date: '',
-			account_id: '',
+			account_id: data.settings?.defaultAccountId ?? '',
 			notes: ''
 		};
 		showDebtForm = true;
@@ -99,60 +104,91 @@
 	);
 </script>
 
-<div class="pb-6">
-	<div class="px-4 pt-4">
-		<PageHeader title="Commitments" user={data.user} displayName={data.settings.displayName} />
+<div class="px-4 pt-1">
+	<!-- Header -->
+	<div class="px-1 pt-1 pb-4">
+		<h1 class="text-[26px] font-semibold tracking-tight">Commitments</h1>
+		<div class="text-text-subtle mt-1 text-[13px]">Money earmarked for the future.</div>
 	</div>
 
-	<!-- Account allocation summary -->
+	<!-- Total committed card -->
+	{#if totalCommitted > 0}
+		<div
+			class="mb-3.5 rounded-[var(--radius-lg)] p-3.5"
+			style="background: var(--expense-soft); border: 1px solid color-mix(in oklab, var(--color-expense) 25%, var(--color-border-default));"
+		>
+			<div class="t-label" style="color: var(--expense-ink);">Total committed</div>
+			<div
+				class="mt-1.5 font-mono text-[22px] font-semibold tracking-tight"
+				style="color: var(--expense-ink); font-variant-numeric: tabular-nums;"
+			>
+				{fmt(totalCommitted)}
+			</div>
+		</div>
+	{/if}
+
+	<!-- Fund allocation per account -->
 	{#if data.accounts.length > 0}
-		<div class="mb-4 px-4">
-			<p class="text-neutral mb-2 text-xs font-semibold tracking-widest uppercase">
-				Fund Allocation
-			</p>
-			<div class="space-y-2">
-				{#each data.accounts as account (account.id)}
+		<div class="mb-4">
+			<div class="t-label text-text-subtle mb-2 px-0.5">Fund allocation</div>
+			<div
+				class="border-border-default bg-surface-1 overflow-hidden rounded-[var(--radius-xl)] border"
+			>
+				{#each data.accounts as account, i (account.id)}
 					{@const em = data.earmarks[account.id] ?? { earmarked: 0, available: account.balance }}
-					<div class="border-border bg-surface rounded-lg border px-4 py-3">
+					<div class="px-3.5 py-3" class:border-t={i > 0} class:border-border-subtle={i > 0}>
 						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-2">
-								{#if account.color}
-									<span class="h-2.5 w-2.5 rounded-full" style="background-color: {account.color};"
-									></span>
-								{:else}
-									<Wallet size={14} class="text-neutral" />
-								{/if}
-								<p class="text-sm font-medium">{account.name}</p>
+							<div class="flex items-center gap-2.5">
+								<div
+									class="bg-bg-1 grid size-7 place-items-center rounded-[var(--radius-sm)] text-[13px]"
+								>
+									{account.emoji ?? '🏦'}
+								</div>
+								<span class="text-text-primary text-[14px] font-medium">{account.name}</span>
 							</div>
-							<p class="text-neutral text-xs">{fmt(account.balance)}</p>
+							<span
+								class="text-text-muted font-mono text-[13px]"
+								style="font-variant-numeric: tabular-nums;"
+							>
+								{fmt(account.balance)}
+							</span>
 						</div>
 						{#if em.earmarked > 0}
-							<div class="mt-2 space-y-1">
-								<div class="flex justify-between text-xs">
-									<span class="text-neutral">Earmarked</span>
-									<span class="text-expense font-medium tabular-nums">{fmt(em.earmarked)}</span>
-								</div>
-								<div class="flex justify-between text-xs">
-									<span class="text-neutral">Available</span>
+							<div class="mt-2.5 pl-[38px]">
+								<div class="flex justify-between text-[12px]">
+									<span class="text-text-subtle">Earmarked</span>
 									<span
-										class="font-semibold tabular-nums {em.available < 0
-											? 'text-expense'
-											: 'text-income'}"
+										class="font-mono font-medium"
+										style="color: var(--expense-ink); font-variant-numeric: tabular-nums;"
+									>
+										{fmt(em.earmarked)}
+									</span>
+								</div>
+								<div class="mt-0.5 flex justify-between text-[12px]">
+									<span class="text-text-subtle">Available</span>
+									<span
+										class="font-mono font-semibold"
+										style="color: {em.available < 0
+											? 'var(--expense-ink)'
+											: 'var(--income-ink)'}; font-variant-numeric: tabular-nums;"
 									>
 										{fmt(em.available)}
 									</span>
 								</div>
-								<div class="bg-surface-muted mt-1.5 h-1.5 overflow-hidden rounded-full">
+								<div class="bg-bg-1 mt-2 h-[5px] overflow-hidden rounded-full">
 									<div
-										class="h-full rounded-full transition-all {em.available < 0
-											? 'bg-expense'
-											: 'bg-accent'}"
-										style="width: {Math.min(100, (em.earmarked / account.balance) * 100)}%"
+										class="h-full rounded-full transition-all"
+										style="width: {Math.min(
+											100,
+											(em.earmarked / account.balance) * 100
+										)}%; background: {em.available < 0
+											? 'var(--color-expense)'
+											: 'var(--color-accent)'};"
 									></div>
 								</div>
 							</div>
 						{:else}
-							<p class="text-neutral mt-1 text-xs">Nothing earmarked</p>
+							<div class="text-text-faint mt-1 pl-[38px] text-[11px]">Nothing earmarked</div>
 						{/if}
 					</div>
 				{/each}
@@ -160,43 +196,50 @@
 		</div>
 	{/if}
 
-	<!-- One-time expenses -->
-	<div class="px-4">
-		<div class="mb-2 flex items-center justify-between">
-			<p class="text-neutral text-xs font-semibold tracking-widest uppercase">Upcoming Expenses</p>
+	<!-- Upcoming Expenses -->
+	<div class="mb-4">
+		<div class="mb-2 flex items-center justify-between px-0.5">
+			<div class="t-label text-text-subtle">Upcoming expenses</div>
 			<button
 				type="button"
 				onclick={openNewExpense}
-				class="bg-expense flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-white"
+				class="border-border-default bg-surface-1 text-text-muted active:bg-bg-1 grid size-[30px] place-items-center rounded-full border transition-colors"
+				aria-label="Add expense"
 			>
-				<Plus size={12} /> Add
+				<Plus size={14} strokeWidth={1.8} />
 			</button>
 		</div>
 
 		{#if data.expenses.length === 0}
-			<div class="border-border rounded-xl border border-dashed p-6 text-center">
-				<p class="text-neutral text-sm">No upcoming one-time expenses.</p>
+			<div
+				class="border-border-default bg-surface-1 text-text-subtle rounded-[var(--radius-xl)] border border-dashed p-7 text-center text-[13.5px]"
+			>
+				No upcoming one-time expenses.
 			</div>
 		{:else}
-			<div class="space-y-2">
-				{#each data.expenses as expense (expense.id)}
+			<div
+				class="border-border-default bg-surface-1 overflow-hidden rounded-[var(--radius-xl)] border"
+			>
+				{#each data.expenses as expense, i (expense.id)}
 					{@const acc = expense.accountId ? accountMap.get(expense.accountId) : null}
 					<button
 						type="button"
 						onclick={() => openEditExpense(expense)}
-						class="border-border bg-surface hover:border-expense/30 flex w-full items-center gap-3 rounded-lg border p-4 text-left shadow-sm transition-colors"
+						class="active:bg-surface-2 flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors"
+						class:border-t={i > 0}
+						class:border-border-subtle={i > 0}
 					>
 						<div
-							class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-							style="background-color: color-mix(in oklab, var(--color-expense) 12%, transparent); color: var(--color-expense);"
+							class="grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)] text-[11px] font-bold"
+							style="background: var(--expense-soft); color: var(--expense-ink);"
 						>
 							{expense.category.slice(0, 3).toUpperCase()}
 						</div>
 						<div class="min-w-0 flex-1">
-							<p class="truncate text-sm font-medium">{expense.name}</p>
-							<p class="text-neutral text-xs">
+							<div class="text-text-primary truncate text-[14px] font-medium">{expense.name}</div>
+							<div class="text-text-subtle mt-0.5 text-[11px]">
 								{#if expense.dueDate}
-									Due {new Date(expense.dueDate).toLocaleDateString('en-GB', {
+									Due {new Date(expense.dueDate).toLocaleDateString(getIntlLocale(), {
 										day: 'numeric',
 										month: 'short'
 									})}
@@ -204,112 +247,111 @@
 									No due date
 								{/if}
 								{#if acc}
-									·
-									<span class="font-medium" style="color: {acc.color ?? 'var(--color-accent)'}"
-										>{acc.name}</span
-									>
+									· <span class="font-medium">{acc.name}</span>
 								{/if}
-							</p>
+							</div>
 						</div>
 						<div class="flex items-center gap-1">
-							<p class="text-expense text-sm font-semibold tabular-nums">{fmt(expense.amount)}</p>
-							<ChevronRight size={14} class="text-neutral" />
+							<span
+								class="font-mono text-[14px] font-semibold"
+								style="color: var(--expense-ink); font-variant-numeric: tabular-nums;"
+							>
+								{fmt(expense.amount)}
+							</span>
+							<ChevronRight size={13} class="text-text-faint" />
 						</div>
 					</button>
 				{/each}
 			</div>
-		{/if}
-
-		{#if unallocatedExpenses.length > 0}
-			<p class="text-neutral mt-2 text-xs">
-				{unallocatedExpenses.length} expense{unallocatedExpenses.length === 1 ? '' : 's'} not linked to
-				an account
-			</p>
+			{#if unallocatedExpenses.length > 0}
+				<p class="text-text-faint mt-1.5 px-0.5 text-[11px]">
+					{unallocatedExpenses.length} expense{unallocatedExpenses.length === 1 ? '' : 's'} not linked
+					to an account
+				</p>
+			{/if}
 		{/if}
 	</div>
 
-	<!-- Debts -->
-	<div class="mt-5 px-4">
-		<div class="mb-2 flex items-center justify-between">
-			<p class="text-neutral text-xs font-semibold tracking-widest uppercase">Open Debts</p>
+	<!-- Open Debts -->
+	<div class="mb-4">
+		<div class="mb-2 flex items-center justify-between px-0.5">
+			<div class="t-label text-text-subtle">Open debts</div>
 			<button
 				type="button"
 				onclick={openNewDebt}
-				class="bg-debt flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-white"
+				class="border-border-default bg-surface-1 text-text-muted active:bg-bg-1 grid size-[30px] place-items-center rounded-full border transition-colors"
+				aria-label="Add debt"
 			>
-				<Plus size={12} /> Add
+				<Plus size={14} strokeWidth={1.8} />
 			</button>
 		</div>
 
 		{#if data.debts.length === 0}
-			<div class="border-border rounded-xl border border-dashed p-6 text-center">
-				<p class="text-neutral text-sm">No open debts.</p>
+			<div
+				class="border-border-default bg-surface-1 text-text-subtle rounded-[var(--radius-xl)] border border-dashed p-7 text-center text-[13.5px]"
+			>
+				No open debts.
 			</div>
 		{:else}
-			<div class="space-y-2">
-				{#each data.debts as debt (debt.id)}
+			<div
+				class="border-border-default bg-surface-1 overflow-hidden rounded-[var(--radius-xl)] border"
+			>
+				{#each data.debts as debt, i (debt.id)}
 					{@const debtWithAcc = debt as Debt & { accountId?: string | null }}
 					{@const acc = debtWithAcc.accountId ? accountMap.get(debtWithAcc.accountId) : null}
 					<button
 						type="button"
 						onclick={() => openEditDebt(debt)}
-						class="border-border bg-surface hover:border-debt/30 flex w-full items-center gap-3 rounded-lg border p-4 text-left shadow-sm transition-colors"
+						class="active:bg-surface-2 flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors"
+						class:border-t={i > 0}
+						class:border-border-subtle={i > 0}
 					>
 						<div
-							class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-							style="background-color: color-mix(in oklab, var(--color-debt) 12%, transparent); color: var(--color-debt);"
+							class="grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)]"
+							style="background: var(--debt-soft); color: var(--debt-ink);"
 						>
 							{#if debt.direction === 'owe'}
-								<ArrowUpRight size={18} stroke-width={2} />
+								<ArrowUpRight size={15} strokeWidth={2} />
 							{:else}
-								<ArrowDownLeft size={18} stroke-width={2} />
+								<ArrowDownLeft size={15} strokeWidth={2} />
 							{/if}
 						</div>
 						<div class="min-w-0 flex-1">
-							<p class="truncate text-sm font-medium">{debt.counterparty}</p>
-							<p class="text-neutral text-xs">
+							<div class="text-text-primary truncate text-[14px] font-medium">
+								{debt.counterparty}
+							</div>
+							<div class="text-text-subtle mt-0.5 text-[11px]">
 								{debt.direction === 'owe' ? 'I owe' : 'Owed to me'}
 								{#if debt.dueDate}
-									· due {new Date(debt.dueDate).toLocaleDateString('en-GB', {
+									· due {new Date(debt.dueDate).toLocaleDateString(getIntlLocale(), {
 										day: 'numeric',
 										month: 'short'
 									})}
 								{/if}
 								{#if acc}
-									·
-									<span class="font-medium" style="color: {acc.color ?? 'var(--color-accent)'}"
-										>{acc.name}</span
-									>
+									· <span class="font-medium">{acc.name}</span>
 								{/if}
-							</p>
+							</div>
 						</div>
 						<div class="flex items-center gap-1">
-							<p class="text-sm font-semibold tabular-nums" style="color: var(--color-debt);">
+							<span
+								class="font-mono text-[14px] font-semibold"
+								style="color: var(--debt-ink); font-variant-numeric: tabular-nums;"
+							>
 								{fmt(debt.amount)}
-							</p>
-							<ChevronRight size={14} class="text-neutral" />
+							</span>
+							<ChevronRight size={13} class="text-text-faint" />
 						</div>
 					</button>
 				{/each}
 			</div>
-		{/if}
-
-		{#if unallocatedDebts.length > 0}
-			<p class="text-neutral mt-2 text-xs">
-				{unallocatedDebts.length} debt{unallocatedDebts.length === 1 ? '' : 's'} not linked to an account
-			</p>
+			{#if unallocatedDebts.length > 0}
+				<p class="text-text-faint mt-1.5 px-0.5 text-[11px]">
+					{unallocatedDebts.length} debt{unallocatedDebts.length === 1 ? '' : 's'} not linked to an account
+				</p>
+			{/if}
 		{/if}
 	</div>
-
-	<!-- Total -->
-	{#if totalCommitted > 0}
-		<div class="border-border bg-surface mx-4 mt-5 rounded-lg border px-4 py-3">
-			<div class="flex items-center justify-between">
-				<p class="text-neutral text-sm">Total committed</p>
-				<p class="text-expense text-sm font-semibold tabular-nums">{fmt(totalCommitted)}</p>
-			</div>
-		</div>
-	{/if}
 </div>
 
 <!-- Expense form sheet -->
@@ -317,9 +359,9 @@
 	<BottomSheet bind:open={showExpenseForm} title={editingExpense ? 'Edit Expense' : 'New Expense'}>
 		{#if confirmDeleteExpense}
 			<div class="space-y-4 py-2">
-				<div class="bg-surface-muted rounded-xl px-4 py-4 text-center">
-					<p class="text-sm font-medium">Delete "{editingExpense?.name}"?</p>
-					<p class="text-neutral mt-1 text-xs">This can't be undone.</p>
+				<div class="bg-bg-1 rounded-[var(--radius-lg)] px-4 py-4 text-center">
+					<p class="text-text-primary text-[14px] font-medium">Delete "{editingExpense?.name}"?</p>
+					<p class="text-text-subtle mt-1 text-[12px]">This can't be undone.</p>
 				</div>
 				<form
 					method="POST"
@@ -334,7 +376,8 @@
 					<input type="hidden" name="id" value={editingExpense?.id} />
 					<button
 						type="submit"
-						class="bg-expense w-full rounded-lg py-3 text-sm font-semibold text-white"
+						class="w-full rounded-[var(--radius-md)] py-3 text-[14px] font-semibold text-white"
+						style="background: var(--color-expense);"
 					>
 						Yes, delete
 					</button>
@@ -342,7 +385,7 @@
 				<button
 					type="button"
 					onclick={() => (confirmDeleteExpense = false)}
-					class="text-neutral w-full rounded-lg py-3 text-sm font-semibold"
+					class="text-text-subtle w-full rounded-[var(--radius-md)] py-3 text-[14px] font-semibold"
 				>
 					Cancel
 				</button>
@@ -363,7 +406,7 @@
 				{/if}
 				<div class="space-y-3">
 					<div>
-						<label for="exp-name" class="text-neutral mb-1 block text-xs font-medium">Name</label>
+						<label for="exp-name" class="t-label text-text-subtle mb-1 block">Name</label>
 						<input
 							id="exp-name"
 							name="name"
@@ -373,9 +416,7 @@
 						/>
 					</div>
 					<div>
-						<label for="exp-amount" class="text-neutral mb-1 block text-xs font-medium"
-							>Amount</label
-						>
+						<label for="exp-amount" class="t-label text-text-subtle mb-1 block">Amount</label>
 						<input
 							id="exp-amount"
 							name="amount"
@@ -387,9 +428,9 @@
 						/>
 					</div>
 					<div>
-						<label for="exp-due" class="text-neutral mb-1 block text-xs font-medium">
-							Due date (optional)
-						</label>
+						<label for="exp-due" class="t-label text-text-subtle mb-1 block"
+							>Due date (optional)</label
+						>
 						<input
 							id="exp-due"
 							name="due_date"
@@ -399,9 +440,9 @@
 						/>
 					</div>
 					<div>
-						<label for="exp-account" class="text-neutral mb-1 block text-xs font-medium">
-							Account (optional)
-						</label>
+						<label for="exp-account" class="t-label text-text-subtle mb-1 block"
+							>Account (optional)</label
+						>
 						<select
 							id="exp-account"
 							name="account_id"
@@ -415,9 +456,9 @@
 						</select>
 					</div>
 					<div>
-						<label for="exp-notes" class="text-neutral mb-1 block text-xs font-medium">
-							Notes (optional)
-						</label>
+						<label for="exp-notes" class="t-label text-text-subtle mb-1 block"
+							>Notes (optional)</label
+						>
 						<input
 							id="exp-notes"
 							name="notes"
@@ -429,7 +470,7 @@
 				</div>
 				<button
 					type="submit"
-					class="bg-expense mt-5 w-full rounded-lg py-3 text-sm font-semibold text-white"
+					class="bg-text-primary text-bg-0 mt-5 h-12 w-full rounded-[var(--radius-md)] text-[14px] font-semibold"
 				>
 					{editingExpense ? 'Save Changes' : 'Create Expense'}
 				</button>
@@ -437,7 +478,8 @@
 					<button
 						type="button"
 						onclick={() => (confirmDeleteExpense = true)}
-						class="text-expense mt-2 w-full rounded-lg py-3 text-sm font-semibold"
+						class="mt-2 w-full rounded-[var(--radius-md)] py-3 text-[14px] font-semibold"
+						style="color: var(--expense-ink);"
 					>
 						Delete Expense
 					</button>
@@ -452,9 +494,11 @@
 	<BottomSheet bind:open={showDebtForm} title={editingDebt ? 'Edit Debt' : 'New Debt'}>
 		{#if confirmDeleteDebt}
 			<div class="space-y-4 py-2">
-				<div class="bg-surface-muted rounded-xl px-4 py-4 text-center">
-					<p class="text-sm font-medium">Delete debt with "{editingDebt?.counterparty}"?</p>
-					<p class="text-neutral mt-1 text-xs">This can't be undone.</p>
+				<div class="bg-bg-1 rounded-[var(--radius-lg)] px-4 py-4 text-center">
+					<p class="text-text-primary text-[14px] font-medium">
+						Delete debt with "{editingDebt?.counterparty}"?
+					</p>
+					<p class="text-text-subtle mt-1 text-[12px]">This can't be undone.</p>
 				</div>
 				<form
 					method="POST"
@@ -469,7 +513,8 @@
 					<input type="hidden" name="id" value={editingDebt?.id} />
 					<button
 						type="submit"
-						class="bg-debt w-full rounded-lg py-3 text-sm font-semibold text-white"
+						class="w-full rounded-[var(--radius-md)] py-3 text-[14px] font-semibold text-white"
+						style="background: var(--color-debt);"
 					>
 						Yes, delete
 					</button>
@@ -477,7 +522,7 @@
 				<button
 					type="button"
 					onclick={() => (confirmDeleteDebt = false)}
-					class="text-neutral w-full rounded-lg py-3 text-sm font-semibold"
+					class="text-text-subtle w-full rounded-[var(--radius-md)] py-3 text-[14px] font-semibold"
 				>
 					Cancel
 				</button>
@@ -498,9 +543,7 @@
 				{/if}
 				<div class="space-y-3">
 					<div>
-						<label for="dbt-direction" class="text-neutral mb-1 block text-xs font-medium"
-							>Direction</label
-						>
+						<label for="dbt-direction" class="t-label text-text-subtle mb-1 block">Direction</label>
 						<select
 							id="dbt-direction"
 							name="direction"
@@ -512,9 +555,9 @@
 						</select>
 					</div>
 					<div>
-						<label for="dbt-counterparty" class="text-neutral mb-1 block text-xs font-medium">
-							Person / entity
-						</label>
+						<label for="dbt-counterparty" class="t-label text-text-subtle mb-1 block"
+							>Person / entity</label
+						>
 						<input
 							id="dbt-counterparty"
 							name="counterparty"
@@ -524,9 +567,7 @@
 						/>
 					</div>
 					<div>
-						<label for="dbt-amount" class="text-neutral mb-1 block text-xs font-medium"
-							>Amount</label
-						>
+						<label for="dbt-amount" class="t-label text-text-subtle mb-1 block">Amount</label>
 						<input
 							id="dbt-amount"
 							name="amount"
@@ -538,9 +579,9 @@
 						/>
 					</div>
 					<div>
-						<label for="dbt-due" class="text-neutral mb-1 block text-xs font-medium">
-							Due date (optional)
-						</label>
+						<label for="dbt-due" class="t-label text-text-subtle mb-1 block"
+							>Due date (optional)</label
+						>
 						<input
 							id="dbt-due"
 							name="due_date"
@@ -550,9 +591,9 @@
 						/>
 					</div>
 					<div>
-						<label for="dbt-account" class="text-neutral mb-1 block text-xs font-medium">
-							Account (optional)
-						</label>
+						<label for="dbt-account" class="t-label text-text-subtle mb-1 block"
+							>Account (optional)</label
+						>
 						<select
 							id="dbt-account"
 							name="account_id"
@@ -566,9 +607,9 @@
 						</select>
 					</div>
 					<div>
-						<label for="dbt-notes" class="text-neutral mb-1 block text-xs font-medium">
-							Notes (optional)
-						</label>
+						<label for="dbt-notes" class="t-label text-text-subtle mb-1 block"
+							>Notes (optional)</label
+						>
 						<input
 							id="dbt-notes"
 							name="notes"
@@ -580,7 +621,7 @@
 				</div>
 				<button
 					type="submit"
-					class="bg-debt mt-5 w-full rounded-lg py-3 text-sm font-semibold text-white"
+					class="bg-text-primary text-bg-0 mt-5 h-12 w-full rounded-[var(--radius-md)] text-[14px] font-semibold"
 				>
 					{editingDebt ? 'Save Changes' : 'Create Debt'}
 				</button>
@@ -589,14 +630,16 @@
 						<button
 							type="submit"
 							form="mark-debt-paid-form"
-							class="bg-income rounded-lg py-3 text-sm font-semibold text-white"
+							class="h-12 rounded-[var(--radius-md)] text-[14px] font-semibold text-white"
+							style="background: var(--color-income);"
 						>
 							Mark Paid
 						</button>
 						<button
 							type="button"
 							onclick={() => (confirmDeleteDebt = true)}
-							class="text-debt rounded-lg py-3 text-sm font-semibold"
+							class="h-12 rounded-[var(--radius-md)] text-[14px] font-semibold"
+							style="color: var(--expense-ink);"
 						>
 							Delete
 						</button>
@@ -607,7 +650,7 @@
 	</BottomSheet>
 {/if}
 
-<!-- Hidden form for markDebtPaid — must live outside BottomSheet to avoid nested <form> -->
+<!-- Hidden form for markDebtPaid -->
 <form
 	id="mark-debt-paid-form"
 	method="POST"
@@ -626,14 +669,16 @@
 <style>
 	.input {
 		width: 100%;
-		border: 1px solid var(--color-border);
+		height: 44px;
+		border: 1px solid var(--color-border-subtle);
 		border-radius: var(--radius-md);
-		background: var(--color-surface);
-		padding: 0.5rem 0.75rem;
+		background: var(--color-bg-1);
+		padding: 0 0.875rem;
 		font-size: 0.875rem;
+		color: var(--color-text-primary);
 		outline: none;
 	}
 	.input:focus {
-		border-color: var(--color-accent);
+		border-color: var(--color-text-primary);
 	}
 </style>

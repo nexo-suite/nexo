@@ -21,7 +21,7 @@
 <header class="mb-5 flex items-center justify-between">
 	<div>
 		{#if subtitle}
-			<p class="text-neutral mb-0.5 text-[11px] font-semibold tracking-widest uppercase">
+			<p class="text-text-subtle mb-0.5 text-[11px] font-semibold tracking-widest uppercase">
 				{subtitle}
 			</p>
 		{/if}

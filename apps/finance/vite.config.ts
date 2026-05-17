@@ -1,6 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { paraglide } from '@inlang/paraglide-sveltekit/vite';
+import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { defineConfig, mergeConfig, type PluginOption } from 'vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { sharedConfig } from '../../vite.shared';
@@ -9,7 +9,11 @@ export default mergeConfig(
 	sharedConfig,
 	defineConfig({
 		plugins: [
-			paraglide({ project: './project.inlang', outdir: './src/lib/paraglide' }) as PluginOption,
+			paraglideVitePlugin({
+				project: './project.inlang',
+				outdir: './src/lib/paraglide',
+				strategy: ['cookie', 'preferredLanguage', 'baseLocale']
+			}) as PluginOption,
 			tailwindcss() as PluginOption,
 			sveltekit() as PluginOption,
 			SvelteKitPWA({

@@ -6,7 +6,8 @@ import { and, eq } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
 import { logger } from '$lib/server/logger';
-import { i18n } from '$lib/i18n';
+import { paraglideMiddleware } from '$lib/paraglide/server.js';
+import { getTextDirection } from '$lib/paraglide/runtime.js';
 
 initDb(env.DATABASE_URL!);
 
@@ -82,4 +83,13 @@ const securityHeaders: Handle = async ({ event, resolve }) => {
 	return response;
 };
 
-export const handle = sequence(i18n.handle(), appHandle, securityHeaders);
+const i18nHandle: Handle = ({ event, resolve }) =>
+	paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
+		event.request = localizedRequest;
+		return resolve(event, {
+			transformPageChunk: ({ html }) =>
+				html.replace('%lang%', locale).replace('%dir%', getTextDirection(locale))
+		});
+	});
+
+export const handle = sequence(i18nHandle, appHandle, securityHeaders);

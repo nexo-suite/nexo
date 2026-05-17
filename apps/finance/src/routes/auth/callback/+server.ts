@@ -6,7 +6,9 @@ import { logger } from '$lib/server/logger';
 // After a successful OAuth flow the auth server sets a session cookie and
 // redirects the user back here. We just bounce them to the app root.
 export const GET: RequestHandler = ({ url }) => {
-	const next = url.searchParams.get('next') ?? '/';
+	const raw = url.searchParams.get('next') ?? '/';
+	// Only allow same-origin redirects — reject any value that contains a scheme or host.
+	const next = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
 	logger.info('auth/callback', { next });
 	redirect(303, next);
 };

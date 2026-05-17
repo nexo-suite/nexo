@@ -1,4 +1,4 @@
-import { db, debts } from '@nexo/db';
+import { db, debts, accounts } from '@nexo/db';
 import { eq, asc, and } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 import { logger } from '$lib/server/logger';
@@ -6,12 +6,15 @@ import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
-	const rows = await db
-		.select()
-		.from(debts)
-		.where(eq(debts.userId, userId))
-		.orderBy(asc(debts.createdAt));
-	return { debts: rows.map((d) => ({ ...d, amount: Number(d.amount) })), userId };
+	const [rows, accountList] = await Promise.all([
+		db.select().from(debts).where(eq(debts.userId, userId)).orderBy(asc(debts.createdAt)),
+		db.select().from(accounts).where(eq(accounts.userId, userId)).orderBy(asc(accounts.createdAt))
+	]);
+	return {
+		debts: rows.map((d) => ({ ...d, amount: Number(d.amount) })),
+		accounts: accountList.map((a) => ({ id: a.id, name: a.name, emoji: a.emoji })),
+		userId
+	};
 };
 
 export const actions: Actions = {
@@ -24,13 +27,17 @@ export const actions: Actions = {
 			counterparty: d.get('counterparty') as string,
 			amount: String(parseFloat(d.get('amount') as string) || 0),
 			dueDate: (d.get('due_date') as string) || null,
+			accountId: (d.get('account_id') as string) || null,
 			paid: d.get('paid') === 'true',
 			notes: (d.get('notes') as string) || null
 		};
-		if (!payload.counterparty) return fail(400, { error: 'Counterparty is required' });
+		if (!payload.counterparty) return fail(400, { error: 'VALIDATION_REQUIRED' });
 		try {
 			if (id) {
-				await db.update(debts).set(payload).where(eq(debts.id, id));
+				await db
+					.update(debts)
+					.set(payload)
+					.where(and(eq(debts.id, id), eq(debts.userId, userId)));
 			} else {
 				await db.insert(debts).values({ ...payload, userId });
 			}
@@ -42,7 +49,7 @@ export const actions: Actions = {
 			});
 			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: payload.paid ? 'Debt settled' : 'Debt saved' };
 	},
 	remove: async ({ request, locals }) => {
 		const userId = locals.user!.id;
@@ -58,7 +65,7 @@ export const actions: Actions = {
 			});
 			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: 'Debt deleted' };
 	},
 	clearSettled: async ({ locals }) => {
 		const userId = locals.user!.id;
@@ -72,6 +79,6 @@ export const actions: Actions = {
 			});
 			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: 'Settled debts cleared' };
 	}
 };

@@ -1,9 +1,13 @@
 import type { User } from 'better-auth';
 
 declare global {
+	const __APP_VERSION__: string;
+
 	namespace App {
 		interface Error {
 			message: string;
+			code?: string;
+			correlationId?: string;
 		}
 		interface Locals {
 			user: User | null;

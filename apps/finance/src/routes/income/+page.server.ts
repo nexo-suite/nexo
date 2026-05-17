@@ -1,4 +1,4 @@
-import { db, income } from '@nexo/db';
+import { db, income, accounts } from '@nexo/db';
 import { eq, asc, and } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 import { logger } from '$lib/server/logger';
@@ -6,12 +6,15 @@ import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
-	const rows = await db
-		.select()
-		.from(income)
-		.where(eq(income.userId, userId))
-		.orderBy(asc(income.createdAt));
-	return { incomeItems: rows.map((i) => ({ ...i, amount: Number(i.amount) })), userId };
+	const [rows, accountList] = await Promise.all([
+		db.select().from(income).where(eq(income.userId, userId)).orderBy(asc(income.createdAt)),
+		db.select().from(accounts).where(eq(accounts.userId, userId)).orderBy(asc(accounts.createdAt))
+	]);
+	return {
+		incomeItems: rows.map((i) => ({ ...i, amount: Number(i.amount) })),
+		accounts: accountList.map((a) => ({ id: a.id, name: a.name, emoji: a.emoji })),
+		userId
+	};
 };
 
 export const actions: Actions = {
@@ -26,12 +29,16 @@ export const actions: Actions = {
 			dayOfMonth: (d.get('day_of_month') as string) || null,
 			expectedDate: (d.get('expected_date') as string) || null,
 			startingMonth: (d.get('starting_month') as string) || null,
+			accountId: (d.get('account_id') as string) || null,
 			received: d.get('received') === 'true'
 		};
-		if (!payload.name) return fail(400, { error: 'Name is required' });
+		if (!payload.name) return fail(400, { error: 'VALIDATION_REQUIRED' });
 		try {
 			if (id) {
-				await db.update(income).set(payload).where(eq(income.id, id));
+				await db
+					.update(income)
+					.set(payload)
+					.where(and(eq(income.id, id), eq(income.userId, userId)));
 			} else {
 				await db.insert(income).values({ ...payload, userId });
 			}
@@ -41,9 +48,9 @@ export const actions: Actions = {
 				error: String(e),
 				correlationId: locals.correlationId
 			});
-			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
+			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: 'Income saved' };
 	},
 	remove: async ({ request, locals }) => {
 		const userId = locals.user!.id;
@@ -57,8 +64,8 @@ export const actions: Actions = {
 				error: String(e),
 				correlationId: locals.correlationId
 			});
-			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
+			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: 'Income deleted' };
 	}
 };

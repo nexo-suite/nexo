@@ -1,11 +1,8 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/layout/PageHeader.svelte';
-	import IncomeRow from '$lib/components/income/IncomeRow.svelte';
-	import BottomSheet from '$lib/components/layout/BottomSheet.svelte';
-	import Toggle from '$lib/components/ui/Toggle.svelte';
+	import IncomeForm from '$lib/components/income/IncomeForm.svelte';
 	import Tabs from '$lib/components/ui/Tabs.svelte';
 	import { Plus } from 'lucide-svelte';
-	import { enhance } from '$app/forms';
+	import { normalizeToMonthly, formatCurrency, getIntlLocale } from '$lib/utils';
 
 	import type { Income } from '$lib/types';
 
@@ -14,18 +11,8 @@
 	// ── Form state ───────────────────────────────────────────────────────────
 	let showForm = $state(false);
 	let editing = $state<Income | null>(null);
-	let confirmDelete = $state(false);
-	let form = $state({
-		name: '',
-		amount: '',
-		recurrence: 'monthly',
-		day_of_month: '',
-		expected_date: '',
-		starting_month: '',
-		received: false
-	});
 
-	// ── Tab + sort state ──────────────────────────────────────────────────────
+	// ── Tab + sort/filter state ───────────────────────────────────────────────
 	type TabId = 'recurring' | 'once' | 'past';
 	let activeTab = $state<TabId>('recurring');
 	let sortBy = $state<'date' | 'amount'>('date');
@@ -38,36 +25,9 @@
 	}
 
 	// ── Static config ─────────────────────────────────────────────────────────
-	const recurrences = [
-		'once',
-		'weekly',
-		'biweekly',
-		'monthly',
-		'quarterly',
-		'half-yearly',
-		'yearly'
-	];
-	const months = [
-		'January',
-		'February',
-		'March',
-		'April',
-		'May',
-		'June',
-		'July',
-		'August',
-		'September',
-		'October',
-		'November',
-		'December'
-	];
-	const fmt = (n: number) =>
-		new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(n);
+	const fmt = (n: number) => formatCurrency(n, data.settings?.currency, data.settings?.hideCents);
 
 	// ── Derived partitions ────────────────────────────────────────────────────
-	const needsMonth = $derived(['quarterly', 'half-yearly', 'yearly'].includes(form.recurrence));
-	const isOnce = $derived(form.recurrence === 'once');
-
 	const recurringIncome = $derived(data.incomeItems.filter((i: Income) => i.recurrence !== 'once'));
 	const onceIncome = $derived(
 		data.incomeItems.filter((i: Income) => i.recurrence === 'once' && !i.received)
@@ -77,14 +37,10 @@
 	);
 
 	const monthlyTotal = $derived(
-		recurringIncome
-			.filter((i: Income) => i.recurrence === 'monthly')
-			.reduce((s: number, i: Income) => s + i.amount, 0)
-	);
-	const receivedTotal = $derived(
-		data.incomeItems
-			.filter((i: Income) => i.received)
-			.reduce((s: number, i: Income) => s + i.amount, 0)
+		recurringIncome.reduce(
+			(s: number, i: Income) => s + normalizeToMonthly(i.amount, i.recurrence),
+			0
+		)
 	);
 
 	const tabCounts = $derived({
@@ -99,7 +55,33 @@
 		{ id: 'past', label: 'Past', count: tabCounts.past }
 	]);
 
-	// ── Sort helpers ──────────────────────────────────────────────────────────
+	// ── Monthly breakdown ─────────────────────────────────────────────────────
+	const RECURRENCE_ORDER = ['monthly', 'weekly', 'biweekly', 'quarterly', 'half-yearly', 'yearly'];
+	const RECURRENCE_LABELS: Record<string, string> = {
+		monthly: 'Monthly',
+		weekly: 'Weekly',
+		biweekly: 'Biweekly',
+		quarterly: 'Quarterly',
+		'half-yearly': 'Half-yearly',
+		yearly: 'Yearly'
+	};
+
+	const monthlyBreakdown = $derived.by(() => {
+		const rows: { recurrence: string; label: string; raw: number; monthly: number }[] = [];
+		for (const recurrence of RECURRENCE_ORDER) {
+			const items = recurringIncome.filter((i: Income) => i.recurrence === recurrence);
+			if (items.length === 0) continue;
+			const raw = items.reduce((s: number, i: Income) => s + i.amount, 0);
+			const monthly = items.reduce(
+				(s: number, i: Income) => s + normalizeToMonthly(i.amount, i.recurrence),
+				0
+			);
+			rows.push({ recurrence, label: RECURRENCE_LABELS[recurrence] ?? recurrence, raw, monthly });
+		}
+		return rows;
+	});
+
+	// ── Filter + sort helpers ─────────────────────────────────────────────────
 	function dateVal(s: string | null, dir: 'asc' | 'desc'): number {
 		if (!s) return dir === 'asc' ? Infinity : -Infinity;
 		return new Date(s).getTime();
@@ -107,21 +89,54 @@
 
 	function pillClass(isActive: boolean): string {
 		return isActive
-			? 'shrink-0 rounded-full border border-income bg-income/10 px-3 py-1.5 text-xs font-medium text-income transition-colors'
-			: 'shrink-0 rounded-full border border-border px-3 py-1.5 text-xs text-neutral transition-colors hover:border-income/40';
+			? 'shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors border-[var(--accent-line)] bg-[var(--income-soft)] text-[var(--income-ink)]'
+			: 'shrink-0 rounded-full border border-border-default px-3 py-1.5 text-[11px] text-text-muted transition-colors hover:border-[var(--accent-line)]';
 	}
 
-	// ── Derived views ─────────────────────────────────────────────────────────
+	// ── Derived views (with sort applied) ────────────────────────────────────
 	const recurringView = $derived.by(() => {
-		const list = recurringIncome.slice() as Income[];
+		let list = recurringIncome.slice() as Income[];
 		if (sortBy === 'amount') {
 			list.sort((a, b) => (sortDir === 'asc' ? a.amount - b.amount : b.amount - a.amount));
 		}
-		return list;
+
+		const groups: {
+			recurrence: string;
+			label: string;
+			items: Income[];
+			subtotal: number;
+			monthlyEquiv: number;
+			count: number;
+		}[] = [];
+		for (const recurrence of RECURRENCE_ORDER) {
+			const items = list.filter((i) => i.recurrence === recurrence);
+			if (items.length === 0) continue;
+			groups.push({
+				recurrence,
+				label: RECURRENCE_LABELS[recurrence] ?? recurrence,
+				items,
+				subtotal: items.reduce((s, i) => s + i.amount, 0),
+				monthlyEquiv: items.reduce((s, i) => s + normalizeToMonthly(i.amount, i.recurrence), 0),
+				count: items.length
+			});
+		}
+		const known = new Set(RECURRENCE_ORDER);
+		const rest = list.filter((i) => !known.has(i.recurrence));
+		if (rest.length > 0) {
+			groups.push({
+				recurrence: 'other',
+				label: 'Other',
+				items: rest,
+				subtotal: rest.reduce((s, i) => s + i.amount, 0),
+				monthlyEquiv: rest.reduce((s, i) => s + normalizeToMonthly(i.amount, i.recurrence), 0),
+				count: rest.length
+			});
+		}
+		return groups;
 	});
 
 	const onceView = $derived.by(() => {
-		const list = onceIncome.slice() as Income[];
+		let list = onceIncome.slice() as Income[];
 		if (sortBy === 'amount') {
 			list.sort((a, b) => (sortDir === 'asc' ? a.amount - b.amount : b.amount - a.amount));
 		} else {
@@ -131,7 +146,7 @@
 	});
 
 	const pastView = $derived.by(() => {
-		const list = pastIncome.slice() as Income[];
+		let list = pastIncome.slice() as Income[];
 		if (sortBy === 'amount') {
 			list.sort((a, b) => (sortDir === 'asc' ? a.amount - b.amount : b.amount - a.amount));
 		} else {
@@ -148,84 +163,85 @@
 		return list;
 	});
 
+	// ── Formatting helpers ────────────────────────────────────────────────────
+	function dayLabel(inc: Income): string {
+		if (inc.dayOfMonth === 'last_working') return 'Last working day';
+		if (inc.dayOfMonth === 'second_last_working') return '2nd-last working day';
+		if (inc.dayOfMonth) return `${inc.dayOfMonth}. of month`;
+		return '';
+	}
+
+	function dueDateLabel(inc: Income): string {
+		if (!inc.expectedDate) return 'no date set';
+		return `expected ${new Date(inc.expectedDate).toLocaleDateString(getIntlLocale(), { day: 'numeric', month: 'short' })}`;
+	}
+
 	// ── Form handlers ─────────────────────────────────────────────────────────
 	function openNew() {
 		editing = null;
-		confirmDelete = false;
-		form = {
-			name: '',
-			amount: '',
-			recurrence: 'monthly',
-			day_of_month: '',
-			expected_date: '',
-			starting_month: '',
-			received: false
-		};
 		showForm = true;
 	}
 
-	function openEdit(income: Income) {
-		editing = income;
-		confirmDelete = false;
-		form = {
-			name: income.name,
-			amount: String(income.amount),
-			recurrence: income.recurrence,
-			day_of_month: income.dayOfMonth ?? '',
-			expected_date: income.expectedDate ?? '',
-			starting_month: income.startingMonth ?? '',
-			received: income.received
-		};
+	function openEdit(inc: Income) {
+		editing = inc;
 		showForm = true;
 	}
 </script>
 
-<div class="pb-6">
-	<div class="px-4 pt-4">
-		<PageHeader title="Income" user={data.user} displayName={data.settings.displayName}>
-			{#snippet actions()}
-				<button
-					type="button"
-					onclick={openNew}
-					class="bg-income flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium text-white"
-				>
-					<Plus size={14} /> Add
-				</button>
-			{/snippet}
-		</PageHeader>
-	</div>
-
-	<div class="mx-4 mb-4 grid grid-cols-2 gap-3">
-		<div class="border-border bg-surface rounded-lg border px-4 py-3">
-			<p class="text-neutral text-xs">Monthly expected</p>
-			<p class="text-income mt-0.5 text-sm font-semibold tabular-nums">
-				{fmt(monthlyTotal)}
-			</p>
+<div class="flex flex-col gap-5 px-4 pt-5 pb-8">
+	<!-- Header -->
+	<header class="flex items-start justify-between">
+		<div>
+			<h1 class="text-text-primary text-[26px] leading-tight font-semibold tracking-tight">
+				Income
+			</h1>
+			<p class="text-text-subtle mt-0.5 text-[13px]">Track what comes in, on cadence.</p>
 		</div>
-		<div class="border-border bg-surface rounded-lg border px-4 py-3">
-			<p class="text-neutral text-xs">Received</p>
-			<p class="text-income mt-0.5 text-sm font-semibold tabular-nums">
-				{fmt(receivedTotal)}
-			</p>
-		</div>
-	</div>
+		<button
+			type="button"
+			onclick={openNew}
+			class="bg-income flex h-[38px] w-[38px] items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-95"
+			aria-label="Add income"
+		>
+			<Plus size={18} strokeWidth={2.5} />
+		</button>
+	</header>
 
-	<div class="mb-3 px-4">
-		<Tabs tabs={incomeTabs} active={activeTab} onchange={switchTab} />
-	</div>
+	<!-- Tabs -->
+	<Tabs tabs={incomeTabs} active={activeTab} onchange={switchTab} />
 
+	<!-- Recurring Tab -->
 	{#if activeTab === 'recurring'}
-		<div class="flex gap-2 overflow-x-auto px-4 pt-1 pb-2 [&::-webkit-scrollbar]:hidden">
-			<button
-				type="button"
-				onclick={() => {
-					sortBy = 'amount';
-					sortDir = 'asc';
-				}}
-				class={pillClass(sortBy === 'amount' && sortDir === 'asc')}
-			>
-				Cheapest first
-			</button>
+		<!-- Monthly Equivalent Card -->
+		<div
+			class="rounded-[var(--radius-lg)] border p-4"
+			style="background: var(--income-soft); border-color: color-mix(in oklab, var(--color-income) 25%, var(--color-border-default));"
+		>
+			<div class="flex items-center justify-between">
+				<span class="mono text-[10px] tracking-wider uppercase" style="color: var(--income-ink);">
+					Monthly Equivalent
+				</span>
+				<span class="text-[22px] font-semibold tabular-nums" style="color: var(--income-ink);">
+					{fmt(monthlyTotal)}
+				</span>
+			</div>
+			{#if monthlyBreakdown.length > 1}
+				<div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+					{#each monthlyBreakdown as row (row.recurrence)}
+						<div class="flex items-center justify-between">
+							<span class="text-text-muted text-[11px]">{row.label}</span>
+							<span
+								class="font-mono text-[11px] font-medium tabular-nums"
+								style="color: var(--income-ink);">{fmt(row.monthly)}</span
+							>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</div>
+
+		<!-- Filter pills -->
+		<div class="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
 			<button
 				type="button"
 				onclick={() => {
@@ -234,11 +250,86 @@
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'desc')}
 			>
-				Highest first
+				Most income
+			</button>
+			<button
+				type="button"
+				onclick={() => {
+					sortBy = 'amount';
+					sortDir = 'asc';
+				}}
+				class={pillClass(sortBy === 'amount' && sortDir === 'asc')}
+			>
+				Smallest first
 			</button>
 		</div>
+
+		<!-- Grouped list -->
+		<div class="flex flex-col gap-5">
+			{#each recurringView as group (group.recurrence)}
+				<section>
+					<!-- Group header -->
+					<div class="mb-2 flex items-baseline justify-between">
+						<span class="text-text-subtle text-[11px] font-semibold tracking-wider uppercase">
+							{group.label} &middot; {group.count}
+						</span>
+						{#if group.subtotal > 0}
+							<span class="text-text-muted font-mono text-[11px] font-medium tabular-nums">
+								{fmt(group.subtotal)}
+							</span>
+						{/if}
+					</div>
+					<!-- Line-list card -->
+					<div
+						class="divide-border-subtle border-border-default bg-surface-1 divide-y overflow-hidden rounded-[var(--radius-lg)] border"
+					>
+						{#each group.items as inc (inc.id)}
+							<button
+								type="button"
+								onclick={() => openEdit(inc)}
+								class="hover:bg-bg-1 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors"
+							>
+								<!-- Emoji -->
+								<div
+									class="bg-bg-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-base"
+								>
+									💵
+								</div>
+								<!-- Name + meta -->
+								<div class="min-w-0 flex-1">
+									<p class="text-text-primary truncate text-[14px] font-medium">
+										{inc.name}
+									</p>
+									<p class="text-text-subtle text-[11px]">
+										{dayLabel(inc)}
+									</p>
+								</div>
+								<!-- Amount -->
+								<span
+									class="shrink-0 font-mono text-[14px] font-semibold tabular-nums"
+									style="color: var(--income-ink);"
+								>
+									{fmt(inc.amount)}
+								</span>
+							</button>
+						{/each}
+					</div>
+				</section>
+			{/each}
+
+			{#if recurringView.length === 0}
+				<div
+					class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
+				>
+					<p class="text-text-muted text-[13px]">No recurring income yet.</p>
+				</div>
+			{/if}
+		</div>
+
+		<!-- One-time Tab -->
 	{:else if activeTab === 'once'}
-		<div class="flex gap-2 overflow-x-auto px-4 pt-1 pb-2 [&::-webkit-scrollbar]:hidden">
+		<!-- Filter pills -->
+		<div class="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
 			<button
 				type="button"
 				onclick={() => {
@@ -263,16 +354,6 @@
 				type="button"
 				onclick={() => {
 					sortBy = 'amount';
-					sortDir = 'asc';
-				}}
-				class={pillClass(sortBy === 'amount' && sortDir === 'asc')}
-			>
-				Cheapest first
-			</button>
-			<button
-				type="button"
-				onclick={() => {
-					sortBy = 'amount';
 					sortDir = 'desc';
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'desc')}
@@ -280,8 +361,52 @@
 				Highest first
 			</button>
 		</div>
+
+		<!-- Line-list card -->
+		{#if onceView.length > 0}
+			<div
+				class="divide-border-subtle border-border-default bg-surface-1 divide-y overflow-hidden rounded-[var(--radius-lg)] border"
+			>
+				{#each onceView as inc (inc.id)}
+					<button
+						type="button"
+						onclick={() => openEdit(inc)}
+						class="hover:bg-bg-1 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors"
+					>
+						<div
+							class="bg-bg-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-base"
+						>
+							📥
+						</div>
+						<div class="min-w-0 flex-1">
+							<p class="text-text-primary truncate text-[14px] font-medium">
+								{inc.name}
+							</p>
+							<p class="text-text-subtle text-[11px]">
+								{dueDateLabel(inc)}
+							</p>
+						</div>
+						<span
+							class="shrink-0 font-mono text-[14px] font-semibold tabular-nums"
+							style="color: var(--income-ink);"
+						>
+							{fmt(inc.amount)}
+						</span>
+					</button>
+				{/each}
+			</div>
+		{:else}
+			<div
+				class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
+			>
+				<p class="text-text-muted text-[13px]">No upcoming one-time income.</p>
+			</div>
+		{/if}
+
+		<!-- Past Tab -->
 	{:else if activeTab === 'past'}
-		<div class="flex gap-2 overflow-x-auto px-4 pt-1 pb-2 [&::-webkit-scrollbar]:hidden">
+		<!-- Filter pills -->
+		<div class="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
 			<button
 				type="button"
 				onclick={() => {
@@ -323,207 +448,53 @@
 				Lowest first
 			</button>
 		</div>
-	{/if}
 
-	<div class="mt-1 space-y-2 px-4">
-		{#if activeTab === 'recurring'}
-			{#each recurringView as income (income.id)}
-				<IncomeRow {income} onEdit={openEdit} />
-			{/each}
-			{#if recurringView.length === 0}
-				<div class="border-border rounded-xl border border-dashed p-8 text-center">
-					<p class="text-neutral text-sm">No recurring income.</p>
-				</div>
-			{/if}
-		{:else if activeTab === 'once'}
-			{#each onceView as income (income.id)}
-				<IncomeRow {income} once={true} onEdit={openEdit} />
-			{/each}
-			{#if onceView.length === 0}
-				<div class="border-border rounded-xl border border-dashed p-8 text-center">
-					<p class="text-neutral text-sm">No upcoming one-time income.</p>
-				</div>
-			{/if}
-		{:else if activeTab === 'past'}
-			{#each pastView as income (income.id)}
-				<IncomeRow {income} once={true} onEdit={openEdit} />
-			{/each}
-			{#if pastView.length === 0}
-				<div class="border-border rounded-xl border border-dashed p-8 text-center">
-					<p class="text-neutral text-sm">Received income will appear here.</p>
-				</div>
-			{/if}
-		{/if}
-	</div>
-</div>
-
-{#if showForm}
-	<BottomSheet bind:open={showForm} title={editing ? 'Edit Income' : 'New Income'}>
-		{#if confirmDelete}
-			<div class="space-y-4 py-2">
-				<div class="bg-surface-muted rounded-xl px-4 py-4 text-center">
-					<p class="text-sm font-medium">Delete "{editing?.name}"?</p>
-					<p class="text-neutral mt-1 text-xs">This can't be undone.</p>
-				</div>
-				<form
-					method="POST"
-					action="?/remove"
-					use:enhance={() => {
-						return async ({ update }) => {
-							showForm = false;
-							await update();
-						};
-					}}
-				>
-					<input type="hidden" name="id" value={editing?.id} />
-					<button
-						type="submit"
-						class="bg-income w-full rounded-lg py-3 text-sm font-semibold text-white"
-					>
-						Yes, delete
-					</button>
-				</form>
-				<button
-					type="button"
-					onclick={() => (confirmDelete = false)}
-					class="text-neutral w-full rounded-lg py-3 text-sm font-semibold"
-				>
-					Cancel
-				</button>
-			</div>
-		{:else}
-			<form
-				method="POST"
-				action="?/save"
-				use:enhance={() => {
-					return async ({ update }) => {
-						showForm = false;
-						await update();
-					};
-				}}
+		<!-- Line-list card -->
+		{#if pastView.length > 0}
+			<div
+				class="divide-border-subtle border-border-default bg-surface-1 divide-y overflow-hidden rounded-[var(--radius-lg)] border"
 			>
-				{#if editing}
-					<input type="hidden" name="id" value={editing.id} />
-				{/if}
-				<input type="hidden" name="received" value={String(form.received)} />
-				<input type="hidden" name="day_of_month" value={!isOnce ? form.day_of_month : ''} />
-				<input type="hidden" name="expected_date" value={isOnce ? form.expected_date : ''} />
-				<input type="hidden" name="starting_month" value={needsMonth ? form.starting_month : ''} />
-				<div class="space-y-3">
-					<div>
-						<label for="inc-name" class="text-neutral mb-1 block text-xs font-medium">Name</label>
-						<input
-							id="inc-name"
-							name="name"
-							bind:value={form.name}
-							class="input"
-							placeholder="e.g. Salary"
-						/>
-					</div>
-					<div class="grid grid-cols-2 gap-3">
-						<div>
-							<label for="inc-amount" class="text-neutral mb-1 block text-xs font-medium"
-								>Amount</label
-							>
-							<input
-								id="inc-amount"
-								name="amount"
-								bind:value={form.amount}
-								type="number"
-								step="0.01"
-								class="input"
-								placeholder="0.00"
-							/>
-						</div>
-						<div>
-							<label for="inc-recurrence" class="text-neutral mb-1 block text-xs font-medium"
-								>Recurrence</label
-							>
-							<select
-								id="inc-recurrence"
-								name="recurrence"
-								bind:value={form.recurrence}
-								class="input"
-							>
-								{#each recurrences as r (r)}<option value={r}>{r}</option>{/each}
-							</select>
-						</div>
-					</div>
-					{#if isOnce}
-						<div>
-							<label for="inc-exp-date" class="text-neutral mb-1 block text-xs font-medium"
-								>Expected date (optional)</label
-							>
-							<input id="inc-exp-date" bind:value={form.expected_date} type="date" class="input" />
-						</div>
-					{:else}
-						<div class="grid grid-cols-2 gap-3">
-							<div>
-								<label for="inc-dom" class="text-neutral mb-1 block text-xs font-medium"
-									>Day of month</label
-								>
-								<select id="inc-dom" bind:value={form.day_of_month} class="input">
-									<option value="">— select —</option>
-									{#each Array.from({ length: 28 }, (_, i) => i + 1) as d (d)}
-										<option value={String(d)}>{d}.</option>
-									{/each}
-									<option value="last_working">Last working day</option>
-									<option value="second_last_working">2nd-last working day</option>
-								</select>
-							</div>
-							{#if needsMonth}
-								<div>
-									<label for="inc-month" class="text-neutral mb-1 block text-xs font-medium"
-										>Starting month</label
-									>
-									<select id="inc-month" bind:value={form.starting_month} class="input">
-										<option value="">— select —</option>
-										{#each months as m, i (m)}
-											<option value={String(i + 1)}>{m}</option>
-										{/each}
-									</select>
-								</div>
-							{/if}
-						</div>
-					{/if}
-					<Toggle
-						bind:checked={form.received}
-						label="Already received"
-						id="inc-received"
-						color="var(--color-income)"
-					/>
-				</div>
-				<button
-					type="submit"
-					class="bg-income mt-5 w-full rounded-lg py-3 text-sm font-semibold text-white"
-				>
-					{editing ? 'Save Changes' : 'Create Income'}
-				</button>
-				{#if editing}
+				{#each pastView as inc (inc.id)}
 					<button
 						type="button"
-						onclick={() => (confirmDelete = true)}
-						class="text-income mt-2 w-full rounded-lg py-3 text-sm font-semibold"
+						onclick={() => openEdit(inc)}
+						class="hover:bg-bg-1 flex w-full items-center gap-3 px-4 py-3 text-left opacity-55 transition-colors"
 					>
-						Delete Income
+						<div
+							class="bg-bg-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-base"
+						>
+							✓
+						</div>
+						<div class="min-w-0 flex-1">
+							<p class="text-text-primary truncate text-[14px] font-medium line-through">
+								{inc.name}
+							</p>
+							<p class="text-text-subtle text-[11px]">
+								{dueDateLabel(inc)} &middot; received
+							</p>
+						</div>
+						<span
+							class="shrink-0 font-mono text-[14px] font-semibold tabular-nums line-through"
+							style="color: var(--income-ink);"
+						>
+							{fmt(inc.amount)}
+						</span>
 					</button>
-				{/if}
-			</form>
+				{/each}
+			</div>
+		{:else}
+			<div
+				class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
+			>
+				<p class="text-text-muted text-[13px]">Received income will appear here.</p>
+			</div>
 		{/if}
-	</BottomSheet>
-{/if}
+	{/if}
+</div>
 
-<style>
-	.input {
-		width: 100%;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-		background: var(--color-surface);
-		padding: 0.5rem 0.75rem;
-		font-size: 0.875rem;
-		outline: none;
-	}
-	.input:focus {
-		border-color: var(--color-income);
-	}
-</style>
+<IncomeForm
+	bind:open={showForm}
+	{editing}
+	accounts={data.accounts}
+	defaultAccountId={data.settings?.defaultAccountId}
+/>

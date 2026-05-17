@@ -1,12 +1,28 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { getLocale } from '$lib/paraglide/runtime.js';
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number, currency = 'EUR'): string {
-	return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+const LOCALE_MAP: Record<string, string> = {
+	en: 'en-GB',
+	de: 'de-DE',
+	tr: 'tr-TR'
+};
+
+export function getIntlLocale(): string {
+	return LOCALE_MAP[getLocale()] ?? 'de-DE';
+}
+
+export function formatCurrency(amount: number, currency = 'EUR', hideCents = false): string {
+	return new Intl.NumberFormat(getIntlLocale(), {
+		style: 'currency',
+		currency,
+		minimumFractionDigits: hideCents ? 0 : 2,
+		maximumFractionDigits: hideCents ? 0 : 2
+	}).format(amount);
 }
 
 export const RECURRENCE_ORDER = [

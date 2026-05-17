@@ -1,6 +1,7 @@
 import { db, userSettings } from '@nexo/db';
 import { eq } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types';
+import { reconcileUser } from '$lib/server/reconcile';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	let settings = null;
@@ -11,6 +12,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			.where(eq(userSettings.userId, locals.user.id))
 			.limit(1);
 		settings = row ?? null;
+
+		await reconcileUser(locals.user.id);
 	}
 
 	return {
@@ -18,7 +21,11 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		settings: {
 			displayName: settings?.displayName ?? null,
 			currency: settings?.currency ?? 'EUR',
-			weekStartDay: settings?.weekStartDay ?? 'monday'
+			weekStartDay: settings?.weekStartDay ?? 'monday',
+			defaultAccountId: settings?.defaultAccountId ?? null,
+			hideCents: settings?.hideCents ?? false,
+			forecastDays: settings?.forecastDays ?? '90',
+			includeDebtInForecast: settings?.includeDebtInForecast ?? true
 		}
 	};
 };

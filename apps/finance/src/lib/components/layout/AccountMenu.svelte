@@ -83,7 +83,7 @@
 		></button>
 
 		<div
-			class="border-border bg-surface absolute top-full right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border shadow-lg"
+			class="border-border-default bg-surface-1 absolute top-full right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border shadow-lg"
 			role="menu"
 		>
 			<!-- User info header -->
@@ -108,7 +108,7 @@
 				</div>
 				<div class="min-w-0">
 					<p class="truncate text-sm font-semibold">{name}</p>
-					<p class="text-neutral truncate text-[11px]">{user.email}</p>
+					<p class="text-text-subtle truncate text-[11px]">{user.email}</p>
 				</div>
 			</div>
 
@@ -122,7 +122,7 @@
 			<a
 				href="/settings"
 				onclick={close}
-				class="hover:bg-surface-muted flex items-center gap-3 px-4 py-2.5 text-sm transition-colors {currentPath ===
+				class="hover:bg-bg-1 flex items-center gap-3 px-4 py-2.5 text-sm transition-colors {currentPath ===
 				'/settings'
 					? 'text-primary-500 font-medium'
 					: ''}"
@@ -138,7 +138,7 @@
 			<form method="post" action="/auth/sign-out">
 				<button
 					type="submit"
-					class="text-expense hover:bg-surface-muted flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+					class="text-expense hover:bg-bg-1 flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors"
 					role="menuitem"
 				>
 					<LogOut size={16} stroke-width={1.75} />
