@@ -12,12 +12,14 @@ mkdir -p gym/src/routes/auth/callback
 mkdir -p gym/src/lib/server
 mkdir -p gym/src/lib/components
 mkdir -p gym/static
+mkdir -p gym/messages
+mkdir -p gym/project.inlang
 ```
 
-Or copy the auth app as a starting point and gut the routes:
+Or copy the finance app as a starting point and gut the routes:
 
 ```bash
-cp -r apps/auth apps/gym
+cp -r apps/finance apps/gym
 ```
 
 ---
@@ -83,9 +85,13 @@ pnpm db:migrate
 	},
 	"dependencies": {
 		"@nexo/db": "workspace:*",
-		"better-auth": "^1.6.9"
+		"@nexo/errors": "workspace:*",
+		"@nexo/logger": "workspace:*",
+		"better-auth": "^1.6.10",
+		"drizzle-orm": "^0.45.2"
 	},
 	"devDependencies": {
+		"@inlang/paraglide-sveltekit": "^0.16.1",
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.59.1",
 		"@sveltejs/vite-plugin-svelte": "^7.1.0",
@@ -95,12 +101,12 @@ pnpm db:migrate
 		"svelte-check": "^4.4.8",
 		"tailwindcss": "^4.2.4",
 		"typescript": "^6.0.3",
-		"vite": "^8.0.10"
+		"vite": "^8.0.11"
 	}
 }
 ```
 
-Pick the next available port (finance is 3002, so gym gets 3003, time gets 3004, etc.).
+Pick the next available port (finance is 3002, admin is 3004, so gym gets 3003).
 
 ---
 
@@ -112,32 +118,82 @@ These are identical across all apps — copy from `apps/finance` and adjust the 
 
 **`tsconfig.json`** — same as auth/finance.
 
-**`vite.config.ts`** — update the PWA manifest name, `short_name`, `theme_color`, and `background_color`:
+**`vite.config.ts`** — include Paraglide, Tailwind, SvelteKit, and PWA plugins. Update the PWA manifest name, `short_name`, `theme_color`, and `background_color`:
 
 ```typescript
-manifest: {
-  name: 'Gym Tracker — Nexo',
-  short_name: 'Gym',
-  theme_color: '#dc2626',       // pick a color distinct from other apps
-  background_color: '#0a0a0a',
-  // ... rest is identical
+import tailwindcss from '@tailwindcss/vite';
+import { sveltekit } from '@sveltejs/kit/vite';
+import { paraglide } from '@inlang/paraglide-sveltekit/vite';
+import { SvelteKitPWA } from '@vite-pwa/sveltekit';
+import { defineConfig, mergeConfig } from 'vite';
+import { sharedConfig } from '../../vite.shared';
+
+export default mergeConfig(
+	sharedConfig,
+	defineConfig({
+		plugins: [
+			paraglide({ project: './project.inlang', outdir: './src/lib/paraglide' }),
+			tailwindcss(),
+			sveltekit(),
+			SvelteKitPWA({
+				registerType: 'autoUpdate',
+				manifest: {
+					name: 'Gym — Nexo',
+					short_name: 'Gym',
+					theme_color: '#f97316',
+					background_color: '#0a0a0a',
+					display: 'standalone'
+				},
+				workbox: {
+					navigateFallback: '/offline'
+				}
+			})
+		]
+	})
+);
+```
+
+**`tsconfig.json`**:
+
+```json
+{
+	"extends": "./.svelte-kit/tsconfig.json",
+	"compilerOptions": {
+		"strict": true,
+		"allowJs": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true
+	},
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.svelte",
+		".svelte-kit/ambient.d.ts",
+		".svelte-kit/non-ambient.d.ts",
+		".svelte-kit/types",
+		"vite.config.ts",
+		"knip.config.ts"
+	]
 }
 ```
+
+`allowJs: true` is required for Paraglide's generated `.js` message functions.
 
 ---
 
 ## 5. Create the auth guard (hooks.server.ts)
 
-`apps/gym/src/hooks.server.ts` — identical to every other app:
+`apps/gym/src/hooks.server.ts` — follows the same pattern as all other apps (auth + i18n + security headers):
 
 ```typescript
 import { redirect, type Handle } from '@sveltejs/kit';
+import { sequence } from '@sveltejs/kit/hooks';
 import { PUBLIC_AUTH_URL } from '$env/static/public';
 import { createAuthClient } from 'better-auth/client';
+import { i18n } from '$lib/i18n';
 
 const authClient = createAuthClient({ baseURL: PUBLIC_AUTH_URL });
 
-export const handle: Handle = async ({ event, resolve }) => {
+const appHandle: Handle = async ({ event, resolve }) => {
 	const session = await authClient.getSession({ fetchOptions: { headers: event.request.headers } });
 	event.locals.user = session?.data?.user ?? null;
 
@@ -148,6 +204,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	return resolve(event);
 };
+
+const securityHeaders: Handle = async ({ event, resolve }) => {
+	const response = await resolve(event);
+	response.headers.set('X-Frame-Options', 'DENY');
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	return response;
+};
+
+export const handle = sequence(i18n.handle(), appHandle, securityHeaders);
 ```
 
 **`src/app.d.ts`** — same as finance:
@@ -187,19 +253,22 @@ export const GET: RequestHandler = ({ url }) => {
 
 ## 6. Create the app shell
 
-**`src/app.html`** — standard SvelteKit shell, add the manifest link:
+**`src/app.html`** — standard SvelteKit shell with PWA links:
 
 ```html
 <!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<link rel="manifest" href="/manifest.webmanifest" />
-		<meta name="theme-color" content="#dc2626" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<meta name="theme-color" content="#f97316" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 		%sveltekit.head%
 	</head>
-	<body>
+	<body data-sveltekit-preload-data="hover">
 		%sveltekit.body%
 	</body>
 </html>
@@ -209,22 +278,65 @@ export const GET: RequestHandler = ({ url }) => {
 
 ```css
 @import 'tailwindcss';
+
+@theme {
+	--color-accent: #f97316;
+	/* Add app-specific tokens here */
+}
 ```
 
 ---
 
-## 7. Add .env.local for local dev
+## 7. Set up i18n (Paraglide)
+
+**`project.inlang/settings.json`**:
+
+```json
+{
+	"$schema": "https://inlang.com/schema/project-settings",
+	"sourceLanguageTag": "en",
+	"languageTags": ["en", "de", "tr"],
+	"modules": [],
+	"plugin.inlang.messageFormat": {
+		"pathPattern": "./messages/{languageTag}.json"
+	}
+}
+```
+
+**`messages/en.json`** — start with basic nav and empty states:
+
+```json
+{
+	"nav_home": "Home"
+}
+```
+
+Copy to `messages/de.json` and `messages/tr.json` with translations.
+
+**`src/lib/i18n.ts`**:
+
+```typescript
+import { createI18n } from '@inlang/paraglide-sveltekit';
+import * as runtime from '$lib/paraglide/runtime';
+
+export const i18n = createI18n(runtime);
+```
+
+---
+
+## 8. Add .env.local for local dev
 
 `apps/gym/.env.local`:
 
 ```bash
-DATABASE_URL=postgres://nexo:devpassword@localhost:5432/nexo
+DATABASE_URL=postgres://nexo:devpassword@localhost:5433/nexo
+BETTER_AUTH_SECRET=<same as root .env>
 PUBLIC_AUTH_URL=http://localhost:3001
 ```
 
 ---
 
-## 8. Add to Docker Compose
+## 9. Add to Docker Compose
 
 In `docker-compose.yml`, add two service blocks — production and preview:
 
@@ -280,7 +392,7 @@ gym.preview.krieger2501.de {
 
 ---
 
-## 9. Add root scripts
+## 10. Add root scripts
 
 In root `package.json`, add:
 
@@ -291,7 +403,7 @@ In root `package.json`, add:
 
 ---
 
-## 10. Add to knip.config.ts
+## 11. Add to knip.config.ts
 
 In the root `knip.config.ts`, add a workspace entry:
 
@@ -305,24 +417,29 @@ In the root `knip.config.ts`, add a workspace entry:
 
 ---
 
-## 11. Update the landing page
+## 12. Update the landing page
+
+In `apps/landing/messages/en.json`, add description and status messages for the new app.
 
 In `apps/landing/src/routes/+page.svelte`, add the new app to the `apps` array:
 
 ```typescript
 {
-  name: 'Gym Tracker',
-  description: 'Log workouts, track progress, build habits',
-  url: 'https://gym.krieger2501.de',
-  color: 'text-red-400',
-  border: 'border-red-900',
-  icon: '🏋️'
+  id: 'gym',
+  name: 'Gym',
+  icon: '/icon-gym.svg',
+  status: 'soon',
+  desc: m.app_gym_desc(),
+  href: '#',
+  meta: 'Summer 2026'
 }
 ```
 
+Add the app icon SVG to `apps/landing/static/icon-gym.svg`.
+
 ---
 
-## 12. Add DNS
+## 13. Add DNS
 
 In your IONOS domain control panel, add A records for both production and preview:
 
@@ -339,14 +456,17 @@ gym.preview.krieger2501.de  A  <VPS IP>
 - [ ] `packages/db/src/index.ts` updated (import + export + drizzle schema)
 - [ ] Migration generated and applied
 - [ ] `apps/gym/package.json` with correct port
-- [ ] `svelte.config.js`, `tsconfig.json`, `vite.config.ts` (with PWA manifest)
-- [ ] `hooks.server.ts`, `app.d.ts`, `app.html`, `app.css`
+- [ ] `svelte.config.js`, `tsconfig.json` (with `allowJs: true`), `vite.config.ts` (with PWA + Paraglide)
+- [ ] `hooks.server.ts` (auth + i18n + security headers), `app.d.ts`, `app.html`, `app.css`
+- [ ] `src/lib/i18n.ts` + `project.inlang/settings.json` + `messages/{en,de,tr}.json`
 - [ ] `routes/auth/callback/+server.ts`
+- [ ] `routes/offline/+page.svelte` (PWA offline fallback)
 - [ ] `apps/gym/.env.local`
 - [ ] `apps/gym/Dockerfile`
-- [ ] `docker-compose.yml` production + preview service blocks added
+- [ ] `docker-compose.yml` production + preview service blocks added (with `logging: loki`)
 - [ ] `Caddyfile` production + preview entries added
 - [ ] `knip.config.ts` workspace entry added
 - [ ] Root `package.json` `dev:gym` / `build:gym` scripts added
-- [ ] Landing page updated
+- [ ] Landing page messages + `apps` array updated
 - [ ] DNS A records added (production + preview)
+- [ ] Auth server `trustedOrigins` updated to include new app URL

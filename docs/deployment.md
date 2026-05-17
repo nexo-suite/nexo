@@ -5,7 +5,7 @@
 - **VPS:** IONOS L+ (6 vCore, 8 GB RAM, 240 GB NVMe SSD)
 - **OS:** Ubuntu 24.04 LTS
 - **Domain:** `krieger2501.de` (and `*.krieger2501.de` subdomains)
-- **Stack:** Docker Compose, Caddy (auto TLS), PostgreSQL 17
+- **Stack:** Docker Compose, Caddy (auto TLS), PostgreSQL 17, Loki + Grafana
 
 ---
 
@@ -67,6 +67,7 @@ In the IONOS domain control panel, add A records for each subdomain:
 | `auth.krieger2501.de`    | A    | `<VPS IP>` |
 | `finance.krieger2501.de` | A    | `<VPS IP>` |
 | `admin.krieger2501.de`   | A    | `<VPS IP>` |
+| `grafana.krieger2501.de` | A    | `<VPS IP>` |
 
 Wait for propagation before continuing (5–30 min). Verify:
 
@@ -161,8 +162,9 @@ This will:
 2. Start PostgreSQL
 3. Run migrations (waits for Postgres to be healthy)
 4. Start auth, admin, finance, landing
-5. Start Caddy and bot (server profile)
+5. Start Caddy, bot, Loki, and Grafana (server profile)
 6. Caddy issues Let's Encrypt certificates automatically
+7. All app logs ship to Loki via the Docker Loki log driver
 
 Monitor startup:
 
