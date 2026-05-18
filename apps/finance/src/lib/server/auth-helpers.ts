@@ -1,4 +1,4 @@
-import { db, accounts } from '@nexo/db';
+import { accounts, type Tx } from '@nexo/db';
 import { and, eq } from 'drizzle-orm';
 
 export class InvalidAccountError extends Error {
@@ -18,11 +18,12 @@ export class InvalidAccountError extends Error {
  * leads to cross-user balance manipulation.
  */
 export async function assertAccountOwned(
+	tx: Tx,
 	accountId: string | null | undefined,
 	userId: string
 ): Promise<void> {
 	if (!accountId) return;
-	const [a] = await db
+	const [a] = await tx
 		.select({ id: accounts.id })
 		.from(accounts)
 		.where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))

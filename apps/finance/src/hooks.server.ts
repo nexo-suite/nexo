@@ -1,7 +1,7 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { getAuth } from '$lib/server/auth';
-import { initDb, db, userAppAccess } from '@nexo/db';
+import { initDb, withUser, userAppAccess } from '@nexo/db';
 import { csrfHandle } from '@nexo/security';
 import { and, eq } from 'drizzle-orm';
 import { dev } from '$app/environment';
@@ -31,11 +31,14 @@ const appHandle: Handle = async ({ event, resolve }) => {
 	}
 
 	if (event.locals.user && !event.url.pathname.startsWith('/auth')) {
-		const access = await db
-			.select()
-			.from(userAppAccess)
-			.where(and(eq(userAppAccess.userId, event.locals.user.id), eq(userAppAccess.app, 'finance')))
-			.limit(1);
+		const userId = event.locals.user.id;
+		const access = await withUser(userId, (tx) =>
+			tx
+				.select()
+				.from(userAppAccess)
+				.where(and(eq(userAppAccess.userId, userId), eq(userAppAccess.app, 'finance')))
+				.limit(1)
+		);
 
 		if (access.length === 0) {
 			logger.warn('app access denied', { email: event.locals.user.email, app: 'finance' });

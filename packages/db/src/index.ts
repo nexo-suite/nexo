@@ -5,6 +5,7 @@ import * as financeSchema from '../schema/finance.js';
 
 export * from '../schema/auth.js';
 export * from '../schema/finance.js';
+export { withUser, type Tx } from './with-user.js';
 
 let _db: ReturnType<typeof drizzle> | undefined;
 

@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import { db, userSettings, accounts } from '@nexo/db';
+import { withUser, userSettings, accounts } from '@nexo/db';
 import { eq, and, asc } from 'drizzle-orm';
 import { logger } from '$lib/server/logger';
 import { assertAccountOwned, InvalidAccountError } from '$lib/server/auth-helpers';
@@ -7,17 +7,21 @@ import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
-	const [row] = await db
-		.select()
-		.from(userSettings)
-		.where(eq(userSettings.userId, userId))
-		.limit(1);
+	const { row, accountList } = await withUser(userId, async (tx) => {
+		const [row] = await tx
+			.select()
+			.from(userSettings)
+			.where(eq(userSettings.userId, userId))
+			.limit(1);
 
-	const accountList = await db
-		.select()
-		.from(accounts)
-		.where(eq(accounts.userId, userId))
-		.orderBy(asc(accounts.createdAt));
+		const accountList = await tx
+			.select()
+			.from(accounts)
+			.where(eq(accounts.userId, userId))
+			.orderBy(asc(accounts.createdAt));
+
+		return { row, accountList };
+	});
 
 	return {
 		user: { name: locals.user!.name, email: locals.user!.email },
@@ -41,6 +45,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	save: async ({ locals, request }) => {
+		const userId = locals.user!.id;
 		const form = await request.formData();
 		const currency = (form.get('currency') as string) || 'EUR';
 		const defaultAccountId = (form.get('defaultAccountId') as string) || null;
@@ -49,28 +54,30 @@ export const actions: Actions = {
 		const includeDebtInForecast = form.get('includeDebtInForecast') !== 'false';
 
 		try {
-			await assertAccountOwned(defaultAccountId, locals.user!.id);
-			await db
-				.insert(userSettings)
-				.values({
-					userId: locals.user!.id,
-					currency,
-					defaultAccountId,
-					hideCents,
-					forecastDays,
-					includeDebtInForecast
-				})
-				.onConflictDoUpdate({
-					target: userSettings.userId,
-					set: {
+			await withUser(userId, async (tx) => {
+				await assertAccountOwned(tx, defaultAccountId, userId);
+				await tx
+					.insert(userSettings)
+					.values({
+						userId,
 						currency,
 						defaultAccountId,
 						hideCents,
 						forecastDays,
-						includeDebtInForecast,
-						updatedAt: new Date()
-					}
-				});
+						includeDebtInForecast
+					})
+					.onConflictDoUpdate({
+						target: userSettings.userId,
+						set: {
+							currency,
+							defaultAccountId,
+							hideCents,
+							forecastDays,
+							includeDebtInForecast,
+							updatedAt: new Date()
+						}
+					});
+			});
 		} catch (e) {
 			if (e instanceof InvalidAccountError) {
 				return fail(400, { error: 'INVALID_ACCOUNT', correlationId: locals.correlationId });
@@ -87,15 +94,18 @@ export const actions: Actions = {
 	},
 
 	toggleLiquid: async ({ locals, request }) => {
+		const userId = locals.user!.id;
 		const form = await request.formData();
 		const accountId = form.get('accountId') as string;
 		const include = form.get('include') === 'true';
 
 		try {
-			await db
-				.update(accounts)
-				.set({ includeInTotal: include, updatedAt: new Date() })
-				.where(and(eq(accounts.id, accountId), eq(accounts.userId, locals.user!.id)));
+			await withUser(userId, (tx) =>
+				tx
+					.update(accounts)
+					.set({ includeInTotal: include, updatedAt: new Date() })
+					.where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
+			);
 		} catch (e) {
 			logger.error('db error', {
 				action: 'toggle-liquid',

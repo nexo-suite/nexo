@@ -1,4 +1,4 @@
-import { db, expenses, accounts } from '@nexo/db';
+import { withUser, expenses, accounts } from '@nexo/db';
 import { eq, asc, and } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 import { logger } from '$lib/server/logger';
@@ -7,10 +7,17 @@ import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
-	const [rows, accountList] = await Promise.all([
-		db.select().from(expenses).where(eq(expenses.userId, userId)).orderBy(asc(expenses.createdAt)),
-		db.select().from(accounts).where(eq(accounts.userId, userId)).orderBy(asc(accounts.createdAt))
-	]);
+	const { rows, accountList } = await withUser(userId, async (tx) => {
+		const [rows, accountList] = await Promise.all([
+			tx
+				.select()
+				.from(expenses)
+				.where(eq(expenses.userId, userId))
+				.orderBy(asc(expenses.createdAt)),
+			tx.select().from(accounts).where(eq(accounts.userId, userId)).orderBy(asc(accounts.createdAt))
+		]);
+		return { rows, accountList };
+	});
 	return {
 		expenses: rows.map((e) => ({ ...e, amount: Number(e.amount) })),
 		accounts: accountList.map((a) => ({ id: a.id, name: a.name, emoji: a.emoji })),
@@ -36,15 +43,17 @@ export const actions: Actions = {
 		};
 		if (!payload.name) return fail(400, { error: 'VALIDATION_REQUIRED' });
 		try {
-			await assertAccountOwned(payload.accountId, userId);
-			if (id) {
-				await db
-					.update(expenses)
-					.set(payload)
-					.where(and(eq(expenses.id, id), eq(expenses.userId, userId)));
-			} else {
-				await db.insert(expenses).values({ ...payload, userId });
-			}
+			await withUser(userId, async (tx) => {
+				await assertAccountOwned(tx, payload.accountId, userId);
+				if (id) {
+					await tx
+						.update(expenses)
+						.set(payload)
+						.where(and(eq(expenses.id, id), eq(expenses.userId, userId)));
+				} else {
+					await tx.insert(expenses).values({ ...payload, userId });
+				}
+			});
 		} catch (e) {
 			if (e instanceof InvalidAccountError) {
 				return fail(400, { error: 'INVALID_ACCOUNT', correlationId: locals.correlationId });
@@ -63,7 +72,9 @@ export const actions: Actions = {
 		const d = await request.formData();
 		const id = d.get('id') as string;
 		try {
-			await db.delete(expenses).where(and(eq(expenses.id, id), eq(expenses.userId, userId)));
+			await withUser(userId, (tx) =>
+				tx.delete(expenses).where(and(eq(expenses.id, id), eq(expenses.userId, userId)))
+			);
 		} catch (e) {
 			logger.error('db error', {
 				action: 'remove-expense',

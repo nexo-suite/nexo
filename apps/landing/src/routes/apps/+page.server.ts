@@ -1,5 +1,14 @@
 import { redirect, fail } from '@sveltejs/kit';
-import { db, userAppAccess, userSettings, accounts, expenses, income, sessions } from '@nexo/db';
+import {
+	db,
+	withUser,
+	userAppAccess,
+	userSettings,
+	accounts,
+	expenses,
+	income,
+	sessions
+} from '@nexo/db';
 import { firesOnDate } from '@nexo/ui/utils/recurrence';
 import { parseUserAgent, deviceIcon } from '@nexo/ui/utils/ua-parser';
 import { and, eq } from 'drizzle-orm';
@@ -8,14 +17,17 @@ import { getAuth } from '$lib/server/auth';
 import type { PageServerLoad, Actions } from './$types';
 
 async function getFinanceGlance(userId: string) {
-	const [accountList, expenseList, incomeList] = await Promise.all([
-		db.select().from(accounts).where(eq(accounts.userId, userId)),
-		db
-			.select()
-			.from(expenses)
-			.where(and(eq(expenses.userId, userId), eq(expenses.active, true))),
-		db.select().from(income).where(eq(income.userId, userId))
-	]);
+	const { accountList, expenseList, incomeList } = await withUser(userId, async (tx) => {
+		const [accountList, expenseList, incomeList] = await Promise.all([
+			tx.select().from(accounts).where(eq(accounts.userId, userId)),
+			tx
+				.select()
+				.from(expenses)
+				.where(and(eq(expenses.userId, userId), eq(expenses.active, true))),
+			tx.select().from(income).where(eq(income.userId, userId))
+		]);
+		return { accountList, expenseList, incomeList };
+	});
 
 	if (accountList.length === 0) return null;
 
@@ -101,18 +113,22 @@ export const load: PageServerLoad = async ({ locals }) => {
 		redirect(303, `${authURL}/login?redirectTo=${encodeURIComponent(`${landingURL}/apps`)}`);
 	}
 
-	const [access, settings, rawSessions] = await Promise.all([
-		db.select().from(userAppAccess).where(eq(userAppAccess.userId, locals.user.id)),
-		db.select().from(userSettings).where(eq(userSettings.userId, locals.user.id)).limit(1),
-		db.select().from(sessions).where(eq(sessions.userId, locals.user.id))
-	]);
+	const userId = locals.user.id;
+
+	const { access, settings } = await withUser(userId, async (tx) => {
+		const [access, settings] = await Promise.all([
+			tx.select().from(userAppAccess).where(eq(userAppAccess.userId, userId)),
+			tx.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1)
+		]);
+		return { access, settings };
+	});
+
+	const rawSessions = await db.select().from(sessions).where(eq(sessions.userId, userId));
 
 	const allowedApps = access.map((a) => a.app);
 	const sessionNames = (settings[0]?.sessionNames as Record<string, string>) ?? {};
 
-	const financeGlance = allowedApps.includes('finance')
-		? await getFinanceGlance(locals.user.id)
-		: null;
+	const financeGlance = allowedApps.includes('finance') ? await getFinanceGlance(userId) : null;
 
 	const currentSessionId = locals.session?.id ?? null;
 	const sessionList = rawSessions.map((s) => {
@@ -145,19 +161,22 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
 	save: async ({ locals, request }) => {
 		if (!locals.user) return fail(401, { error: 'Not authenticated' });
+		const userId = locals.user.id;
 
 		const form = await request.formData();
 		const displayName = (form.get('displayName') as string)?.trim() || null;
 		const weekStartDay = (form.get('weekStartDay') as string)?.trim() || 'monday';
 
 		try {
-			await db
-				.insert(userSettings)
-				.values({ userId: locals.user.id, displayName, weekStartDay })
-				.onConflictDoUpdate({
-					target: userSettings.userId,
-					set: { displayName, weekStartDay, updatedAt: new Date() }
-				});
+			await withUser(userId, (tx) =>
+				tx
+					.insert(userSettings)
+					.values({ userId, displayName, weekStartDay })
+					.onConflictDoUpdate({
+						target: userSettings.userId,
+						set: { displayName, weekStartDay, updatedAt: new Date() }
+					})
+			);
 		} catch {
 			return fail(500, { error: 'Failed to save settings' });
 		}
@@ -207,6 +226,7 @@ export const actions: Actions = {
 
 	renameSession: async ({ locals, request }) => {
 		if (!locals.user) return fail(401, { error: 'Not authenticated' });
+		const userId = locals.user.id;
 
 		const form = await request.formData();
 		const sessionId = form.get('sessionId') as string;
@@ -216,31 +236,33 @@ export const actions: Actions = {
 		const [owned] = await db
 			.select({ id: sessions.id })
 			.from(sessions)
-			.where(and(eq(sessions.id, sessionId), eq(sessions.userId, locals.user.id)))
+			.where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
 			.limit(1);
 		if (!owned) return fail(404, { error: 'Not found' });
 
 		try {
-			const [current] = await db
-				.select({ sessionNames: userSettings.sessionNames })
-				.from(userSettings)
-				.where(eq(userSettings.userId, locals.user.id))
-				.limit(1);
+			await withUser(userId, async (tx) => {
+				const [current] = await tx
+					.select({ sessionNames: userSettings.sessionNames })
+					.from(userSettings)
+					.where(eq(userSettings.userId, userId))
+					.limit(1);
 
-			const names = (current?.sessionNames as Record<string, string>) ?? {};
-			if (name) {
-				names[sessionId] = name;
-			} else {
-				delete names[sessionId];
-			}
+				const names = (current?.sessionNames as Record<string, string>) ?? {};
+				if (name) {
+					names[sessionId] = name;
+				} else {
+					delete names[sessionId];
+				}
 
-			await db
-				.insert(userSettings)
-				.values({ userId: locals.user.id, sessionNames: names })
-				.onConflictDoUpdate({
-					target: userSettings.userId,
-					set: { sessionNames: names, updatedAt: new Date() }
-				});
+				await tx
+					.insert(userSettings)
+					.values({ userId, sessionNames: names })
+					.onConflictDoUpdate({
+						target: userSettings.userId,
+						set: { sessionNames: names, updatedAt: new Date() }
+					});
+			});
 		} catch {
 			return fail(500, { error: 'Failed to rename session' });
 		}

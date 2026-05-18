@@ -1,4 +1,4 @@
-import { db, accounts, expenses, debts } from '@nexo/db';
+import { withUser, accounts, expenses, debts } from '@nexo/db';
 import { eq, and, asc } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 import { logger } from '$lib/server/logger';
@@ -8,21 +8,28 @@ import type { PageServerLoad, Actions } from './$types';
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
 
-	const [accountRows, expenseRows, debtRows] = await Promise.all([
-		db.select().from(accounts).where(eq(accounts.userId, userId)).orderBy(asc(accounts.name)),
-		db
-			.select()
-			.from(expenses)
-			.where(
-				and(eq(expenses.userId, userId), eq(expenses.recurrence, 'once'), eq(expenses.active, true))
-			)
-			.orderBy(asc(expenses.dueDate)),
-		db
-			.select()
-			.from(debts)
-			.where(and(eq(debts.userId, userId), eq(debts.paid, false)))
-			.orderBy(asc(debts.dueDate))
-	]);
+	const { accountRows, expenseRows, debtRows } = await withUser(userId, async (tx) => {
+		const [accountRows, expenseRows, debtRows] = await Promise.all([
+			tx.select().from(accounts).where(eq(accounts.userId, userId)).orderBy(asc(accounts.name)),
+			tx
+				.select()
+				.from(expenses)
+				.where(
+					and(
+						eq(expenses.userId, userId),
+						eq(expenses.recurrence, 'once'),
+						eq(expenses.active, true)
+					)
+				)
+				.orderBy(asc(expenses.dueDate)),
+			tx
+				.select()
+				.from(debts)
+				.where(and(eq(debts.userId, userId), eq(debts.paid, false)))
+				.orderBy(asc(debts.dueDate))
+		]);
+		return { accountRows, expenseRows, debtRows };
+	});
 
 	const earmarks: Record<string, { earmarked: number; available: number }> = {};
 	for (const acc of accountRows) {
@@ -62,15 +69,17 @@ export const actions: Actions = {
 		};
 		if (!payload.name) return fail(400, { error: 'VALIDATION_REQUIRED' });
 		try {
-			await assertAccountOwned(payload.accountId, userId);
-			if (id) {
-				await db
-					.update(expenses)
-					.set(payload)
-					.where(and(eq(expenses.id, id), eq(expenses.userId, userId)));
-			} else {
-				await db.insert(expenses).values({ ...payload, userId });
-			}
+			await withUser(userId, async (tx) => {
+				await assertAccountOwned(tx, payload.accountId, userId);
+				if (id) {
+					await tx
+						.update(expenses)
+						.set(payload)
+						.where(and(eq(expenses.id, id), eq(expenses.userId, userId)));
+				} else {
+					await tx.insert(expenses).values({ ...payload, userId });
+				}
+			});
 		} catch (e) {
 			if (e instanceof InvalidAccountError) {
 				return fail(400, { error: 'INVALID_ACCOUNT', correlationId: locals.correlationId });
@@ -90,7 +99,9 @@ export const actions: Actions = {
 		const d = await request.formData();
 		const id = d.get('id') as string;
 		try {
-			await db.delete(expenses).where(and(eq(expenses.id, id), eq(expenses.userId, userId)));
+			await withUser(userId, (tx) =>
+				tx.delete(expenses).where(and(eq(expenses.id, id), eq(expenses.userId, userId)))
+			);
 		} catch (e) {
 			logger.error('db error', {
 				action: 'remove-commitment-expense',
@@ -117,15 +128,17 @@ export const actions: Actions = {
 		};
 		if (!payload.counterparty) return fail(400, { error: 'Counterparty is required' });
 		try {
-			await assertAccountOwned(payload.accountId, userId);
-			if (id) {
-				await db
-					.update(debts)
-					.set(payload)
-					.where(and(eq(debts.id, id), eq(debts.userId, userId)));
-			} else {
-				await db.insert(debts).values({ ...payload, userId });
-			}
+			await withUser(userId, async (tx) => {
+				await assertAccountOwned(tx, payload.accountId, userId);
+				if (id) {
+					await tx
+						.update(debts)
+						.set(payload)
+						.where(and(eq(debts.id, id), eq(debts.userId, userId)));
+				} else {
+					await tx.insert(debts).values({ ...payload, userId });
+				}
+			});
 		} catch (e) {
 			if (e instanceof InvalidAccountError) {
 				return fail(400, { error: 'INVALID_ACCOUNT', correlationId: locals.correlationId });
@@ -145,7 +158,9 @@ export const actions: Actions = {
 		const d = await request.formData();
 		const id = d.get('id') as string;
 		try {
-			await db.delete(debts).where(and(eq(debts.id, id), eq(debts.userId, userId)));
+			await withUser(userId, (tx) =>
+				tx.delete(debts).where(and(eq(debts.id, id), eq(debts.userId, userId)))
+			);
 		} catch (e) {
 			logger.error('db error', {
 				action: 'remove-commitment-debt',
@@ -162,10 +177,12 @@ export const actions: Actions = {
 		const d = await request.formData();
 		const id = d.get('id') as string;
 		try {
-			await db
-				.update(debts)
-				.set({ paid: true })
-				.where(and(eq(debts.id, id), eq(debts.userId, userId)));
+			await withUser(userId, (tx) =>
+				tx
+					.update(debts)
+					.set({ paid: true })
+					.where(and(eq(debts.id, id), eq(debts.userId, userId)))
+			);
 		} catch (e) {
 			logger.error('db error', {
 				action: 'mark-debt-paid',
