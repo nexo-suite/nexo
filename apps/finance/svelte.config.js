@@ -7,7 +7,22 @@ const config = {
 	},
 	kit: {
 		adapter: adapter(),
-		csrf: { trustedOrigins: ['*'] }
+		csrf: { trustedOrigins: ['*'] },
+		csp: {
+			mode: 'auto',
+			reportOnly: {
+				'default-src': ['self'],
+				'script-src': ['self'],
+				'style-src': ['self', 'unsafe-inline'],
+				'img-src': ['self', 'data:', 'https:'],
+				'font-src': ['self', 'data:'],
+				'connect-src': ['self'],
+				'frame-ancestors': ['none'],
+				'base-uri': ['self'],
+				'form-action': ['self'],
+				'object-src': ['none']
+			}
+		}
 		// serviceWorker is registered via @vite-pwa/sveltekit
 	}
 };
