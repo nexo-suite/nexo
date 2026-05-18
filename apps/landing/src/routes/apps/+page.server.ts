@@ -2,7 +2,7 @@ import { redirect, fail } from '@sveltejs/kit';
 import { db, userAppAccess, userSettings, accounts, expenses, income, sessions } from '@nexo/db';
 import { firesOnDate } from '@nexo/ui/utils/recurrence';
 import { parseUserAgent, deviceIcon } from '@nexo/ui/utils/ua-parser';
-import { eq, and } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { env as publicEnv } from '$env/dynamic/public';
 import { getAuth } from '$lib/server/auth';
 import type { PageServerLoad, Actions } from './$types';
@@ -119,7 +119,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 		const parsed = parseUserAgent(s.userAgent);
 		return {
 			id: s.id,
-			token: s.token,
 			isCurrent: s.id === currentSessionId,
 			name: sessionNames[s.id] ?? null,
 			icon: deviceIcon(parsed.device, parsed.os),
@@ -170,12 +169,22 @@ export const actions: Actions = {
 		if (!locals.user) return fail(401, { error: 'Not authenticated' });
 
 		const form = await request.formData();
-		const token = form.get('token') as string;
-		if (!token) return fail(400, { error: 'Missing token' });
+		const sessionId = form.get('sessionId') as string;
+		if (!sessionId) return fail(400, { error: 'Missing sessionId' });
+
+		const [owned] = await db
+			.select({ token: sessions.token })
+			.from(sessions)
+			.where(and(eq(sessions.id, sessionId), eq(sessions.userId, locals.user.id)))
+			.limit(1);
+		if (!owned) return fail(404, { error: 'Not found' });
 
 		const auth = getAuth();
 		try {
-			await auth.api.revokeSession({ body: { token }, headers: request.headers });
+			await auth.api.revokeSession({
+				body: { token: owned.token },
+				headers: request.headers
+			});
 		} catch {
 			return fail(500, { error: 'Failed to revoke session' });
 		}
@@ -203,6 +212,13 @@ export const actions: Actions = {
 		const sessionId = form.get('sessionId') as string;
 		const name = (form.get('name') as string)?.trim() || null;
 		if (!sessionId) return fail(400, { error: 'Missing session ID' });
+
+		const [owned] = await db
+			.select({ id: sessions.id })
+			.from(sessions)
+			.where(and(eq(sessions.id, sessionId), eq(sessions.userId, locals.user.id)))
+			.limit(1);
+		if (!owned) return fail(404, { error: 'Not found' });
 
 		try {
 			const [current] = await db

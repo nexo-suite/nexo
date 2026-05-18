@@ -3,7 +3,6 @@
 
 	type Session = {
 		id: string;
-		token: string;
 		isCurrent: boolean;
 		name: string | null;
 		icon: string;
@@ -102,7 +101,7 @@
 							};
 						}}
 					>
-						<input type="hidden" name="token" value={session.token} />
+						<input type="hidden" name="sessionId" value={session.id} />
 						<button type="submit" class="session-action-btn danger" aria-label="Revoke">✕</button>
 					</form>
 				{/if}
