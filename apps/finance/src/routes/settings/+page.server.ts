@@ -2,6 +2,7 @@ import { fail } from '@sveltejs/kit';
 import { db, userSettings, accounts } from '@nexo/db';
 import { eq, and, asc } from 'drizzle-orm';
 import { logger } from '$lib/server/logger';
+import { assertAccountOwned, InvalidAccountError } from '$lib/server/auth-helpers';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -48,6 +49,7 @@ export const actions: Actions = {
 		const includeDebtInForecast = form.get('includeDebtInForecast') !== 'false';
 
 		try {
+			await assertAccountOwned(defaultAccountId, locals.user!.id);
 			await db
 				.insert(userSettings)
 				.values({
@@ -70,6 +72,9 @@ export const actions: Actions = {
 					}
 				});
 		} catch (e) {
+			if (e instanceof InvalidAccountError) {
+				return fail(400, { error: 'INVALID_ACCOUNT', correlationId: locals.correlationId });
+			}
 			logger.error('db error', {
 				action: 'save-settings',
 				error: String(e),

@@ -2,6 +2,7 @@ import { db, income, accounts } from '@nexo/db';
 import { eq, asc, and } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 import { logger } from '$lib/server/logger';
+import { assertAccountOwned, InvalidAccountError } from '$lib/server/auth-helpers';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -34,6 +35,7 @@ export const actions: Actions = {
 		};
 		if (!payload.name) return fail(400, { error: 'VALIDATION_REQUIRED' });
 		try {
+			await assertAccountOwned(payload.accountId, userId);
 			if (id) {
 				await db
 					.update(income)
@@ -43,6 +45,9 @@ export const actions: Actions = {
 				await db.insert(income).values({ ...payload, userId });
 			}
 		} catch (e) {
+			if (e instanceof InvalidAccountError) {
+				return fail(400, { error: 'INVALID_ACCOUNT', correlationId: locals.correlationId });
+			}
 			logger.error('db error', {
 				action: 'save-income',
 				error: String(e),

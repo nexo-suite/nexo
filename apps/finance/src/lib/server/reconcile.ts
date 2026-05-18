@@ -72,7 +72,7 @@ export async function reconcileUser(userId: string): Promise<number> {
 				await db
 					.update(accounts)
 					.set({ balance: sql`${accounts.balance} - ${e.amount}` })
-					.where(eq(accounts.id, e.accountId));
+					.where(and(eq(accounts.id, e.accountId), eq(accounts.userId, userId)));
 				count++;
 			}
 		}
@@ -102,7 +102,7 @@ export async function reconcileUser(userId: string): Promise<number> {
 				await db
 					.update(accounts)
 					.set({ balance: sql`${accounts.balance} + ${inc.amount}` })
-					.where(eq(accounts.id, inc.accountId));
+					.where(and(eq(accounts.id, inc.accountId), eq(accounts.userId, userId)));
 				count++;
 			}
 		}
@@ -134,7 +134,7 @@ export async function reconcileUser(userId: string): Promise<number> {
 								? sql`${accounts.balance} - ${debt.amount}`
 								: sql`${accounts.balance} + ${debt.amount}`
 					})
-					.where(eq(accounts.id, debt.accountId));
+					.where(and(eq(accounts.id, debt.accountId), eq(accounts.userId, userId)));
 				count++;
 			}
 		}
