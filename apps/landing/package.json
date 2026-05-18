@@ -17,6 +17,7 @@
 	},
 	"dependencies": {
 		"@nexo/db": "workspace:*",
+		"@nexo/security": "workspace:*",
 		"@nexo/ui": "workspace:*",
 		"better-auth": "^1.6.11",
 		"drizzle-orm": "^0.45.2",

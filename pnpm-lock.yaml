@@ -83,6 +83,9 @@ importers:
       '@nexo/logger':
         specifier: workspace:*
         version: link:../../packages/logger
+      '@nexo/security':
+        specifier: workspace:*
+        version: link:../../packages/security
       '@nexo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -138,6 +141,9 @@ importers:
       '@nexo/logger':
         specifier: workspace:*
         version: link:../../packages/logger
+      '@nexo/security':
+        specifier: workspace:*
+        version: link:../../packages/security
       '@nexo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -221,6 +227,9 @@ importers:
       '@nexo/logger':
         specifier: workspace:*
         version: link:../../packages/logger
+      '@nexo/security':
+        specifier: workspace:*
+        version: link:../../packages/security
       '@nexo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -291,6 +300,9 @@ importers:
       '@nexo/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@nexo/security':
+        specifier: workspace:*
+        version: link:../../packages/security
       '@nexo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -396,6 +408,15 @@ importers:
 
   packages/logger:
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.4
+
+  packages/security:
+    devDependencies:
+      '@sveltejs/kit':
+        specifier: ^2.60.1
+        version: 2.60.1(@sveltejs/vite-plugin-svelte@7.1.2(svelte@5.55.7(@typescript-eslint/types@8.59.3))(vite@8.0.13(@types/node@24.12.4)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.1)(yaml@2.9.0)))(svelte@5.55.7(@typescript-eslint/types@8.59.3))(typescript@6.0.3)(vite@8.0.13(@types/node@24.12.4)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(tsx@4.22.1)(yaml@2.9.0))
       '@types/node':
         specifier: 'catalog:'
         version: 24.12.4

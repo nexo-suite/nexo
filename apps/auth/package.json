@@ -19,6 +19,7 @@
 		"@better-auth/oauth-provider": "^1.6.11",
 		"@nexo/db": "workspace:*",
 		"@nexo/logger": "workspace:*",
+		"@nexo/security": "workspace:*",
 		"@nexo/ui": "workspace:*",
 		"better-auth": "^1.6.11",
 		"drizzle-orm": "^0.45.2",

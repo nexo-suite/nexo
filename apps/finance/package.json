@@ -26,6 +26,7 @@
 		"@nexo/db": "workspace:*",
 		"@nexo/errors": "workspace:*",
 		"@nexo/logger": "workspace:*",
+		"@nexo/security": "workspace:*",
 		"@nexo/ui": "workspace:*",
 		"better-auth": "^1.6.11",
 		"clsx": "^2.1.1",

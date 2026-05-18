@@ -1,5 +1,7 @@
 import { getAuth } from '$lib/server/auth';
 import { initDb } from '@nexo/db';
+import { csrfHandle } from '@nexo/security';
+import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { logger } from '$lib/server/logger';
 import { paraglideMiddleware } from '$lib/paraglide/server.js';
@@ -58,4 +60,9 @@ const i18nHandle: Handle = ({ event, resolve }) =>
 		});
 	});
 
-export const handle = sequence(i18nHandle, authHandle, securityHeaders);
+export const handle = sequence(
+	i18nHandle,
+	csrfHandle({ allowLocalhost: dev, skipPaths: ['/api/auth', '/oauth2'] }),
+	authHandle,
+	securityHeaders
+);

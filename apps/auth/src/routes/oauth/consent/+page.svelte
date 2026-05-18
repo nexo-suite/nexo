@@ -1,33 +1,34 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import type { PageData } from './$types';
 
-	// For this private suite there are no third-party clients, so we
-	// auto-accept consent on mount and redirect back immediately.
-	// Wire up a real consent UI here if you ever open the OAuth server
-	// to external apps.
-	onMount(async () => {
-		const res = await fetch('/api/auth/oauth2/consent', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ accept: true }),
-			credentials: 'include'
-		});
+	let { data }: { data: PageData } = $props();
+	let submitting = $state<'accept' | 'deny' | null>(null);
 
-		if (res.ok) {
-			const { redirectURI } = await res.json().catch(() => ({}));
-			if (redirectURI) {
-				window.location.href = redirectURI;
-				return;
+	async function decide(accept: boolean) {
+		submitting = accept ? 'accept' : 'deny';
+		try {
+			const res = await fetch('/api/auth/oauth2/consent', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ accept }),
+				credentials: 'include'
+			});
+			if (res.ok) {
+				const { redirectURI } = await res.json().catch(() => ({}));
+				if (redirectURI) {
+					window.location.href = redirectURI;
+					return;
+				}
 			}
+			window.location.href = '/';
+		} finally {
+			submitting = null;
 		}
-
-		// Fallback — shouldn't happen in normal flow
-		window.location.href = '/';
-	});
+	}
 </script>
 
 <svelte:head>
-	<title>Authorizing — Nexo</title>
+	<title>Authorize {data.clientName} — Nexo</title>
 </svelte:head>
 
 <main class="login-root">
@@ -36,7 +37,38 @@
 			<span class="brand-mark"></span>
 			<span class="brand-name">Nexo</span>
 		</div>
-		<p class="sub">Authorizing…</p>
+		<h1 class="title">Authorize {data.clientName}</h1>
+		<p class="sub">
+			<strong>{data.clientName}</strong> is requesting access to your account.
+		</p>
+
+		{#if data.scopes.length > 0}
+			<p class="sub">It will be able to:</p>
+			<ul class="scopes">
+				{#each data.scopes as scope (scope)}
+					<li>{scope}</li>
+				{/each}
+			</ul>
+		{/if}
+
+		<div class="actions">
+			<button
+				type="button"
+				class="btn-deny"
+				disabled={submitting !== null}
+				onclick={() => decide(false)}
+			>
+				{submitting === 'deny' ? 'Denying…' : 'Deny'}
+			</button>
+			<button
+				type="button"
+				class="btn-accept"
+				disabled={submitting !== null}
+				onclick={() => decide(true)}
+			>
+				{submitting === 'accept' ? 'Approving…' : 'Approve'}
+			</button>
+		</div>
 	</div>
 </main>
 
@@ -89,9 +121,53 @@
 		letter-spacing: -0.01em;
 		color: var(--color-text-primary);
 	}
+	.title {
+		font-size: 18px;
+		font-weight: 600;
+		margin: 0 0 12px;
+		color: var(--color-text-primary);
+	}
 	.sub {
 		font-size: 13px;
 		color: var(--color-text-muted);
-		margin: 0;
+		margin: 0 0 12px;
+	}
+	.scopes {
+		font-size: 13px;
+		color: var(--color-text-primary);
+		margin: 0 0 20px;
+		padding-left: 18px;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.actions {
+		display: flex;
+		gap: 8px;
+		margin-top: 20px;
+	}
+	.btn-accept,
+	.btn-deny {
+		flex: 1;
+		padding: 12px;
+		font: inherit;
+		font-size: 14px;
+		font-weight: 600;
+		border: none;
+		border-radius: var(--radius-md);
+		cursor: pointer;
+	}
+	.btn-accept {
+		background: var(--color-accent);
+		color: #fff;
+	}
+	.btn-deny {
+		background: var(--color-surface-2, #f0f0f0);
+		color: var(--color-text-primary);
+	}
+	.btn-accept:disabled,
+	.btn-deny:disabled {
+		opacity: 0.6;
+		cursor: progress;
 	}
 </style>

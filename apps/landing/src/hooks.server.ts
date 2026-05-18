@@ -1,4 +1,6 @@
 import { initDb } from '@nexo/db';
+import { csrfHandle } from '@nexo/security';
+import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { getAuth } from '$lib/server/auth';
 import { paraglideMiddleware } from '$lib/paraglide/server.js';
@@ -33,4 +35,9 @@ const securityHeaders: Handle = async ({ event, resolve }) => {
 	return response;
 };
 
-export const handle = sequence(i18nHandle, appHandle, securityHeaders);
+export const handle = sequence(
+	i18nHandle,
+	csrfHandle({ allowLocalhost: dev }),
+	appHandle,
+	securityHeaders
+);
