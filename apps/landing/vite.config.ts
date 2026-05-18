@@ -7,8 +7,12 @@ import { defineConfig, mergeConfig, type PluginOption } from 'vite';
 import { sharedConfig } from '../../vite.shared';
 
 function readVersion(relativePath: string): string {
-	const pkg = JSON.parse(readFileSync(resolve(__dirname, relativePath, 'package.json'), 'utf-8'));
-	return pkg.version ?? '0.0.0';
+	try {
+		const pkg = JSON.parse(readFileSync(resolve(__dirname, relativePath, 'package.json'), 'utf-8'));
+		return pkg.version ?? '0.0.0';
+	} catch {
+		return '0.0.0';
+	}
 }
 
 const appVersions = {

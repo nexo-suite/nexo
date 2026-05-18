@@ -11,9 +11,6 @@ RUN pnpm install --frozen-lockfile
 COPY vite.shared.ts tsconfig.json ./
 COPY packages/db ./packages/db
 COPY packages/ui ./packages/ui
-COPY apps/finance/package.json ./apps/finance/package.json
-COPY apps/auth/package.json ./apps/auth/package.json
-COPY apps/admin/package.json ./apps/admin/package.json
 COPY apps/landing ./apps/landing
 
 ARG PUBLIC_FINANCE_URL=https://finance.krieger2501.de

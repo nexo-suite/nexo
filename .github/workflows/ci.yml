@@ -58,7 +58,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [admin, auth, finance, landing]
+        app: [admin, auth, bot, finance, landing]
 
     steps:
       - name: Checkout
