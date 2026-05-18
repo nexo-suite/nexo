@@ -204,41 +204,78 @@ docker compose --profile production --env-file .env up -d --build finance
 
 ## Backups
 
-Set up a nightly `pg_dump` cron job:
+Backups must be encrypted at rest. The DB contains financial data and Better
+Auth access/refresh tokens — a leaked plaintext dump is game-over for the
+trust model. We use [`age`](https://github.com/FiloSottile/age) with a
+public-key recipient; the matching private key lives **off the VPS** (laptop
+plus a paper backup), so a VPS compromise alone cannot decrypt past dumps.
+
+### One-time setup
+
+On your laptop (not the VPS):
 
 ```bash
+brew install age
+age-keygen -o ~/nexo-backup.age
+# Prints: Public key: age1...    ← copy this
+# Move ~/nexo-backup.age to a password manager + write the private key on
+# paper. If you lose this key, all backups become unrecoverable.
+```
+
+On the VPS:
+
+```bash
+sudo apt install age
 sudo mkdir -p /backups
 sudo chown nexo:nexo /backups
 
+# Store ONLY the public key on the VPS — no private material.
+echo 'age1<your-public-key>' | sudo tee /etc/nexo/backup.recipient
+```
+
+### Nightly cron
+
+```
 crontab -e
 ```
 
-Add:
-
 ```
-0 3 * * * docker compose --profile production exec -T postgres pg_dump -U nexo nexo | gzip > /backups/nexo-$(date +\%Y\%m\%d).sql.gz
+0 3 * * * docker compose --profile production exec -T postgres pg_dump -U nexo nexo | gzip | age -R /etc/nexo/backup.recipient > /backups/nexo-$(date +\%Y\%m\%d).sql.gz.age
 ```
 
 ### Restoring from a backup
 
+On the laptop with the private key (do not copy the key to the VPS):
+
 ```bash
-gunzip -c /backups/nexo-20260501.sql.gz | \
+age -d -i ~/nexo-backup.age /backups/nexo-20260501.sql.gz.age | \
+  gunzip | \
   docker compose exec -T postgres psql -U nexo -d nexo
 ```
 
-### Optional: offsite backup with rclone
+### Offsite copies
+
+Sync the encrypted `.age` files to B2 — never the raw dumps:
 
 ```bash
-# Install rclone
 sudo apt install rclone
+rclone config   # configure a B2 remote
 
-# Configure a Backblaze B2 bucket (free tier covers ~10 GB)
-rclone config
-
-# Add a daily sync after the dump
 # In crontab, after the pg_dump line:
-30 3 * * * rclone sync /backups b2:your-bucket-name/nexo-backups
+30 3 * * * rclone sync --include '*.age' /backups b2:your-bucket-name/nexo-backups
 ```
+
+### Key rotation
+
+Rotate the age key once a year, or immediately if the laptop is lost or you
+suspect compromise:
+
+1. Generate a new key on the laptop.
+2. Replace `/etc/nexo/backup.recipient` on the VPS.
+3. Keep the old private key archived offline so historical backups stay
+   restorable until you decide to retire them.
+4. Re-encrypt the most recent few dumps to the new recipient if you want a
+   clean cut-over.
 
 ---
 

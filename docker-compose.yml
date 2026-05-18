@@ -296,7 +296,7 @@ services:
     command: -config.file=/etc/loki/config.yaml
     networks: [production]
     ports:
-      - '3100:3100'
+      - '127.0.0.1:3100:3100'
     volumes:
       - loki_data:/loki
       - ./loki/config.yaml:/etc/loki/config.yaml:ro
@@ -328,8 +328,6 @@ services:
         loki-url: 'http://localhost:3100/loki/api/v1/push'
         mode: non-blocking
         max-buffer-size: 4m
-    ports:
-      - '3003:3003'
     environment:
       GH_APP_ID: ${GH_APP_ID}
       GH_APP_PRIVATE_KEY: ${GH_APP_PRIVATE_KEY}
