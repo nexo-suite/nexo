@@ -15,7 +15,9 @@ services:
     restart: unless-stopped
     networks: [production]
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Mount the parent dir so future major bumps can use pg_upgrade --link.
+      # PGDATA is /var/lib/postgresql/18/docker on this image.
+      - pgdata:/var/lib/postgresql
     environment:
       POSTGRES_DB: nexo
       POSTGRES_USER: nexo
@@ -183,7 +185,7 @@ services:
     restart: unless-stopped
     networks: [preview]
     volumes:
-      - pgdata_preview:/var/lib/postgresql/data
+      - pgdata_preview:/var/lib/postgresql
     environment:
       POSTGRES_DB: nexo
       POSTGRES_USER: nexo
