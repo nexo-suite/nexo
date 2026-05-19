@@ -142,6 +142,7 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       PUBLIC_AUTH_URL: https://auth.krieger2501.de
       PUBLIC_FINANCE_URL: https://finance.krieger2501.de
+      PUBLIC_LANDING_URL: https://krieger2501.de
       PROTOCOL_HEADER: x-forwarded-proto
       HOST_HEADER: x-forwarded-host
     depends_on:
@@ -266,6 +267,7 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
       PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
+      PUBLIC_LANDING_URL: https://preview.krieger2501.de
       PROTOCOL_HEADER: x-forwarded-proto
       HOST_HEADER: x-forwarded-host
     depends_on:

@@ -141,7 +141,7 @@
 	}
 
 	const hubUrl = $derived(
-		env.PUBLIC_LANDING_URL ? `${env.PUBLIC_LANDING_URL}/apps` : 'http://localhost:3000/apps'
+		env.PUBLIC_LANDING_URL ? `${env.PUBLIC_LANDING_URL}/apps` : 'https://krieger2501.de/apps'
 	);
 </script>
 
