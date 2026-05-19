@@ -366,3 +366,91 @@
 		transform: scale(0.75);
 	}
 }
+
+/* ── Section label (eyebrow above set-card) ── */
+.section-label {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	padding: 24px 4px 10px;
+	gap: 12px;
+}
+.sl-title {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--color-text-subtle);
+	white-space: nowrap;
+}
+.sl-title b {
+	color: var(--color-text-primary);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+}
+.sl-right {
+	font-size: 12px;
+	color: var(--color-text-faint);
+	font-family: var(--font-mono);
+	letter-spacing: 0.04em;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+/* ── Status banner (above-content notices) ── */
+.banner {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 12px 16px;
+	border-radius: var(--radius-lg, 16px);
+	margin-bottom: 14px;
+	font-size: 13px;
+	line-height: 1.4;
+}
+.banner-ok {
+	background: color-mix(in oklab, var(--ok) 12%, var(--color-surface-1));
+	color: var(--color-text);
+	border: 1px solid color-mix(in oklab, var(--ok) 30%, transparent);
+}
+.banner-warn {
+	background: color-mix(in oklab, var(--warn) 12%, var(--color-surface-1));
+	color: var(--color-text);
+	border: 1px solid color-mix(in oklab, var(--warn) 30%, transparent);
+}
+.banner-err {
+	background: color-mix(in oklab, var(--err) 12%, var(--color-surface-1));
+	color: var(--color-text);
+	border: 1px solid color-mix(in oklab, var(--err) 30%, transparent);
+}
+
+/* ── Toggle (use as .toggle on a <button> or non-interactive <span>) ── */
+.toggle {
+	position: relative;
+	width: 44px;
+	height: 26px;
+	border-radius: 13px;
+	border: none;
+	background: var(--color-bg-2);
+	cursor: pointer;
+	transition: background var(--dur-fast, 150ms) var(--ease-out);
+	flex-shrink: 0;
+	display: inline-block;
+}
+.toggle.on {
+	background: var(--color-accent);
+}
+.toggle-thumb {
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+	transition: left var(--dur-fast, 150ms) var(--ease-out);
+}
+.toggle-thumb.on {
+	left: 21px;
+}
