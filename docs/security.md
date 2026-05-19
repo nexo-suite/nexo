@@ -276,10 +276,10 @@ per-request via the `withUser` helper:
 ```ts
 // packages/db/src/with-user.ts
 export async function withUser<T>(userId: string, fn: (tx: Tx) => Promise<T>) {
- return db.transaction(async (tx) => {
-  await tx.execute(sql`select set_config('app.current_user_id', ${userId}, true)`);
-  return fn(tx);
- });
+	return db.transaction(async (tx) => {
+		await tx.execute(sql`select set_config('app.current_user_id', ${userId}, true)`);
+		return fn(tx);
+	});
 }
 ```
 

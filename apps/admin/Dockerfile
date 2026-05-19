@@ -7,6 +7,7 @@ COPY packages/email/package.json ./packages/email/
 COPY packages/errors/package.json ./packages/errors/
 COPY packages/i18n/package.json ./packages/i18n/
 COPY packages/logger/package.json ./packages/logger/
+COPY packages/security/package.json ./packages/security/
 COPY packages/ui/package.json ./packages/ui/
 COPY apps/admin/package.json ./apps/admin/
 RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
@@ -18,6 +19,7 @@ COPY packages/email ./packages/email
 COPY packages/errors ./packages/errors
 COPY packages/i18n ./packages/i18n
 COPY packages/logger ./packages/logger
+COPY packages/security ./packages/security
 COPY packages/ui ./packages/ui
 COPY apps/admin ./apps/admin
 RUN pnpm --filter=@nexo/admin run build
@@ -32,6 +34,7 @@ COPY packages/email/package.json ./packages/email/
 COPY packages/errors/package.json ./packages/errors/
 COPY packages/i18n/package.json ./packages/i18n/
 COPY packages/logger/package.json ./packages/logger/
+COPY packages/security/package.json ./packages/security/
 COPY packages/ui/package.json ./packages/ui/
 COPY apps/admin/package.json ./apps/admin/
 RUN pnpm install --frozen-lockfile --prod

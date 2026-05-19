@@ -3,6 +3,7 @@ WORKDIR /app
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/db/package.json ./packages/db/
+COPY packages/security/package.json ./packages/security/
 COPY packages/ui/package.json ./packages/ui/
 COPY apps/landing/package.json ./apps/landing/
 RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
@@ -10,6 +11,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY vite.shared.ts tsconfig.json ./
 COPY packages/db ./packages/db
+COPY packages/security ./packages/security
 COPY packages/ui ./packages/ui
 COPY apps/landing ./apps/landing
 
@@ -28,6 +30,7 @@ RUN addgroup -S app && adduser -S app -G app
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/db/package.json ./packages/db/
+COPY packages/security/package.json ./packages/security/
 COPY packages/ui/package.json ./packages/ui/
 COPY apps/landing/package.json ./apps/landing/
 RUN pnpm install --frozen-lockfile --prod

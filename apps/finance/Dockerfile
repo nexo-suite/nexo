@@ -6,6 +6,7 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/errors/package.json ./packages/errors/
 COPY packages/i18n/package.json ./packages/i18n/
 COPY packages/logger/package.json ./packages/logger/
+COPY packages/security/package.json ./packages/security/
 COPY packages/ui/package.json ./packages/ui/
 COPY apps/finance/package.json ./apps/finance/
 RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
@@ -16,6 +17,7 @@ COPY packages/db ./packages/db
 COPY packages/errors ./packages/errors
 COPY packages/i18n ./packages/i18n
 COPY packages/logger ./packages/logger
+COPY packages/security ./packages/security
 COPY packages/ui ./packages/ui
 COPY apps/finance ./apps/finance
 
@@ -31,6 +33,7 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/errors/package.json ./packages/errors/
 COPY packages/i18n/package.json ./packages/i18n/
 COPY packages/logger/package.json ./packages/logger/
+COPY packages/security/package.json ./packages/security/
 COPY packages/ui/package.json ./packages/ui/
 COPY apps/finance/package.json ./apps/finance/
 RUN pnpm install --frozen-lockfile --prod
