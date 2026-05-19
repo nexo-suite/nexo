@@ -33,6 +33,16 @@
 	const url = $derived(page.url);
 	const flowActive = $derived(flowItems.some((i) => url.pathname === i.href));
 
+	const activeFlowColor = $derived(
+		url.pathname === '/expenses'
+			? 'var(--color-expense)'
+			: url.pathname === '/income'
+				? 'var(--color-income)'
+				: url.pathname === '/debt'
+					? 'var(--color-debt)'
+					: null
+	);
+
 	function togglePopover() {
 		popoverOpen = !popoverOpen;
 	}
@@ -126,7 +136,7 @@
 					class="grid size-11 place-items-center rounded-full transition-colors"
 					style="transition-duration: var(--dur-base); transition-timing-function: var(--ease-out);
 					       background: {active
-						? 'var(--color-accent)'
+						? (activeFlowColor ?? 'var(--color-accent)')
 						: 'var(--color-text-primary)'}; color: var(--color-bg-0);"
 				>
 					<item.icon size={20} strokeWidth={1.8} />

@@ -47,3 +47,29 @@ textarea {
 	--dur-base: var(--duration-base);
 	--dur-slow: var(--duration-slow);
 }
+
+/* ─── Portrait-only on phones ─── */
+/* The PWA manifest locks orientation when installed; this covers
+   browser-tab usage and apps without a manifest. We don't design
+   landscape layouts, so phones in landscape get a polite nudge. */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+	body > * {
+		display: none !important;
+	}
+	body::before {
+		content: 'Rotate your phone to portrait ✨';
+		position: fixed;
+		inset: 0;
+		display: grid;
+		place-items: center;
+		padding: 24px;
+		background: var(--color-bg-0);
+		color: var(--color-text-primary);
+		font-family: var(--font-sans);
+		font-size: 16px;
+		font-weight: 500;
+		letter-spacing: -0.01em;
+		text-align: center;
+		z-index: 9999;
+	}
+}
