@@ -20,6 +20,7 @@ const i18nHandle: Handle = ({ event, resolve }) =>
 	});
 
 const appHandle: Handle = async ({ event, resolve }) => {
+	if (event.url.pathname === '/healthz') return resolve(event);
 	const auth = getAuth();
 	const result = await auth.api.getSession({ headers: event.request.headers }).catch(() => null);
 	event.locals.user = result?.user ?? null;
