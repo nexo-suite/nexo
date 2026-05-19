@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/logger/package.json ./packages/logger/
 COPY apps/bot/package.json ./apps/bot/
-RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
+RUN corepack enable
 RUN pnpm install --frozen-lockfile
 
 COPY packages/logger ./packages/logger
@@ -13,7 +13,7 @@ RUN pnpm --filter=@nexo/bot run build
 
 FROM node:24-alpine
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
+RUN corepack enable
 RUN addgroup -S app && adduser -S app -G app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/logger/package.json ./packages/logger/
