@@ -27,6 +27,11 @@ finance.krieger2501.de {
 	reverse_proxy finance:3000
 }
 
+flaschen.krieger2501.de {
+	import security_headers
+	reverse_proxy flaschen:3000
+}
+
 # Preview
 preview.krieger2501.de {
 	import security_headers

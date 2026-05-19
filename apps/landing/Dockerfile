@@ -1,7 +1,4 @@
 # syntax=docker/dockerfile:1.7
-# Sharper layer caching: manifests copied before sources, so the install
-# layer reuses across source-only changes. Must be updated when adding or
-# removing workspace packages.
 #
 # apps/landing/package.json sets "files": ["build", "package.json"] so the
 # adapter-node build/ output is included in `pnpm deploy` (build/ is
@@ -11,26 +8,20 @@
 # usages get resolved at build time. Runtime envs in docker-compose still
 # apply for $env/dynamic usages.
 
-FROM node:24-alpine AS build
+FROM node:24-alpine AS fetch
 WORKDIR /app
 RUN corepack enable
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY packages/db/package.json        ./packages/db/
-COPY packages/security/package.json  ./packages/security/
-COPY packages/ui/package.json        ./packages/ui/
-COPY apps/landing/package.json       ./apps/landing/
-
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+    pnpm fetch
 
-COPY vite.shared.ts tsconfig.json ./
-COPY packages/db        ./packages/db
-COPY packages/security  ./packages/security
-COPY packages/ui        ./packages/ui
-COPY apps/landing       ./apps/landing
+FROM fetch AS build
+COPY . .
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install -r --offline --frozen-lockfile
 
 ARG PUBLIC_FINANCE_URL=https://finance.krieger2501.de
 ARG PUBLIC_ADMIN_URL=https://admin.krieger2501.de
@@ -55,4 +46,5 @@ USER app
 ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000
+
 CMD ["node", "build"]

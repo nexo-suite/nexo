@@ -56,11 +56,28 @@ You need real OAuth credentials even locally. Each provider needs a redirect URI
 
 ### 3. Configure environment
 
+> The `.env.example` file at the repo root has the full reference with comments at the top. The summary below covers the common case.
+
+There are **three layers** of env files in this repo. Knowing which is which removes most of the confusion:
+
+| File                    | Loaded by                                                           | Purpose                                                                                           | What goes here                                                                                                                                                                                          |
+| ----------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Root `.env`             | `docker-compose` (VPS / `pnpm docker:*`)                            | Real production runtime env                                                                       | Secrets only — `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, OAuth client secrets, `VAPID_*`, `FLASCHEN_TOKEN_ENC_KEY`. Public URLs are **hardcoded** in `docker-compose.yml`, not interpolated from here. |
+| Root `.env.local`       | Host CLI tools — `drizzle-kit`, `pnpm db:migrate`, `pnpm db:studio` | Override `DATABASE_URL` to use `localhost:5433` (since these run on your host, not inside Docker) | `DATABASE_URL=postgres://nexo:devpassword@localhost:5433/nexo`                                                                                                                                          |
+| `apps/<app>/.env.local` | `pnpm dev:<app>` (SvelteKit dev server)                             | Everything the dev server needs at runtime                                                        | `DATABASE_URL` (localhost), `BETTER_AUTH_SECRET`, `PUBLIC_AUTH_URL=http://localhost:3001`, plus app-specific `PUBLIC_<APP>_URL` and any feature secrets that production reads from root `.env`          |
+
+**Rule of thumb:**
+
+- A `PUBLIC_*` URL never goes in root `.env` — it's hardcoded in `docker-compose.yml` for prod and in per-app `.env.local` for dev.
+- A secret consumed by the SvelteKit app at runtime (e.g. `VAPID_PRIVATE_KEY`) goes in **both** root `.env` (for prod) and per-app `.env.local` (for dev).
+
+#### Step 1 — Root `.env`
+
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` — the minimum required values:
+Minimum required values:
 
 ```bash
 POSTGRES_PASSWORD=devpassword
@@ -77,12 +94,28 @@ DISCORD_CLIENT_ID=...
 DISCORD_CLIENT_SECRET=...
 ```
 
-You also need per-app `.env.local` files. `.env.example` has the exact contents for each — copy the relevant block and create the file:
+If you're working on **flaschen** or any other push-using app, also add:
+
+```bash
+# Generate with: pnpm exec web-push generate-vapid-keys
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:dev@localhost
+
+# Generate with: openssl rand -base64 32
+FLASCHEN_TOKEN_ENC_KEY=...
+FLASCHEN_OAUTH_CLIENT_ID=86fe707f-ea47-4bf3-aa81-42579bf180cd
+```
+
+#### Step 2 — Per-app `.env.local`
+
+`.env.example` has the exact contents for each app — copy the relevant block:
 
 - `apps/auth/.env.local` — `DATABASE_URL` (localhost), `BETTER_AUTH_SECRET`, `PUBLIC_AUTH_URL`, OAuth keys
 - `apps/finance/.env.local` — `DATABASE_URL` (localhost), `BETTER_AUTH_SECRET`, `PUBLIC_AUTH_URL`
+- `apps/flaschen/.env.local` — `DATABASE_URL` (localhost), `BETTER_AUTH_SECRET`, `PUBLIC_AUTH_URL`, `PUBLIC_FLASCHEN_URL`, **plus** the same `VAPID_*` and `FLASCHEN_TOKEN_ENC_KEY` values you put in root `.env` (and `PUBLIC_VAPID_PUBLIC_KEY` matching `VAPID_PUBLIC_KEY`)
 - `apps/admin/.env.local` — `DATABASE_URL` (localhost), `BETTER_AUTH_SECRET`, `PUBLIC_AUTH_URL`
-- `apps/landing/.env.local` — `DATABASE_URL` (localhost), `BETTER_AUTH_SECRET`, `PUBLIC_AUTH_URL`, `PUBLIC_FINANCE_URL`
+- `apps/landing/.env.local` — `DATABASE_URL` (localhost), `BETTER_AUTH_SECRET`, `PUBLIC_AUTH_URL`, `PUBLIC_FINANCE_URL`, `PUBLIC_FLASCHEN_URL`
 - `.env.local` (repo root) — `DATABASE_URL` with `localhost:5433` for Drizzle CLI tools
 
 ### 4. Start Postgres and run migrations
@@ -107,12 +140,13 @@ pnpm dev
 
 Turborepo starts all SvelteKit apps concurrently (bot excluded by default):
 
-| App     | URL                   |
-| ------- | --------------------- |
-| Landing | http://localhost:3000 |
-| Auth    | http://localhost:3001 |
-| Finance | http://localhost:3002 |
-| Admin   | http://localhost:3004 |
+| App      | URL                   |
+| -------- | --------------------- |
+| Landing  | http://localhost:3000 |
+| Auth     | http://localhost:3001 |
+| Finance  | http://localhost:3002 |
+| Admin    | http://localhost:3004 |
+| Flaschen | http://localhost:3006 |
 
 Open `http://localhost:3002` — you'll be redirected to the auth server, sign in, and land back in the finance app.
 
