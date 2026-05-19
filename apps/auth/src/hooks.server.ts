@@ -12,6 +12,7 @@ import type { Handle } from '@sveltejs/kit';
 initDb(env.DATABASE_URL!);
 
 const authHandle: Handle = async ({ event, resolve }) => {
+	if (event.url.pathname === '/healthz') return resolve(event);
 	if (event.url.pathname.startsWith('/api/auth') || event.url.pathname.startsWith('/oauth2')) {
 		const correlationId = crypto.randomUUID().slice(0, 8);
 		try {

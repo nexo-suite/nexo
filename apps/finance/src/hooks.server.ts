@@ -15,6 +15,7 @@ initDb(env.DATABASE_URL!);
 
 const appHandle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/_app/')) return resolve(event);
+	if (event.url.pathname === '/healthz') return resolve(event);
 
 	event.locals.correlationId ??= crypto.randomUUID().slice(0, 8);
 
