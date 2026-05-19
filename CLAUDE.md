@@ -27,6 +27,7 @@ apps/
   auth/     → auth.krieger2501.de   (OIDC provider, login UI)
   admin/    → admin.krieger2501.de  (container management, user access)
   finance/  → finance.krieger2501.de (personal finance tracker)
+  flaschen/ → flaschen.krieger2501.de (Flaschenpost shift-offer notifier; web + worker)
   landing/  → krieger2501.de        (app directory)
   bot/      → internal              (GitHub webhook deploy automation)
 packages/
@@ -34,6 +35,7 @@ packages/
   errors/   → Error codes + i18n user messages
   logger/   → Structured JSON logger (pino)
   i18n/     → Language detection, Language type
+  push/     → Web Push (VAPID, subscriptions, send helpers, SW handlers)
   email/    → React Email templates
 ```
 
@@ -55,7 +57,7 @@ pnpm docker:observe  # start Loki + Grafana locally
 | --------- | ------------------------------------------------------------------------ |
 | Framework | SvelteKit 2 + Svelte 5 runes (`$props`, `$state`, `$derived`, `$effect`) |
 | Styling   | Tailwind CSS v4 with `@theme {}` tokens in `app.css`                     |
-| i18n      | Paraglide.js — `import * as m from '$lib/paraglide/messages'`            |
+| i18n      | Paraglide.js — `import { m } from '$lib/paraglide/messages.js'`          |
 | ORM       | Drizzle — schemas in `packages/db/schema/`, imported as `@nexo/db`       |
 | Auth      | Better Auth — central server at `apps/auth`, apps validate via API       |
 | Forms     | SvelteKit form actions with `use:enhance`                                |
@@ -103,7 +105,7 @@ export const actions: Actions = {
 
 ```svelte
 <script lang="ts">
-	import * as m from '$lib/paraglide/messages';
+	import { m } from '$lib/paraglide/messages.js';
 	// Typed props with $props()
 	let { data, onEdit }: { data: MyType; onEdit: (item: MyType) => void } = $props();
 	// Reactive state
@@ -176,7 +178,7 @@ Messages in `messages/{en,de,tr}.json`. Use `$derived` for reactive message arra
 
 ```svelte
 <script lang="ts">
-	import * as m from '$lib/paraglide/messages';
+	import { m } from '$lib/paraglide/messages.js';
 	const tabs = $derived([
 		{ id: 'recurring', label: m.tab_recurring() },
 		{ id: 'once', label: m.tab_once() }

@@ -1,0 +1,55 @@
+{
+	"name": "@nexo/flaschen",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"files": [
+		"build",
+		"package.json"
+	],
+	"scripts": {
+		"build": "vite build && pnpm build:worker",
+		"build:worker": "esbuild src/worker/index.ts --bundle --platform=node --target=node22 --format=esm --outfile=build/worker/index.js --packages=external",
+		"dev": "vite dev --port 3006",
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
+		"preview": "vite preview",
+		"qc": "run-s lint type:check build",
+		"translate": "pnpm dlx @inlang/paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide",
+		"translate:watch": "pnpm dlx @inlang/paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --watch",
+		"type:check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"type:check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"worker:dev": "tsx watch src/worker/index.ts"
+	},
+	"dependencies": {
+		"@js-temporal/polyfill": "^0.5.1",
+		"@lucide/svelte": "^1.16.0",
+		"@nexo/db": "workspace:*",
+		"@nexo/errors": "workspace:*",
+		"@nexo/logger": "workspace:*",
+		"@nexo/push": "workspace:*",
+		"@nexo/security": "workspace:*",
+		"@nexo/ui": "workspace:*",
+		"better-auth": "^1.6.11",
+		"drizzle-orm": "^0.45.2",
+		"web-push": "^3.6.7"
+	},
+	"devDependencies": {
+		"@inlang/paraglide-js": "^2.18.0",
+		"@sveltejs/adapter-node": "^5.5.4",
+		"@sveltejs/kit": "^2.60.1",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@tailwindcss/vite": "^4.3.0",
+		"@types/node": "catalog:",
+		"@types/web-push": "^3.6.4",
+		"@vite-pwa/sveltekit": "^1.1.0",
+		"esbuild": "^0.25.0",
+		"svelte": "^5.55.7",
+		"svelte-check": "^4.4.8",
+		"tailwindcss": "^4.3.0",
+		"tsx": "^4.20.0",
+		"vite": "^8.0.13",
+		"workbox-precaching": "^7.3.0",
+		"workbox-window": "^7.3.0"
+	}
+}

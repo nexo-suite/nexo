@@ -3,6 +3,7 @@
 		id: string;
 		name: string;
 		monogram: string;
+		icon?: string;
 		accent: string;
 		desc: string;
 		href: string;
@@ -13,6 +14,7 @@
 		id: string;
 		name: string;
 		monogram: string;
+		icon?: string;
 		accent: string;
 		desc: string;
 		meta: string;
@@ -22,6 +24,7 @@
 		id: string;
 		name: string;
 		monogram: string;
+		icon?: string;
 		accent: string;
 		sub: string;
 	};
@@ -34,16 +37,29 @@
 		tightAmount: number;
 	};
 
+	type FlaschenGlance =
+		| { connected: false }
+		| {
+				connected: true;
+				needsReconnect: boolean;
+				available: number;
+				matches: number;
+				lastPollAt: Date | null;
+				lastPollOk: boolean | null;
+		  };
+
 	let {
 		liveApps,
 		workshopApps,
 		ideaApps,
-		financeGlance
+		financeGlance,
+		flaschenGlance
 	}: {
 		liveApps: LiveApp[];
 		workshopApps: WorkshopApp[];
 		ideaApps: IdeaApp[];
 		financeGlance: FinanceGlance | null;
+		flaschenGlance: FlaschenGlance | null;
 	} = $props();
 
 	const fmt = (n: number) =>
@@ -61,7 +77,11 @@
 		{#each liveApps as app (app.id)}
 			<a class="app-card" href={app.href} style="--app-accent: {app.accent}" data-app={app.id}>
 				<div class="ac-head">
-					<div class="app-tile">{app.monogram}</div>
+					{#if app.icon}
+						<img class="app-tile app-tile-img" src={app.icon} alt="" width="46" height="46" />
+					{:else}
+						<div class="app-tile">{app.monogram}</div>
+					{/if}
 					<span class="pill pill-live"><span class="pill-dot"></span>Live</span>
 				</div>
 				<div class="ac-name">{app.name}</div>
@@ -85,6 +105,43 @@
 						<div class="stat">
 							<div class="stat-k">Tight day</div>
 							<div class="stat-v mono">{g.tightDay ?? '—'}</div>
+						</div>
+					</div>
+				{/if}
+
+				{#if app.id === 'flaschen' && flaschenGlance}
+					<div class="ac-glance">
+						<div class="stat">
+							<div class="stat-k">Available now</div>
+							<div class="stat-v mono">
+								{flaschenGlance.connected ? flaschenGlance.available : '—'}
+							</div>
+						</div>
+						<div class="stat">
+							<div class="stat-k">Match rules</div>
+							<div
+								class="stat-v mono {flaschenGlance.connected && flaschenGlance.matches > 0
+									? 'up'
+									: ''}"
+							>
+								{flaschenGlance.connected ? flaschenGlance.matches : '—'}
+							</div>
+						</div>
+						<div class="stat">
+							<div class="stat-k">Status</div>
+							<div
+								class="stat-v mono {!flaschenGlance.connected
+									? 'muted'
+									: flaschenGlance.needsReconnect
+										? 'down'
+										: 'up'}"
+							>
+								{!flaschenGlance.connected
+									? 'Not connected'
+									: flaschenGlance.needsReconnect
+										? 'Reauth'
+										: 'Live'}
+							</div>
 						</div>
 					</div>
 				{/if}
@@ -124,7 +181,11 @@
 	{#each workshopApps as app (app.id)}
 		<div class="app-card locked" style="--app-accent: {app.accent}">
 			<div class="ac-head">
-				<div class="app-tile">{app.monogram}</div>
+				{#if app.icon}
+					<img class="app-tile app-tile-img" src={app.icon} alt="" width="46" height="46" />
+				{:else}
+					<div class="app-tile">{app.monogram}</div>
+				{/if}
 				<span class="pill pill-soon">Coming soon</span>
 			</div>
 			<div class="ac-name">{app.name}</div>
@@ -268,6 +329,15 @@
 		border-color: var(--color-border-default);
 		background: var(--color-bg-1);
 	}
+	.app-tile-img {
+		background: transparent;
+		border: 0;
+		padding: 0;
+		object-fit: contain;
+	}
+	.app-card.locked .app-tile-img {
+		opacity: 0.7;
+	}
 
 	.pill {
 		display: inline-flex;
@@ -364,6 +434,9 @@
 	}
 	.stat-v.down {
 		color: oklch(0.59 0.2 27);
+	}
+	.stat-v.muted {
+		color: var(--color-text-faint);
 	}
 	.stat-v.mono {
 		font-family: var(--font-mono);

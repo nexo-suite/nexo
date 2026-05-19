@@ -5,6 +5,7 @@
 		id: string;
 		name: string;
 		monogram: string;
+		icon?: string;
 		accent: string;
 		status: 'live' | 'soon' | 'planned';
 		desc: string;
@@ -43,7 +44,11 @@
 					style="--card-accent: {app.accent}"
 				>
 					<div class="flex items-center justify-between">
-						<div class="icon-tile" style="color: {app.accent}">{app.monogram}</div>
+						{#if app.icon}
+							<img class="icon-tile icon-tile-img" src={app.icon} alt="" width="46" height="46" />
+						{:else}
+							<div class="icon-tile" style="color: {app.accent}">{app.monogram}</div>
+						{/if}
 						{#if app.status === 'live'}
 							<span class="status-pill status-pill--live">
 								<span class="dot"></span>{m.status_live()}
@@ -165,6 +170,12 @@
 	}
 	.card.locked .icon-tile {
 		opacity: 0.5;
+	}
+	.icon-tile-img {
+		background: transparent;
+		border: 0;
+		padding: 0;
+		object-fit: contain;
 	}
 
 	.status-pill {

@@ -1,0 +1,96 @@
+@import '@nexo/ui/tokens.css';
+@import '@nexo/ui/base.css' layer(base);
+@import '@nexo/ui/components.css' layer(components);
+@import 'tailwindcss';
+
+@theme {
+	--color-accent: #a50a50;
+	--color-accent-ink: oklch(35% 0.18 350);
+	--color-accent-soft: color-mix(in oklab, #a50a50 12%, transparent);
+	--color-accent-softer: color-mix(in oklab, #a50a50 6%, transparent);
+
+	--color-ok: #16a34a;
+	--color-warn: #f59e0b;
+	--color-err: #ef4444;
+
+	--tab-h: 64px;
+	--app-max-w: 448px;
+}
+
+:root {
+	--accent: var(--color-accent);
+	--ok: var(--color-ok);
+	--ok-bg: color-mix(in oklab, var(--ok) 14%, transparent);
+	--warn: var(--color-warn);
+	--warn-bg: color-mix(in oklab, var(--warn) 14%, transparent);
+	--err: var(--color-err);
+	--err-bg: color-mix(in oklab, var(--err) 14%, transparent);
+
+	--safe-top: env(safe-area-inset-top, 0px);
+	--safe-bot: env(safe-area-inset-bottom, 0px);
+}
+
+body {
+	padding-top: var(--safe-top);
+	min-height: 100vh;
+	overflow-x: hidden;
+	background: var(--color-bg);
+	color: var(--color-text);
+}
+
+.mono {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+}
+
+.t-label {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	line-height: 1;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--color-text-subtle);
+}
+
+.app-container {
+	max-width: var(--app-max-w);
+	margin-inline: auto;
+	padding-inline: 16px;
+	padding-bottom: calc(var(--tab-h) + var(--safe-bot) + 24px);
+}
+
+.screen-title {
+	font-size: 28px;
+	font-weight: 600;
+	letter-spacing: -0.025em;
+	margin: 0;
+}
+
+.screen-sub {
+	color: var(--color-text-muted);
+	font-size: 14px;
+	margin-top: 2px;
+}
+
+@keyframes pulse-dot {
+	0%,
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.55;
+		transform: scale(0.85);
+	}
+}
+
+@keyframes pulse-ring {
+	0% {
+		transform: scale(0.85);
+		opacity: 0.6;
+	}
+	100% {
+		transform: scale(1.6);
+		opacity: 0;
+	}
+}

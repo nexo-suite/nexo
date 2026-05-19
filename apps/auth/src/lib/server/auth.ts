@@ -13,6 +13,7 @@ function createAuth() {
 	const trustedOrigins: string[] = [baseURL];
 	if (env.FINANCE_URL) trustedOrigins.push(env.FINANCE_URL);
 	if (env.ADMIN_URL) trustedOrigins.push(env.ADMIN_URL);
+	if (env.FLASCHEN_URL) trustedOrigins.push(env.FLASCHEN_URL);
 	if (publicEnv.PUBLIC_LANDING_URL) trustedOrigins.push(publicEnv.PUBLIC_LANDING_URL);
 	const isProduction = baseURL.startsWith('https://');
 	return betterAuth({

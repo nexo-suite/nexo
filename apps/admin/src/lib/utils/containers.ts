@@ -15,6 +15,7 @@ export function ctnGroup(c: ContainerInfo): string {
 	if (n.includes('auth') || n.includes('www') || n.includes('landing')) return 'core';
 	if (
 		n.includes('finance') ||
+		n.includes('flaschen') ||
 		n.includes('gym') ||
 		n.includes('time') ||
 		n.includes('pomodoro') ||

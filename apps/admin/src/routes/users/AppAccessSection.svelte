@@ -2,6 +2,12 @@
 	import { enhance } from '$app/forms';
 	import type { SvelteSet } from 'svelte/reactivity';
 
+	const APP_ICONS: Record<string, string> = {
+		finance: '/icon-finance.svg',
+		flaschen: '/icon-flaschen.svg',
+		gym: '/icon-gym.svg'
+	};
+
 	type UserEntry = {
 		type: 'user';
 		id: string;
@@ -52,8 +58,13 @@
 	<div class="row-stack" style="margin-bottom:10px">
 		{#each knownApps as app (app.id)}
 			{@const granted = pendingApps.has(app.id)}
+			{@const iconUrl = APP_ICONS[app.id]}
 			<div class="app-toggle">
-				<div class="app-icon app-{app.id}">{app.label[0]}</div>
+				{#if iconUrl}
+					<img class="app-icon app-icon-img" src={iconUrl} alt="" width="36" height="36" />
+				{:else}
+					<div class="app-icon app-{app.id}">{app.label[0]}</div>
+				{/if}
 				<div>
 					<div class="app-name">{app.label}</div>
 				</div>
@@ -129,14 +140,21 @@
 	.app-icon.app-finance {
 		background: linear-gradient(135deg, #16a34a, #166534);
 	}
+	.app-icon.app-flaschen {
+		background: linear-gradient(135deg, #a50a50, #5e0a30);
+	}
 	.app-icon.app-gym {
 		background: linear-gradient(135deg, #f97316, #9a3412);
 	}
-	.app-icon.app-time {
-		background: linear-gradient(135deg, #3b82f6, #1e40af);
-	}
 	.app-icon.app-pomodoro {
 		background: linear-gradient(135deg, #ef4444, #991b1b);
+	}
+
+	.app-icon-img {
+		background: transparent;
+		border: 0;
+		padding: 0;
+		object-fit: contain;
 	}
 
 	.app-name {

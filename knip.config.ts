@@ -31,6 +31,11 @@ const config: KnipConfig = {
 				'tailwindcss'
 			]
 		},
+		'apps/flaschen': {
+			entry: [...SVELTE_ENTRY, 'src/worker/index.ts', 'src/service-worker.ts'],
+			project: SVELTE_PROJECT,
+			ignoreDependencies: ['tailwindcss', 'web-push', 'workbox-window']
+		},
 		'apps/bot': {
 			project: ['src/**/*.ts']
 		},
