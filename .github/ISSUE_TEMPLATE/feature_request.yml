@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest a new feature or improvement.
+title: '[feat]: '
+labels: ['enhancement']
+body:
+  - type: dropdown
+    id: app
+    attributes:
+      label: Which app is this for?
+      options:
+        - finance
+        - admin
+        - auth
+        - landing
+        - new app idea
+        - cross-cutting / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What's the idea?
+      description: Describe the feature in a sentence or two.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does it matter?
+      description: What problem does it solve, or what gets nicer about using the app?
+    validations:
+      required: true
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else?
+      description: Sketches, links, references to similar features elsewhere.
+    validations:
+      required: false

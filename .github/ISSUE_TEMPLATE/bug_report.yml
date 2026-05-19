@@ -1,0 +1,80 @@
+name: Bug report
+description: Something broke or behaves unexpectedly in one of the apps.
+title: '[bug]: '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. The more detail you can give, the faster it gets fixed.
+
+  - type: dropdown
+    id: app
+    attributes:
+      label: Which app?
+      options:
+        - finance
+        - admin
+        - auth
+        - landing
+        - other / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: I clicked save and the page went blank.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Click on ...
+        3. See error
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: false
+
+  - type: input
+    id: correlation-id
+    attributes:
+      label: Correlation ID
+      description: If an error toast showed an ID, paste it here. It helps me find the matching log line.
+      placeholder: e.g. 7f3a8b2c-...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device / browser
+      options:
+        - iPhone (PWA installed)
+        - iPhone (Safari)
+        - Android (PWA installed)
+        - Android (Chrome / Firefox)
+        - Desktop (Chrome / Firefox / Safari / Edge)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else?
+      description: Screenshots, screen recordings, or extra context welcome.
+    validations:
+      required: false
