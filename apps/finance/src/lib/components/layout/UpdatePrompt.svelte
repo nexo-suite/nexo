@@ -33,7 +33,7 @@
 <style>
 	.update-toast {
 		position: fixed;
-		bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+		bottom: calc(var(--tab-h) + 6px + 12px);
 		left: 50%;
 		transform: translateX(-50%);
 		z-index: 200;

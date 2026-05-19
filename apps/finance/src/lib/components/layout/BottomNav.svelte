@@ -61,7 +61,7 @@
 	<!-- Popover -->
 	<div
 		class="border-border-default bg-surface-1 fixed z-[55] rounded-[var(--radius-lg)] border p-1.5"
-		style="left: 50%; transform: translateX(-50%); bottom: calc(var(--tab-h) + var(--safe-bot) + 8px);
+		style="left: 50%; transform: translateX(-50%); bottom: calc(var(--tab-h) + 6px + 8px);
 		       width: 240px; box-shadow: 0 30px 60px -20px rgba(15,15,17,0.18), 0 8px 20px -10px rgba(15,15,17,0.10);"
 	>
 		{#each flowItems as item, i (item.href)}
@@ -108,7 +108,7 @@
 
 <nav
 	class="border-border-subtle fixed right-0 bottom-0 left-0 z-40 flex items-stretch border-t"
-	style="height: calc(var(--tab-h) + var(--safe-bot)); padding-bottom: var(--safe-bot);
+	style="height: calc(var(--tab-h) + 6px); padding-bottom: 6px;
 	       background: color-mix(in oklab, var(--color-bg-0) 88%, transparent);
 	       backdrop-filter: blur(16px) saturate(140%); -webkit-backdrop-filter: blur(16px) saturate(140%);"
 >

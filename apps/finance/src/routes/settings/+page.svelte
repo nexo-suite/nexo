@@ -835,13 +835,13 @@
 	/* ─── Sticky save bar ─── */
 	.save-bar {
 		position: fixed;
-		bottom: calc(var(--tab-h, 76px) + var(--safe-bot, 0px));
+		bottom: calc(var(--tab-h, 76px) + 6px + 12px);
 		left: 50%;
 		transform: translateX(-50%);
 		width: 100%;
 		max-width: var(--max-w, 448px);
 		padding: 0 16px;
-		z-index: 30;
+		z-index: 45;
 		pointer-events: none;
 		opacity: 0;
 		translate: 0 12px;

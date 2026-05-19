@@ -22,6 +22,12 @@
 		tr: '🇹🇷'
 	};
 
+	const languageDescs: Record<string, string> = {
+		en: 'Default — every screen translated.',
+		de: 'Beta — manche Knöpfe stottern noch auf Englisch.',
+		tr: 'Beta — bazı düğmeler hâlâ İngilizce kekeliyor.'
+	};
+
 	const weekDayLabels: Record<string, string> = {
 		monday: 'Monday',
 		sunday: 'Sunday',
@@ -564,7 +570,10 @@
 						onclick={() => (selectedLocale = locale)}
 					>
 						<span class="sheet-opt-icon">{languageIcons[locale] ?? '🌐'}</span>
-						<span class="sheet-opt-name">{languageLabels[locale] ?? locale}</span>
+						<div class="sheet-opt-text">
+							<span class="sheet-opt-name">{languageLabels[locale] ?? locale}</span>
+							<span class="sheet-opt-desc">{languageDescs[locale] ?? ''}</span>
+						</div>
 						<span class="sheet-radio"></span>
 					</button>
 				{/each}

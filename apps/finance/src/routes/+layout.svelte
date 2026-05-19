@@ -39,7 +39,7 @@
 {/if}
 <main
 	class="mx-auto min-h-screen max-w-md"
-	style="padding-bottom: calc(var(--tab-h) + 32px + var(--safe-bot))"
+	style="padding-bottom: calc(var(--tab-h) + 6px + 32px)"
 >
 	{@render children()}
 </main>
