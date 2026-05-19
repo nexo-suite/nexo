@@ -82,9 +82,7 @@ export const userSettings = financeSchema.table('user_settings', {
 	userId: text('user_id')
 		.primaryKey()
 		.references(() => users.id, { onDelete: 'cascade' }),
-	displayName: text('display_name'),
 	currency: text('currency').notNull().default('EUR'),
-	weekStartDay: text('week_start_day').notNull().default('monday'),
 	defaultAccountId: uuid('default_account_id').references(() => accounts.id, {
 		onDelete: 'set null'
 	}),

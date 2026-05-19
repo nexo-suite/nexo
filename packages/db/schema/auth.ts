@@ -150,9 +150,11 @@ export const userPreferences = authSchema.table('user_preferences', {
 	userId: text('user_id')
 		.primaryKey()
 		.references(() => users.id, { onDelete: 'cascade' }),
+	displayName: text('display_name'),
 	language: text('language').notNull().default('auto'),
 	birthday: date('birthday'),
 	theme: text('theme').notNull().default('system'),
+	weekStartDay: text('week_start_day').notNull().default('monday'),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
