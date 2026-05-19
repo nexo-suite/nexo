@@ -45,7 +45,14 @@ services:
       context: .
       dockerfile: apps/auth/Dockerfile
     restart: unless-stopped
+    init: true
     networks: [production]
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     logging:
       driver: loki
       options:
@@ -74,6 +81,7 @@ services:
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
       FINANCE_URL: https://finance.krieger2501.de
       ADMIN_URL: https://admin.krieger2501.de
+      FLASCHEN_URL: https://flaschen.krieger2501.de
       PUBLIC_LANDING_URL: https://krieger2501.de
     depends_on:
       migrate:
@@ -85,7 +93,14 @@ services:
       context: .
       dockerfile: apps/admin/Dockerfile
     restart: unless-stopped
+    init: true
     networks: [production]
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     logging:
@@ -122,7 +137,14 @@ services:
       context: .
       dockerfile: apps/finance/Dockerfile
     restart: unless-stopped
+    init: true
     networks: [production]
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     logging:
       driver: loki
       options:
@@ -149,6 +171,92 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  flaschen:
+    profiles: [production]
+    build:
+      context: .
+      dockerfile: apps/flaschen/Dockerfile
+    restart: unless-stopped
+    init: true
+    networks: [production]
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3100/loki/api/v1/push'
+        mode: non-blocking
+        max-buffer-size: 4m
+        loki-pipeline-stages: |
+          - json:
+              expressions:
+                level: level
+                service: service
+          - labels:
+              level:
+              service:
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      PUBLIC_AUTH_URL: https://auth.krieger2501.de
+      PUBLIC_FLASCHEN_URL: https://flaschen.krieger2501.de
+      PUBLIC_LANDING_URL: https://krieger2501.de
+      PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
+      FLASCHEN_TOKEN_ENC_KEY: ${FLASCHEN_TOKEN_ENC_KEY}
+      FLASCHEN_OAUTH_CLIENT_ID: ${FLASCHEN_OAUTH_CLIENT_ID}
+      FLASCHEN_API_TZ_MODE: ${FLASCHEN_API_TZ_MODE:-local-naive}
+      PROTOCOL_HEADER: x-forwarded-proto
+      HOST_HEADER: x-forwarded-host
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  flaschen-worker:
+    profiles: [production]
+    build:
+      context: .
+      dockerfile: apps/flaschen/Dockerfile
+    command: node build/worker/index.js
+    restart: unless-stopped
+    init: true
+    networks: [production]
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3100/loki/api/v1/push'
+        mode: non-blocking
+        max-buffer-size: 4m
+        loki-pipeline-stages: |
+          - json:
+              expressions:
+                level: level
+                service: service
+          - labels:
+              level:
+              service:
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
+      FLASCHEN_TOKEN_ENC_KEY: ${FLASCHEN_TOKEN_ENC_KEY}
+      FLASCHEN_OAUTH_CLIENT_ID: ${FLASCHEN_OAUTH_CLIENT_ID}
+      FLASCHEN_QUIET_HOURS: ${FLASCHEN_QUIET_HOURS:-22-06}
+      FLASCHEN_POLL_INTERVAL_MS: ${FLASCHEN_POLL_INTERVAL_MS:-180000}
+      FLASCHEN_POLL_JITTER_MS: ${FLASCHEN_POLL_JITTER_MS:-30000}
+      FLASCHEN_API_TZ_MODE: ${FLASCHEN_API_TZ_MODE:-local-naive}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
   landing:
     profiles: [production]
     build:
@@ -157,7 +265,14 @@ services:
       args:
         PUBLIC_FINANCE_URL: https://finance.krieger2501.de
     restart: unless-stopped
+    init: true
     networks: [production]
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     logging:
       driver: loki
       options:
@@ -166,6 +281,7 @@ services:
         max-buffer-size: 4m
     environment:
       PUBLIC_FINANCE_URL: https://finance.krieger2501.de
+      PUBLIC_FLASCHEN_URL: https://flaschen.krieger2501.de
       PUBLIC_ADMIN_URL: https://admin.krieger2501.de
       PUBLIC_AUTH_URL: https://auth.krieger2501.de
       PUBLIC_LANDING_URL: https://krieger2501.de
@@ -213,7 +329,14 @@ services:
       context: .
       dockerfile: apps/auth/Dockerfile
     restart: unless-stopped
+    init: true
     networks: [preview]
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     environment:
       DATABASE_URL: ${DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
@@ -238,7 +361,14 @@ services:
       context: .
       dockerfile: apps/admin/Dockerfile
     restart: unless-stopped
+    init: true
     networks: [preview]
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
@@ -261,7 +391,14 @@ services:
       context: .
       dockerfile: apps/finance/Dockerfile
     restart: unless-stopped
+    init: true
     networks: [preview]
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     environment:
       DATABASE_URL: ${DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
@@ -282,7 +419,14 @@ services:
       args:
         PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
     restart: unless-stopped
+    init: true
     networks: [preview]
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     environment:
       PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
     depends_on:
@@ -323,6 +467,7 @@ services:
       context: .
       dockerfile: apps/bot/Dockerfile
     restart: unless-stopped
+    init: true
     networks: [production]
     logging:
       driver: loki

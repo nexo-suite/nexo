@@ -1,40 +1,23 @@
 # syntax=docker/dockerfile:1.7
-# Sharper layer caching: manifests copied before sources, so the install
-# layer reuses across source-only changes. Must be updated when adding or
-# removing workspace packages.
 #
 # apps/admin/package.json sets "files": ["build", "package.json"] so the
 # adapter-node build/ output is included in `pnpm deploy` (build/ is
 # .gitignored, which pnpm pack would otherwise honour).
 
-FROM node:24-alpine AS build
+FROM node:24-alpine AS fetch
 WORKDIR /app
 RUN corepack enable
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY packages/db/package.json        ./packages/db/
-COPY packages/email/package.json     ./packages/email/
-COPY packages/errors/package.json    ./packages/errors/
-COPY packages/i18n/package.json      ./packages/i18n/
-COPY packages/logger/package.json    ./packages/logger/
-COPY packages/security/package.json  ./packages/security/
-COPY packages/ui/package.json        ./packages/ui/
-COPY apps/admin/package.json         ./apps/admin/
-
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+    pnpm fetch
 
-COPY vite.shared.ts tsconfig.json ./
-COPY packages/db        ./packages/db
-COPY packages/email     ./packages/email
-COPY packages/errors    ./packages/errors
-COPY packages/i18n      ./packages/i18n
-COPY packages/logger    ./packages/logger
-COPY packages/security  ./packages/security
-COPY packages/ui        ./packages/ui
-COPY apps/admin         ./apps/admin
+FROM fetch AS build
+COPY . .
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install -r --offline --frozen-lockfile
 
 RUN pnpm --filter=@nexo/admin run build
 
@@ -52,4 +35,5 @@ USER app
 ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000
+
 CMD ["node", "build"]

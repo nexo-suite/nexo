@@ -10,6 +10,7 @@ nexo/
 │   ├── auth/        → auth.krieger2501.de   — OIDC provider, login UI
 │   ├── admin/       → admin.krieger2501.de  — Container management, user access
 │   ├── finance/     → finance.krieger2501.de — Personal finance tracker
+│   ├── flaschen/    → flaschen.krieger2501.de — Flaschenpost shift-offer notifier (web + worker)
 │   ├── landing/     → krieger2501.de         — App directory + /apps route
 │   └── bot/         → internal               — GitHub webhook bot (deploy automation)
 └── packages/
@@ -17,6 +18,7 @@ nexo/
     ├── errors/      → Error codes + i18n user messages
     ├── logger/      → Structured JSON logging (pino) with correlation IDs
     ├── i18n/        → Language detection utilities, Language type
+    ├── push/        → Web Push (VAPID, subscriptions, send helpers, SW handlers)
     └── email/       → Email templates (React Email)
 ```
 
@@ -64,12 +66,20 @@ nexo (database)
 │   ├── allowed_emails      — email whitelist; controls who can sign in
 │   ├── user_app_access     — per-user, per-app access control (active)
 │   └── user_preferences    — global prefs: language, theme, birthday
-└── finance (schema)
-    ├── accounts            — bank/cash accounts
-    ├── expenses            — recurring and one-off expenses
-    ├── income              — recurring and one-off income
-    ├── debts               — money owed to/from others
-    └── user_settings       — per-user finance prefs (currency, display name, week start)
+├── finance (schema)
+│   ├── accounts            — bank/cash accounts
+│   ├── expenses            — recurring and one-off expenses
+│   ├── income              — recurring and one-off income
+│   ├── debts               — money owed to/from others
+│   └── user_settings       — per-user finance prefs (currency, display name, week start)
+├── flaschen (schema)
+│   ├── account             — Flaschenpost account link, encrypted refresh/access tokens
+│   ├── prefs               — user filter rules (days, time window, warehouse, workgroup, reward score)
+│   ├── seen_offer          — dedup table for offers the worker has observed (per user × dedupeKey)
+│   ├── seen_location       — discovered warehouse/workgroup labels for the settings UI
+│   └── poll_log            — per-poll outcome log (offers seen, matches, errors)
+└── push (schema)
+    └── subscription        — Web Push subscriptions (per user × app × endpoint)
 ```
 
 Every app-schema table has a `user_id TEXT` foreign key referencing `auth.user.id`. This means every query is automatically scoped to the authenticated user.
