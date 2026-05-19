@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/krieger2501/nexo/compare/ui-v0.2.0...ui-v0.2.1) (2026-05-19)
+
+
+### Bug Fixes
+
+* **ui,finance:** portrait-only on phones + flow-tinted Flows tab ([f567e07](https://github.com/krieger2501/nexo/commit/f567e07cedd19fe0e36f5aa1fef3b5836518633f))
+
 ## [0.2.0](https://github.com/krieger2501/nexo/compare/ui-v0.1.0...ui-v0.2.0) (2026-05-18)
 
 

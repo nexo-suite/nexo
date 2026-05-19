@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.3.0](https://github.com/krieger2501/nexo/compare/finance-v0.2.0...finance-v0.3.0) (2026-05-19)
+
+
+### Features
+
+* **security:** add CSP, HSTS, and Permissions-Policy headers ([6d165f1](https://github.com/krieger2501/nexo/commit/6d165f1e98588d0ad631993a9ae316964ed2e5eb))
+
+
+### Bug Fixes
+
+* **finance,landing:** mobile bottom-nav polish + i18n WIP hints ([bad2732](https://github.com/krieger2501/nexo/commit/bad2732bf056c2d349c806fc9c31ce6fd55a5398))
+* **finance:** hub link falls back to localhost in dev ([b97628f](https://github.com/krieger2501/nexo/commit/b97628fb656e9f5d9a3b2a7f9c8e3eccf2f8fdfe))
+* **finance:** scope reconcile + validate accountId ownership ([663c67c](https://github.com/krieger2501/nexo/commit/663c67cf8ec2a0523c4f16fa1ad9881245ba9238))
+* **finance:** set PUBLIC_LANDING_URL on finance container ([6b3abcc](https://github.com/krieger2501/nexo/commit/6b3abcc6f4e1fc19b4f8de14743226351fb26646))
+* **finance:** tint flow popover row + commitments gray ([729c04f](https://github.com/krieger2501/nexo/commit/729c04fb17b0e877f8ebb36bd59f52ab1a8592f5))
+* **security:** enforce CSP via directives, drop reportOnly ([3c82060](https://github.com/krieger2501/nexo/commit/3c820605f86459afbf098867aba40f93d603aa0d))
+* **security:** require origin on CSRF + show real OAuth consent ([b0c96de](https://github.com/krieger2501/nexo/commit/b0c96de30c1882dc1a2373f10bfc09b0c87997be))
+* **ui,finance:** portrait-only on phones + flow-tinted Flows tab ([f567e07](https://github.com/krieger2501/nexo/commit/f567e07cedd19fe0e36f5aa1fef3b5836518633f))
+
 ## [0.2.0](https://github.com/krieger2501/nexo/compare/finance-v0.1.0...finance-v0.2.0) (2026-05-18)
 
 
