@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/krieger2501/nexo/compare/bot-v0.2.0...bot-v0.2.1) (2026-05-19)
+
+
+### Bug Fixes
+
+* **infra:** set CI=true in Dockerfiles for pnpm v11 ([9724a0f](https://github.com/krieger2501/nexo/commit/9724a0f5f1cfccb8d296400da3084ec8528570ca))
+
 ## [0.2.0](https://github.com/krieger2501/nexo/compare/bot-v0.1.0...bot-v0.2.0) (2026-05-18)
 
 

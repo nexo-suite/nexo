@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/krieger2501/nexo/compare/ui-v0.2.1...ui-v0.3.0) (2026-05-19)
+
+
+### Features
+
+* **ui:** add ProfileHubCard and Toggle shared components ([74d5959](https://github.com/krieger2501/nexo/commit/74d59595dfa8bb27ad7bc6d534cfc5d91f1cf462))
+
 ## [0.2.1](https://github.com/krieger2501/nexo/compare/ui-v0.2.0...ui-v0.2.1) (2026-05-19)
 
 

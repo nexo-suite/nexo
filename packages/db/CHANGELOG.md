@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/krieger2501/nexo/compare/db-v0.2.0...db-v0.3.0) (2026-05-19)
+
+
+### Features
+
+* **db:** add flaschen + push schemas, profile hub helper ([88e8c09](https://github.com/krieger2501/nexo/commit/88e8c095fc581b0a25249b256170a886f900d2b0))
+
+
+### Bug Fixes
+
+* **infra:** set CI=true in Dockerfiles for pnpm v11 ([9724a0f](https://github.com/krieger2501/nexo/commit/9724a0f5f1cfccb8d296400da3084ec8528570ca))
+
 ## [0.2.0](https://github.com/krieger2501/nexo/compare/db-v0.1.0...db-v0.2.0) (2026-05-18)
 
 

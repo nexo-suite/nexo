@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/krieger2501/nexo/compare/auth-v0.3.0...auth-v0.4.0) (2026-05-19)
+
+
+### Features
+
+* **flaschen:** add Flaschenpost shift-offer notifier app ([e35a981](https://github.com/krieger2501/nexo/commit/e35a981bb99429d7e7ad1cd2a8ecaa6aa040091e))
+* **infra:** add /healthz endpoints to all apps ([7888d90](https://github.com/krieger2501/nexo/commit/7888d905901eaabc25d1ab0668edec24e56a9d41))
+
+
+### Bug Fixes
+
+* **infra:** set CI=true in Dockerfiles for pnpm v11 ([9724a0f](https://github.com/krieger2501/nexo/commit/9724a0f5f1cfccb8d296400da3084ec8528570ca))
+
 ## [0.3.0](https://github.com/krieger2501/nexo/compare/auth-v0.2.0...auth-v0.3.0) (2026-05-19)
 
 

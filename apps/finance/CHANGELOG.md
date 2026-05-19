@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/krieger2501/nexo/compare/finance-v0.3.0...finance-v0.4.0) (2026-05-19)
+
+
+### Features
+
+* **infra:** add /healthz endpoints to all apps ([7888d90](https://github.com/krieger2501/nexo/commit/7888d905901eaabc25d1ab0668edec24e56a9d41))
+* **profile:** integrate profile hub on finance + landing ([8fe465c](https://github.com/krieger2501/nexo/commit/8fe465cde675ffdadab56f267090ce967756841d))
+
+
+### Bug Fixes
+
+* **infra:** set CI=true in Dockerfiles for pnpm v11 ([9724a0f](https://github.com/krieger2501/nexo/commit/9724a0f5f1cfccb8d296400da3084ec8528570ca))
+
 ## [0.3.0](https://github.com/krieger2501/nexo/compare/finance-v0.2.0...finance-v0.3.0) (2026-05-19)
 
 
