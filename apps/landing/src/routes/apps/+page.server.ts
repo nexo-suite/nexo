@@ -4,14 +4,18 @@ import {
 	withUser,
 	userAppAccess,
 	userSettings,
+	userPreferences,
+	loadHubProfile,
 	accounts,
 	expenses,
 	income,
-	sessions
+	sessions,
+	flaschenAccount,
+	flaschenSeenOffer
 } from '@nexo/db';
 import { firesOnDate } from '@nexo/ui/utils/recurrence';
 import { parseUserAgent, deviceIcon } from '@nexo/ui/utils/ua-parser';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, gte, sql } from 'drizzle-orm';
 import { env as publicEnv } from '$env/dynamic/public';
 import { getAuth } from '$lib/server/auth';
 import type { PageServerLoad, Actions } from './$types';
@@ -106,6 +110,40 @@ async function getFinanceGlance(userId: string) {
 	};
 }
 
+async function getFlaschenGlance(userId: string) {
+	const [acct] = await db
+		.select({
+			needsReconnect: flaschenAccount.needsReconnect,
+			lastPollAt: flaschenAccount.lastPollAt,
+			lastPollOk: flaschenAccount.lastPollOk
+		})
+		.from(flaschenAccount)
+		.where(eq(flaschenAccount.userId, userId))
+		.limit(1);
+
+	if (!acct) return { connected: false as const };
+
+	const liveCutoff = new Date(Date.now() - 10 * 60_000);
+	const [counts] = await db
+		.select({
+			available: sql<number>`count(*)::int`,
+			matches: sql<number>`count(*) filter (where ${flaschenSeenOffer.matched})::int`
+		})
+		.from(flaschenSeenOffer)
+		.where(
+			and(eq(flaschenSeenOffer.userId, userId), gte(flaschenSeenOffer.lastSeenAt, liveCutoff))
+		);
+
+	return {
+		connected: true as const,
+		needsReconnect: acct.needsReconnect,
+		available: counts?.available ?? 0,
+		matches: counts?.matches ?? 0,
+		lastPollAt: acct.lastPollAt,
+		lastPollOk: acct.lastPollOk
+	};
+}
+
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
 		const authURL = publicEnv.PUBLIC_AUTH_URL;
@@ -115,12 +153,13 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const userId = locals.user.id;
 
-	const { access, settings } = await withUser(userId, async (tx) => {
+	const { access, settings, profile } = await withUser(userId, async (tx) => {
 		const [access, settings] = await Promise.all([
 			tx.select().from(userAppAccess).where(eq(userAppAccess.userId, userId)),
 			tx.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1)
 		]);
-		return { access, settings };
+		const profile = await loadHubProfile(userId);
+		return { access, settings, profile };
 	});
 
 	const rawSessions = await db.select().from(sessions).where(eq(sessions.userId, userId));
@@ -129,6 +168,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const sessionNames = (settings[0]?.sessionNames as Record<string, string>) ?? {};
 
 	const financeGlance = allowedApps.includes('finance') ? await getFinanceGlance(userId) : null;
+	const flaschenGlance = allowedApps.includes('flaschen') ? await getFlaschenGlance(userId) : null;
 
 	const currentSessionId = locals.session?.id ?? null;
 	const sessionList = rawSessions.map((s) => {
@@ -151,9 +191,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		user: { name: locals.user.name, email: locals.user.email, image: locals.user.image },
 		allowedApps,
-		displayName: settings[0]?.displayName ?? '',
-		weekStartDay: settings[0]?.weekStartDay ?? 'monday',
+		displayName: profile.displayName ?? '',
+		weekStartDay: profile.weekStartDay,
 		financeGlance,
+		flaschenGlance,
 		sessions: sessionList
 	};
 };
@@ -170,10 +211,10 @@ export const actions: Actions = {
 		try {
 			await withUser(userId, (tx) =>
 				tx
-					.insert(userSettings)
+					.insert(userPreferences)
 					.values({ userId, displayName, weekStartDay })
 					.onConflictDoUpdate({
-						target: userSettings.userId,
+						target: userPreferences.userId,
 						set: { displayName, weekStartDay, updatedAt: new Date() }
 					})
 			);

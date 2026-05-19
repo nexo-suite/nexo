@@ -100,6 +100,7 @@
 		id: string;
 		name: string;
 		monogram: string;
+		icon?: string;
 		accent: string;
 		desc: string;
 		href: string;
@@ -110,6 +111,7 @@
 		id: string;
 		name: string;
 		monogram: string;
+		icon?: string;
 		accent: string;
 		desc: string;
 		meta: string;
@@ -119,6 +121,7 @@
 		id: string;
 		name: string;
 		monogram: string;
+		icon?: string;
 		accent: string;
 		sub: string;
 	};
@@ -129,15 +132,27 @@
 				id: 'finance',
 				name: 'Finance',
 				monogram: 'F',
+				icon: '/icon-finance-dark.svg',
 				accent: 'var(--color-accent-finance)',
 				desc: 'Track accounts, categorize spend, see where the month went.',
 				href: env.PUBLIC_FINANCE_URL ?? '#',
 				meta: `v${__APP_VERSIONS__.finance}`
 			},
+			data.allowedApps.includes('flaschen') && {
+				id: 'flaschen',
+				name: 'Flaschen',
+				monogram: 'F',
+				icon: '/icon-flaschen-dark.svg',
+				accent: '#a50a50',
+				desc: "Refreshes the shift portal so I don't have to. Pings the moment a good one drops.",
+				href: env.PUBLIC_FLASCHEN_URL ?? '#',
+				meta: ''
+			},
 			data.allowedApps.includes('admin') && {
 				id: 'admin',
 				name: 'Admin',
 				monogram: 'A',
+				icon: '/icon-admin.svg',
 				accent: '#3b82f6',
 				desc: 'Services, users, logs — the control room.',
 				href: env.PUBLIC_ADMIN_URL ?? '#',
@@ -151,6 +166,7 @@
 			id: 'gym',
 			name: 'Gym',
 			monogram: 'G',
+			icon: '/icon-gym.svg',
 			accent: 'var(--color-accent-gym)',
 			desc: 'Log lifts, watch the progressive overload curve. Built for the once-a-week strength routine I keep forgetting to write down.',
 			meta: 'eta: when I stop missing leg day'
@@ -270,7 +286,13 @@
 	</div>
 
 	<!-- Your Apps / Workshop / Ideas -->
-	<AppGrid {liveApps} {workshopApps} {ideaApps} financeGlance={data.financeGlance} />
+	<AppGrid
+		{liveApps}
+		{workshopApps}
+		{ideaApps}
+		financeGlance={data.financeGlance}
+		flaschenGlance={data.flaschenGlance}
+	/>
 
 	<!-- Settings: Profile -->
 	<div class="sec">

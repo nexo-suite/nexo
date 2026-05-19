@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import { withUser, userSettings, accounts } from '@nexo/db';
+import { withUser, userSettings, accounts, loadHubProfile } from '@nexo/db';
 import { eq, and, asc } from 'drizzle-orm';
 import { logger } from '$lib/server/logger';
 import { assertAccountOwned, InvalidAccountError } from '$lib/server/auth-helpers';
@@ -7,27 +7,28 @@ import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
-	const { row, accountList } = await withUser(userId, async (tx) => {
-		const [row] = await tx
-			.select()
-			.from(userSettings)
-			.where(eq(userSettings.userId, userId))
-			.limit(1);
+	const [{ row, accountList }, profile] = await Promise.all([
+		withUser(userId, async (tx) => {
+			const [row] = await tx
+				.select()
+				.from(userSettings)
+				.where(eq(userSettings.userId, userId))
+				.limit(1);
 
-		const accountList = await tx
-			.select()
-			.from(accounts)
-			.where(eq(accounts.userId, userId))
-			.orderBy(asc(accounts.createdAt));
+			const accountList = await tx
+				.select()
+				.from(accounts)
+				.where(eq(accounts.userId, userId))
+				.orderBy(asc(accounts.createdAt));
 
-		return { row, accountList };
-	});
+			return { row, accountList };
+		}),
+		loadHubProfile(userId)
+	]);
 
 	return {
-		user: { name: locals.user!.name, email: locals.user!.email },
-		displayName: row?.displayName ?? '',
+		profile,
 		currency: row?.currency ?? 'EUR',
-		weekStartDay: row?.weekStartDay ?? 'monday',
 		defaultAccountId: row?.defaultAccountId ?? null,
 		hideCents: row?.hideCents ?? false,
 		forecastDays: row?.forecastDays ?? '90',

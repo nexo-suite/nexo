@@ -5,6 +5,7 @@
 	import { env } from '$env/dynamic/public';
 	import { getLocale } from '$lib/paraglide/runtime.js';
 	import BottomSheet from '$lib/components/layout/BottomSheet.svelte';
+	import { ProfileHubCard, SaveBar, Toggle } from '@nexo/ui';
 
 	let { data, form: _form } = $props();
 
@@ -90,15 +91,6 @@
 			includeDebt !== (data.includeDebtInForecast ?? true)
 	);
 
-	const initials = $derived(
-		(data.displayName || data.user?.name || 'U')
-			.split(' ')
-			.map((w: string) => w[0])
-			.join('')
-			.slice(0, 2)
-			.toUpperCase()
-	);
-
 	const currentLocale = getLocale();
 	const currentCurrency = $derived(currencies.find((c) => c.code === selectedCurrency));
 	const currentForecast = $derived(forecastWindows.find((f) => f.value === forecastWindow));
@@ -157,65 +149,15 @@
 	</div>
 
 	<!-- ─── Profile (read-only — managed in hub) ─── -->
-	<div class="section-label">
-		<span class="sl-title"><b>Profile</b> · global</span>
-		<span class="sl-right">read-only</span>
-	</div>
-
-	<div class="set-card ro-card">
-		<div class="profile-row">
-			<div
-				class="avatar"
-				style="background: linear-gradient(135deg, var(--color-accent), color-mix(in oklab, var(--color-accent) 50%, #000));"
-			>
-				{initials}
-			</div>
-			<div class="profile-info">
-				<div class="profile-name">{data.displayName || data.user?.name || 'Set name'}</div>
-				<div class="profile-email">{data.user?.email ?? ''}</div>
-			</div>
-			<span class="ro-badge">managed in hub</span>
-		</div>
-
-		<div class="set-scope"><b>Identity & locale</b></div>
-		<div class="set-row ro-row" data-readonly>
-			<div class="sr-icon">@</div>
-			<div class="sr-text"><div class="sr-label">Display name</div></div>
-			<div class="sr-value">{data.displayName || '—'}</div>
-		</div>
-		<div class="set-row ro-row" data-readonly>
-			<div class="sr-icon">🌐</div>
-			<div class="sr-text"><div class="sr-label">Language</div></div>
-			<div class="sr-value">{languageLabels[currentLocale] ?? currentLocale}</div>
-		</div>
-		<div class="set-row ro-row" data-readonly>
-			<div class="sr-icon">📅</div>
-			<div class="sr-text"><div class="sr-label">Week starts</div></div>
-			<div class="sr-value">{weekLabels[data.weekStartDay ?? 'monday'] ?? 'Monday'}</div>
-		</div>
-		<div class="set-row ro-row" data-readonly>
-			<div class="sr-icon">☀</div>
-			<div class="sr-text"><div class="sr-label">Theme</div></div>
-			<div class="sr-value">Light</div>
-		</div>
-
-		<a class="manage-cta" href={hubUrl}>
-			<div class="manage-text">
-				<b>Manage in hub</b>
-				<span>One place to change your name, language, and sessions.</span>
-			</div>
-			<span class="manage-arrow">
-				Open
-				<svg
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-linecap="round"
-					stroke-linejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg
-				>
-			</span>
-		</a>
-	</div>
+	<ProfileHubCard
+		name={data.profile.name}
+		email={data.profile.email}
+		{hubUrl}
+		displayName={data.profile.displayName}
+		language={languageLabels[currentLocale] ?? currentLocale}
+		weekStarts={weekLabels[data.profile.weekStartDay] ?? 'Monday'}
+		theme="Light"
+	/>
 
 	<!-- ─── Finance — app-specific (editable) ─── -->
 	<div class="section-label">
@@ -287,17 +229,7 @@
 					<div class="sr-desc">Round to nearest euro everywhere.</div>
 				</div>
 				<div class="sr-toggle">
-					<button
-						type="button"
-						role="switch"
-						aria-checked={hideCents}
-						aria-label="Hide cents"
-						onclick={() => (hideCents = !hideCents)}
-						class="toggle"
-						class:on={hideCents}
-					>
-						<span class="toggle-thumb" class:on={hideCents}></span>
-					</button>
+					<Toggle bind:checked={hideCents} ariaLabel="Hide cents" />
 				</div>
 			</div>
 		</div>
@@ -350,17 +282,7 @@
 					<div class="sr-desc">Open debts dent or lift the projection.</div>
 				</div>
 				<div class="sr-toggle">
-					<button
-						type="button"
-						role="switch"
-						aria-checked={includeDebt}
-						aria-label="Include debt in forecast"
-						onclick={() => (includeDebt = !includeDebt)}
-						class="toggle"
-						class:on={includeDebt}
-					>
-						<span class="toggle-thumb" class:on={includeDebt}></span>
-					</button>
+					<Toggle bind:checked={includeDebt} ariaLabel="Include debt in forecast" />
 				</div>
 			</div>
 		</div>
@@ -441,12 +363,7 @@
 </div>
 
 <!-- ─── Sticky save bar ─── -->
-<div class="save-bar" class:visible={dirty}>
-	<div class="save-bar-inner">
-		<span class="save-bar-hint">Unsaved changes</span>
-		<button type="submit" form="settings-form" class="save-bar-btn">Save</button>
-	</div>
-</div>
+<SaveBar visible={dirty} hint="Unsaved changes" label="Save" formId="settings-form" />
 
 <!-- ─── Currency sheet ─── -->
 <BottomSheet
@@ -653,243 +570,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
-	}
-
-	/* ─── Section labels ─── */
-	.section-label {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		padding: 24px 4px 10px;
-		gap: 12px;
-	}
-	.sl-title {
-		font-family: var(--font-mono);
-		font-size: 10px;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--color-text-subtle);
-		white-space: nowrap;
-	}
-	.sl-title b {
-		color: var(--color-text-primary);
-		font-weight: 600;
-		letter-spacing: 0.04em;
-	}
-	.sl-right {
-		font-size: 12px;
-		color: var(--color-text-faint);
-		font-family: var(--font-mono);
-		letter-spacing: 0.04em;
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
-
-	/* ─── Read-only card variant ─── */
-	.ro-card {
-		border-style: dashed;
-		background: var(--color-bg-1);
-	}
-	.ro-row {
-		cursor: default;
-	}
-	.ro-row:active {
-		background: transparent;
-	}
-	.ro-row .sr-icon {
-		background: var(--color-bg-1);
-		border: 1px solid var(--color-border-subtle);
-	}
-	.ro-row .sr-label {
-		color: var(--color-text-muted);
-	}
-	.ro-row .sr-value {
-		color: var(--color-text-subtle);
-	}
-
-	/* ─── Profile row ─── */
-	.profile-row {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 16px;
-		position: relative;
-		background: var(--color-surface-1);
-		border-bottom: 1px dashed var(--color-border-default);
-	}
-	.avatar {
-		width: 44px;
-		height: 44px;
-		border-radius: 50%;
-		display: grid;
-		place-items: center;
-		font-size: 14px;
-		font-weight: 600;
-		color: #fff;
-		flex-shrink: 0;
-	}
-	.profile-info {
-		min-width: 0;
-		flex: 1;
-	}
-	.profile-name {
-		font-size: 15px;
-		font-weight: 600;
-		letter-spacing: -0.015em;
-	}
-	.profile-email {
-		font-size: 12px;
-		color: var(--color-text-subtle);
-		margin-top: 2px;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.ro-badge {
-		font-family: var(--font-mono);
-		font-size: 9px;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		padding: 3px 7px;
-		border-radius: 999px;
-		background: var(--color-bg-1);
-		border: 1px solid var(--color-border-subtle);
-		color: var(--color-text-faint);
-		flex-shrink: 0;
-	}
-
-	/* ─── Manage CTA ─── */
-	.manage-cta {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 14px 16px;
-		border-top: 1px dashed var(--color-border-default);
-		background: var(--color-surface-1);
-		text-decoration: none;
-		color: inherit;
-		transition: background var(--dur-fast, 150ms) var(--ease-out);
-	}
-	.manage-cta:active {
-		background: var(--color-surface-2);
-	}
-	.manage-text {
-		flex: 1;
-		min-width: 0;
-	}
-	.manage-text b {
-		display: block;
-		font-size: 13.5px;
-		font-weight: 600;
-		color: color-mix(in oklab, var(--color-accent) 80%, #000);
-	}
-	.manage-text span {
-		display: block;
-		font-size: 11.5px;
-		color: var(--color-text-subtle);
-		margin-top: 2px;
-		line-height: 1.4;
-	}
-	.manage-arrow {
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-		font-size: 12px;
-		font-weight: 600;
-		color: var(--color-accent);
-		flex-shrink: 0;
-	}
-	.manage-arrow svg {
-		width: 14px;
-		height: 14px;
-		stroke-width: 2;
-	}
-
-	/* ─── Toggle ─── */
-	.sr-toggle {
-		flex-shrink: 0;
-	}
-	.toggle {
-		position: relative;
-		width: 44px;
-		height: 26px;
-		border-radius: 13px;
-		border: none;
-		background: var(--color-bg-2);
-		cursor: pointer;
-		transition: background var(--dur-fast, 150ms) var(--ease-out);
-	}
-	.toggle.on {
-		background: var(--color-accent);
-	}
-	.toggle-thumb {
-		position: absolute;
-		top: 3px;
-		left: 3px;
-		width: 20px;
-		height: 20px;
-		border-radius: 50%;
-		background: #fff;
-		box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
-		transition: left var(--dur-fast, 150ms) var(--ease-out);
-	}
-	.toggle-thumb.on {
-		left: 21px;
-	}
-
-	/* ─── Sticky save bar ─── */
-	.save-bar {
-		position: fixed;
-		bottom: calc(var(--tab-h, 76px) + 6px + 12px);
-		left: 50%;
-		transform: translateX(-50%);
-		width: 100%;
-		max-width: var(--max-w, 448px);
-		padding: 0 16px;
-		z-index: 45;
-		pointer-events: none;
-		opacity: 0;
-		translate: 0 12px;
-		transition:
-			opacity var(--dur-base, 240ms) var(--ease-out),
-			translate var(--dur-base, 240ms) var(--ease-out);
-	}
-	.save-bar.visible {
-		opacity: 1;
-		translate: 0 0;
-		pointer-events: auto;
-	}
-	.save-bar-inner {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		padding: 10px 12px 10px 16px;
-		background: var(--color-text-primary);
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: var(--radius-lg, 16px);
-		box-shadow: 0 4px 24px -4px rgb(0 0 0 / 0.18);
-	}
-	.save-bar-hint {
-		font-size: 13px;
-		font-weight: 500;
-		color: rgba(255, 255, 255, 0.7);
-	}
-	.save-bar-btn {
-		padding: 10px 20px;
-		font: inherit;
-		font-size: 14px;
-		font-weight: 600;
-		border-radius: var(--radius-md);
-		border: none;
-		background: #fff;
-		color: var(--color-text-primary);
-		cursor: pointer;
-		flex-shrink: 0;
-		transition: opacity var(--dur-fast, 150ms) var(--ease-out);
-	}
-	.save-bar-btn:active {
-		opacity: 0.85;
 	}
 
 	/* ─── Excluded sheet ─── */
