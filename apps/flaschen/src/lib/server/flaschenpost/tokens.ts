@@ -30,6 +30,7 @@ export async function saveTokens(
 		encryptedAccessToken: encrypt(tokens.accessToken),
 		encryptedRefreshToken: encrypt(tokens.refreshToken),
 		accessTokenExpiresAt: tokens.expiresAt,
+		refreshTokenExpiresAt: tokens.refreshExpiresAt,
 		updatedAt: new Date()
 	} satisfies Partial<AccountRow>;
 

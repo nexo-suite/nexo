@@ -17,35 +17,81 @@ function berlinDateKey(local: { year: number; month: number; day: number }): str
 	return `${local.year}-${String(local.month).padStart(2, '0')}-${String(local.day).padStart(2, '0')}`;
 }
 
-export function matchesWindow(
+type WindowFailReason =
+	| 'disabled'
+	| 'marketplace_excluded'
+	| 'warehouse_excluded'
+	| 'workgroup_excluded'
+	| 'day_unavailable'
+	| 'override_excludes'
+	| 'outside_window';
+
+type WindowFailDetail = {
+	reason: WindowFailReason;
+	overrideDate?: string;
+};
+
+export function windowFailDetail(
 	prefs: FlaschenPrefs,
 	overrides: FlaschenDateOverride[],
 	offer: ShiftOfferPayload
-): boolean {
-	if (!prefs.enabled) return false;
-	if (!prefs.includeMarketplace && offer.isMarketplaceShift) return false;
-	if (!prefs.warehouseIds.includes(offer.warehouse.warehouseId)) return false;
-	if (!prefs.workgroupIds.includes(offer.workgroup.workgroupId)) return false;
+): WindowFailDetail | null {
+	if (!prefs.enabled) return { reason: 'disabled' };
+	if (!prefs.includeMarketplace && offer.isMarketplaceShift)
+		return { reason: 'marketplace_excluded' };
+	if (!prefs.warehouseIds.includes(offer.warehouse.warehouseId))
+		return { reason: 'warehouse_excluded' };
+	if (!prefs.workgroupIds.includes(offer.workgroup.workgroupId))
+		return { reason: 'workgroup_excluded' };
 
 	const local = parseOfferStart(offer.start);
 	const dateKey = berlinDateKey(local);
 	const override = overrides.find((o) => o.date === dateKey);
 
+	if (override?.kind === 'unavailable') return { reason: 'day_unavailable', overrideDate: dateKey };
+
 	let slots: WeeklySlot[];
-	if (override?.kind === 'unavailable') return false;
-	else if (override?.kind === 'available') slots = override.slots;
+	const usingOverride = override?.kind === 'available';
+	if (usingOverride) slots = override.slots;
 	else {
 		const dow = String(local.dayOfWeek) as keyof WeeklyWindows;
 		slots = (prefs.weeklyWindows as WeeklyWindows)[dow] ?? [];
 	}
 
-	if (slots.length === 0) return false;
 	const minutes = local.hour * 60 + local.minute;
-	return slots.some((s) => minutes >= s.start && minutes < s.end);
+	const inSlots = slots.some((s) => minutes >= s.start && minutes < s.end);
+	if (slots.length === 0 || !inSlots) {
+		return usingOverride
+			? { reason: 'override_excludes', overrideDate: dateKey }
+			: { reason: 'outside_window' };
+	}
+
+	return null;
 }
 
-export function withinMaxLength(prefs: FlaschenPrefs, offer: ShiftOfferPayload): boolean {
-	return offer.durationInMinutes <= prefs.shiftMaxMinutes;
+export function matchesWindow(
+	prefs: FlaschenPrefs,
+	overrides: FlaschenDateOverride[],
+	offer: ShiftOfferPayload
+): boolean {
+	return windowFailDetail(prefs, overrides, offer) === null;
+}
+
+export function withinLengthRange(prefs: FlaschenPrefs, offer: ShiftOfferPayload): boolean {
+	if (offer.durationInMinutes < prefs.shiftMinMinutes) return false;
+	if (offer.durationInMinutes > prefs.shiftMaxMinutes) return false;
+	return true;
+}
+
+export function meetsAdvanceNotice(
+	prefs: FlaschenPrefs,
+	offer: ShiftOfferPayload,
+	now: Date = new Date()
+): boolean {
+	if (prefs.advanceNoticeMinutes <= 0) return true;
+	const start = new Date(offer.start).getTime();
+	const minStart = now.getTime() + prefs.advanceNoticeMinutes * 60_000;
+	return start >= minStart;
 }
 
 export function formatOfferBody(offer: ShiftOfferPayload): string {
