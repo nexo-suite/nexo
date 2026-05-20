@@ -57,8 +57,7 @@ export default mergeConfig(
 				},
 				devOptions: {
 					enabled: true,
-					type: 'module',
-					navigateFallback: '/'
+					type: 'module'
 				}
 			})
 		]

@@ -1,3 +1,5 @@
+/// <reference types="vite-plugin-pwa/vanillajs" />
+/// <reference types="vite-plugin-pwa/info" />
 import type { User } from 'better-auth';
 
 declare global {

@@ -1,8 +1,10 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { getAuth } from '$lib/server/auth';
-import { initDb, withUser, userAppAccess } from '@nexo/db';
+import { initDb, registerShutdown, withUser, userAppAccess, loadUserLocale } from '@nexo/db';
+import { initPush } from '@nexo/push/server';
 import { csrfHandle } from '@nexo/security';
+import { ensureUserLocaleCookie } from '@nexo/i18n';
 import { and, eq } from 'drizzle-orm';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
@@ -13,6 +15,12 @@ import { getTextDirection } from '$lib/paraglide/runtime.js';
 import { setFlaschenpostEnv } from '$lib/server/flaschenpost/env';
 
 initDb(env.DATABASE_URL!);
+registerShutdown();
+initPush({
+	subject: env.VAPID_SUBJECT!,
+	publicKey: env.VAPID_PUBLIC_KEY!,
+	privateKey: env.VAPID_PRIVATE_KEY!
+});
 setFlaschenpostEnv(env);
 
 const APP = 'flaschen';
@@ -67,14 +75,19 @@ const securityHeaders: Handle = async ({ event, resolve }) => {
 	return response;
 };
 
-const i18nHandle: Handle = ({ event, resolve }) =>
-	paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
+const i18nHandle: Handle = async ({ event, resolve }) => {
+	await ensureUserLocaleCookie(event, {
+		getSession: (request) => getAuth().api.getSession({ headers: request.headers }),
+		loadLocale: loadUserLocale
+	});
+	return paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
 		event.request = localizedRequest;
 		return resolve(event, {
 			transformPageChunk: ({ html }) =>
 				html.replace('%lang%', locale).replace('%dir%', getTextDirection(locale))
 		});
 	});
+};
 
 export const handle = sequence(
 	i18nHandle,
