@@ -24,6 +24,7 @@
 		"apps/auth": { "component": "auth" },
 		"apps/admin": { "component": "admin" },
 		"apps/landing": { "component": "landing" },
-		"apps/bot": { "component": "bot" }
+		"apps/bot": { "component": "bot" },
+		"apps/flaschen": { "component": "flaschen" }
 	}
 }

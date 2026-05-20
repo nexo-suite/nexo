@@ -28,9 +28,7 @@ services:
 
   migrate:
     profiles: [production]
-    build:
-      context: .
-      dockerfile: packages/db/Dockerfile
+    image: ghcr.io/nexo-suite/nexo-db:latest
     networks: [production]
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -41,9 +39,7 @@ services:
 
   auth:
     profiles: [production]
-    build:
-      context: .
-      dockerfile: apps/auth/Dockerfile
+    image: ghcr.io/nexo-suite/nexo-auth:latest
     restart: unless-stopped
     init: true
     networks: [production]
@@ -89,9 +85,7 @@ services:
 
   admin:
     profiles: [production]
-    build:
-      context: .
-      dockerfile: apps/admin/Dockerfile
+    image: ghcr.io/nexo-suite/nexo-admin:latest
     restart: unless-stopped
     init: true
     networks: [production]
@@ -102,7 +96,7 @@ services:
       retries: 3
       start_period: 10s
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     logging:
       driver: loki
       options:
@@ -125,6 +119,10 @@ services:
       PUBLIC_LANDING_URL: https://krieger2501.de
       RESEND_API_KEY: ${RESEND_API_KEY}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
+      PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
       PROTOCOL_HEADER: x-forwarded-proto
       HOST_HEADER: x-forwarded-host
     depends_on:
@@ -133,9 +131,7 @@ services:
 
   finance:
     profiles: [production]
-    build:
-      context: .
-      dockerfile: apps/finance/Dockerfile
+    image: ghcr.io/nexo-suite/nexo-finance:latest
     restart: unless-stopped
     init: true
     networks: [production]
@@ -173,9 +169,7 @@ services:
 
   flaschen:
     profiles: [production]
-    build:
-      context: .
-      dockerfile: apps/flaschen/Dockerfile
+    image: ghcr.io/nexo-suite/nexo-flaschen:latest
     restart: unless-stopped
     init: true
     networks: [production]
@@ -220,9 +214,7 @@ services:
 
   flaschen-worker:
     profiles: [production]
-    build:
-      context: .
-      dockerfile: apps/flaschen/Dockerfile
+    image: ghcr.io/nexo-suite/nexo-flaschen:latest
     command: node build/worker/index.js
     restart: unless-stopped
     init: true
@@ -259,11 +251,7 @@ services:
 
   landing:
     profiles: [production]
-    build:
-      context: .
-      dockerfile: apps/landing/Dockerfile
-      args:
-        PUBLIC_FINANCE_URL: https://finance.krieger2501.de
+    image: ghcr.io/nexo-suite/nexo-landing:latest
     restart: unless-stopped
     init: true
     networks: [production]
@@ -370,7 +358,7 @@ services:
       retries: 3
       start_period: 10s
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       DATABASE_URL: ${DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
@@ -379,6 +367,10 @@ services:
       PUBLIC_LANDING_URL: https://preview.krieger2501.de
       RESEND_API_KEY: ${RESEND_API_KEY}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
+      PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
       PROTOCOL_HEADER: x-forwarded-proto
       HOST_HEADER: x-forwarded-host
     depends_on:
@@ -463,9 +455,7 @@ services:
 
   bot:
     profiles: [server]
-    build:
-      context: .
-      dockerfile: apps/bot/Dockerfile
+    image: ghcr.io/nexo-suite/nexo-bot:latest
     restart: unless-stopped
     init: true
     networks: [production]

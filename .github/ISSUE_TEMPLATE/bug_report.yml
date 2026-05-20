@@ -17,6 +17,7 @@ body:
         - admin
         - auth
         - landing
+        - flaschen
         - other / not sure
     validations:
       required: true

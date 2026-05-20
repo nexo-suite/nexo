@@ -25,7 +25,7 @@ docker -v
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/krieger2501/nexo
+git clone https://github.com/nexo-suite/nexo
 cd nexo
 pnpm install
 ```
@@ -153,7 +153,7 @@ Open `http://localhost:3002` — you'll be redirected to the auth server, sign i
 To also run the bot (needs GitHub App credentials):
 
 ```bash
-pnpm dev:bot
+pnpm dev --filter=@nexo/bot
 ```
 
 ---
@@ -170,8 +170,8 @@ pnpm dev         # start all dev servers
 Or start just the app you're working on:
 
 ```bash
-pnpm dev:finance
-pnpm dev:admin
+pnpm dev --filter=@nexo/finance
+pnpm dev --filter=@nexo/admin
 ```
 
 ### Making schema changes

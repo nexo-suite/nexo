@@ -97,7 +97,7 @@ OAuth credentials are only registered against the **auth** app — admin and fin
 
 ```bash
 cd ~
-git clone https://github.com/krieger2501/nexo
+git clone https://github.com/nexo-suite/nexo
 cd nexo
 cp .env.example .env
 nano .env
@@ -147,16 +147,18 @@ Production deployments are fully automated via GitHub Actions. No manual SSH req
 1. Merge your changes into `main`
 2. release-please opens (or updates) a release PR with the version bump and changelog
 3. Merge the release PR — this pushes a `nexo-v*` tag
-4. The `Deploy Production` workflow triggers, SSHes into the VPS, and runs:
+4. CI builds all Docker images and pushes them to GHCR (`ghcr.io/nexo-suite/nexo-*`)
+5. The `Deploy Production` workflow triggers, SSHes into the VPS, and runs:
    ```bash
    git pull origin main
-   docker compose --profile production --profile server --env-file .env up -d --build
-   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
-   docker compose --profile preview --env-file .env.preview up -d --build
+   docker compose -f docker-compose.yml --profile production --profile server --env-file .env pull
+   docker compose -f docker-compose.yml --profile production --profile server --env-file .env up -d
+   docker compose -f docker-compose.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
+   docker compose -f docker-compose.yml --profile preview --env-file .env.preview up -d --build
    ```
-5. All services rebuild with the new images. The preview environment is also redeployed against `main`.
+6. Production services start from pre-built GHCR images. Preview rebuilds from source.
 
-Monitor the run in the [Actions tab](https://github.com/krieger2501/nexo/actions).
+Monitor the run in the [Actions tab](https://github.com/nexo-suite/nexo/actions).
 
 ### Manual deployment (emergency / first-time)
 
@@ -165,8 +167,9 @@ SSH into the VPS and run directly:
 ```bash
 cd ~/nexo
 git pull origin main
-docker compose --profile production --profile server --env-file .env up -d --build
-docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+docker compose -f docker-compose.yml --profile production --profile server --env-file .env pull
+docker compose -f docker-compose.yml --profile production --profile server --env-file .env up -d
+docker compose -f docker-compose.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
 This will:
@@ -289,6 +292,34 @@ suspect compromise:
    restorable until you decide to retire them.
 4. Re-encrypt the most recent few dumps to the new recipient if you want a
    clean cut-over.
+
+---
+
+## Admin app — Docker socket and replica constraints
+
+The `admin` app needs **read-write** access to the host Docker socket so it can
+start, stop, restart, and inspect containers. This is set in
+`docker-compose.yml`:
+
+```yaml
+admin:
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock # rw — required for actions
+```
+
+**Trust model.** RW socket access is equivalent to root on the host. The admin
+app is gated by `ADMIN_EMAIL` in `hooks.server.ts` (rejects 403 for any other
+authenticated user) and destructive actions re-check via `requireOwner(locals)`.
+For a 5–10 user friend/family deployment this is sufficient. If the admin user
+base ever expands, add per-action audit logging and consider a sidecar that
+brokers Docker calls.
+
+**Single replica.** The admin app runs an in-process health poller (every 30s
+hits each container's `/healthz`) and an alert engine (web-push on health
+transitions). Both assume a single replica. Do **not** scale the admin service
+horizontally — duplicate alerts and duplicate writes will result. If horizontal
+scaling is ever needed, extract the poller to a worker container (mirror
+`apps/flaschen/src/worker/`).
 
 ---
 

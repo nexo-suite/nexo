@@ -12,6 +12,7 @@ body:
         - admin
         - auth
         - landing
+        - flaschen
         - new app idea
         - cross-cutting / not sure
     validations:

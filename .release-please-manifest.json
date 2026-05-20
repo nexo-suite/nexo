@@ -9,5 +9,6 @@
 	"apps/auth": "0.4.0",
 	"apps/admin": "0.4.0",
 	"apps/landing": "0.4.0",
-	"apps/bot": "0.2.1"
+	"apps/bot": "0.2.1",
+	"apps/flaschen": "0.1.0"
 }
