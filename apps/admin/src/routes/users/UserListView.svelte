@@ -33,7 +33,6 @@
 		searchQuery: string;
 		filterStatus: FilterStatus;
 		onopendetail: (entry: Entry) => void;
-		onopeninvite: () => void;
 	}
 
 	let {
@@ -41,23 +40,11 @@
 		counts,
 		searchQuery = $bindable(''),
 		filterStatus = $bindable('all' as FilterStatus),
-		onopendetail,
-		onopeninvite
+		onopendetail
 	}: Props = $props();
 </script>
 
 <div class="screen fade-in">
-	<div>
-		<div class="label-eyebrow">Users</div>
-		<h1 class="screen-title">{counts.active} active</h1>
-		<div class="screen-sub">
-			{#if counts.invited > 0}
-				<span style="color:var(--warn-ink)">{counts.invited} pending</span> ·
-			{/if}
-			{counts.all} total
-		</div>
-	</div>
-
 	<SearchInput bind:value={searchQuery} placeholder="Search by email or name…" />
 
 	<FilterChips
@@ -104,12 +91,6 @@
 			</div>
 		{/if}
 	</div>
-
-	<button type="button" class="fab" onclick={onopeninvite} aria-label="Invite user">
-		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-			><path d="M12 5v14M5 12h14" stroke-linecap="round" /></svg
-		>
-	</button>
 </div>
 
 <style>
@@ -187,35 +168,5 @@
 		font-size: 32px;
 		margin-bottom: 8px;
 		opacity: 0.4;
-	}
-
-	.fab {
-		position: fixed;
-		right: max(16px, calc(50vw - 240px + 16px));
-		bottom: calc(var(--tabbar-h) + var(--safe-bot) + 16px);
-		z-index: 40;
-		width: 52px;
-		height: 52px;
-		border-radius: 50%;
-		background: var(--color-text-primary);
-		color: var(--color-surface-1);
-		display: grid;
-		place-items: center;
-		box-shadow:
-			0 8px 24px rgba(0, 0, 0, 0.2),
-			0 1px 3px rgba(0, 0, 0, 0.1);
-		cursor: pointer;
-		border: 0;
-		-webkit-tap-highlight-color: transparent;
-		transition: transform var(--duration-fast) var(--ease-out);
-	}
-
-	.fab:active {
-		transform: scale(0.94);
-	}
-
-	.fab svg {
-		width: 22px;
-		height: 22px;
 	}
 </style>

@@ -20,27 +20,30 @@
 		"type:check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
 	"dependencies": {
-		"@lucide/svelte": "^1.16.0",
+		"@lucide/svelte": "catalog:",
 		"@nexo/db": "workspace:*",
 		"@nexo/email": "workspace:*",
 		"@nexo/errors": "workspace:*",
+		"@nexo/i18n": "workspace:*",
 		"@nexo/logger": "workspace:*",
+		"@nexo/push": "workspace:*",
 		"@nexo/security": "workspace:*",
 		"@nexo/ui": "workspace:*",
-		"better-auth": "^1.6.11",
-		"drizzle-orm": "^0.45.2"
+		"better-auth": "catalog:",
+		"drizzle-orm": "catalog:",
+		"workbox-precaching": "catalog:"
 	},
 	"devDependencies": {
-		"@inlang/paraglide-js": "^2.18.0",
-		"@sveltejs/adapter-node": "^5.5.4",
-		"@sveltejs/kit": "^2.60.1",
-		"@sveltejs/vite-plugin-svelte": "^7.1.2",
-		"@tailwindcss/vite": "^4.3.0",
+		"@inlang/paraglide-js": "catalog:",
+		"@sveltejs/adapter-node": "catalog:",
+		"@sveltejs/kit": "catalog:",
+		"@sveltejs/vite-plugin-svelte": "catalog:",
+		"@tailwindcss/vite": "catalog:",
 		"@types/node": "catalog:",
-		"@vite-pwa/sveltekit": "^1.1.0",
-		"svelte": "^5.55.7",
-		"svelte-check": "^4.4.8",
-		"tailwindcss": "^4.3.0",
-		"vite": "^8.0.13"
+		"@vite-pwa/sveltekit": "catalog:",
+		"svelte": "catalog:",
+		"svelte-check": "catalog:",
+		"tailwindcss": "catalog:",
+		"vite": "catalog:"
 	}
 }

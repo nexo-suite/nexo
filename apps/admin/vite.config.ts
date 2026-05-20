@@ -17,6 +17,9 @@ export default mergeConfig(
 			tailwindcss() as PluginOption,
 			sveltekit() as PluginOption,
 			SvelteKitPWA({
+				strategies: 'injectManifest',
+				srcDir: 'src',
+				filename: 'service-worker.ts',
 				registerType: 'autoUpdate',
 				includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
 				manifest: {
@@ -48,13 +51,14 @@ export default mergeConfig(
 						}
 					]
 				},
-				workbox: {
-					globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-					navigateFallback: '/offline',
-					navigateFallbackDenylist: [/^\/api\//],
-					runtimeCaching: [{ urlPattern: /^\/api\//, handler: 'NetworkOnly' }]
+				injectManifest: {
+					globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,woff2}']
 				},
-				devOptions: { enabled: true }
+				devOptions: {
+					enabled: true,
+					type: 'module',
+					navigateFallback: '/'
+				}
 			})
 		]
 	})

@@ -9,12 +9,14 @@
 	} from '$lib/utils/containers';
 
 	interface Props {
-		container: ContainerInfo;
+		container: ContainerInfo & { RestartCount?: number; Profile?: string };
 	}
 
 	let { container: c }: Props = $props();
 	const tone = $derived(ctnTone(c));
 	const href = $derived(`/services/${(c.Names[0] ?? c.Id).replace(/^\//, '')}`);
+	const restarts = $derived(c.RestartCount ?? 0);
+	const profile = $derived(c.Profile ?? 'unknown');
 </script>
 
 <a {href} class="ctn-row">
@@ -25,9 +27,16 @@
 			<span>{ctnImageTag(c)}</span>
 			<span class="sep"></span>
 			<span>{ctnUptimeLabel(c)}</span>
+			{#if restarts > 0}
+				<span class="sep"></span>
+				<span class="warn-text" title="Restart count">↻ {restarts}</span>
+			{/if}
 		</div>
 	</div>
 	<div class="ctn-right">
+		{#if profile !== 'unknown'}
+			<span class="profile-chip" data-p={profile}>{profile === 'production' ? 'prod' : 'pre'}</span>
+		{/if}
 		<span class="pill {tone}">{ctnStatusLabel(c)}</span>
 		<svg class="ctn-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
 			><path d="M6 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" /></svg
@@ -80,6 +89,11 @@
 		color: var(--color-text-subtle);
 	}
 
+	.warn-text {
+		color: var(--warn-ink);
+		font-weight: 600;
+	}
+
 	.sep {
 		width: 3px;
 		height: 3px;
@@ -93,6 +107,23 @@
 		align-items: center;
 		gap: 6px;
 		flex-shrink: 0;
+	}
+
+	.profile-chip {
+		font-family: var(--font-mono);
+		font-size: 9px;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		padding: 2px 6px;
+		border-radius: 4px;
+		background: var(--color-bg-2);
+		color: var(--color-text-subtle);
+		border: 1px solid var(--color-border-subtle);
+	}
+	.profile-chip[data-p='production'] {
+		color: var(--accent-ink);
+		background: color-mix(in oklab, var(--accent-ink) 8%, transparent);
+		border-color: color-mix(in oklab, var(--accent-ink) 25%, transparent);
 	}
 
 	.ctn-chev {

@@ -2,27 +2,11 @@
 	import '../app.css';
 	import { page, navigating } from '$app/state';
 	import { userMessage } from '@nexo/errors';
-	import UpdatePrompt from '$lib/components/UpdatePrompt.svelte';
+	import { ErrorBanner, UpdatePrompt } from '@nexo/ui';
 	import KonamiCode from '$lib/components/KonamiCode.svelte';
 	import { m } from '$lib/paraglide/messages.js';
 
 	let { children } = $props();
-
-	const isServiceDetail = $derived(
-		page.url.pathname.startsWith('/services/') &&
-			page.url.pathname !== '/services' &&
-			page.url.pathname !== '/services/'
-	);
-
-	const rawName = $derived((page.params as Record<string, string>).name ?? '');
-	const displayTitle = $derived(
-		isServiceDetail
-			? rawName
-					.replace(/^nexo-/, '')
-					.replace(/-\d+$/, '')
-					.replace(/_/g, ' ')
-			: 'Nexo Admin'
-	);
 
 	const activeTab = $derived(
 		page.url.pathname.startsWith('/users')
@@ -37,69 +21,27 @@
 	const errorCode = $derived(formResult?.error ?? null);
 	const errorMsg = $derived(errorCode ? userMessage(errorCode) : null);
 	const errorId = $derived(formResult?.correlationId ?? null);
+	const errorKey = $derived(errorId ?? errorCode ?? '');
 
-	let copied = $state(false);
-	async function copyId() {
-		if (!errorId) return;
-		await navigator.clipboard.writeText(errorId);
-		copied = true;
-		setTimeout(() => (copied = false), 2000);
-	}
+	let dismissedFor = $state<string | null>(null);
+	const showError = $derived(Boolean(errorMsg) && dismissedFor !== errorKey);
 </script>
 
 {#if navigating.to}
 	<div class="nav-progress"></div>
 {/if}
+<svelte:head>
+	<title>Admin — Nexo</title>
+</svelte:head>
 <div class="shell">
-	<!-- Topbar -->
-	<header class="topbar">
-		{#if isServiceDetail}
-			<a href="/services" class="topbar-action" aria-label="Back">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-					><path d="M15 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" /></svg
-				>
-			</a>
-		{:else}
-			<div class="brand-mark" style="margin-left:14px"></div>
-		{/if}
-		<div class="topbar-center">
-			<span class="topbar-title">{displayTitle}</span>
-		</div>
-		<div class="topbar-right">
-			<button
-				type="button"
-				class="topbar-action"
-				onclick={() => window.location.reload()}
-				title="Refresh"
-			>
-				<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
-					><path d="M3 8a5 5 0 018-3.5M13 8a5 5 0 01-8 3.5" /><path
-						d="M11 2v3h-3M5 14v-3h3"
-						stroke-linecap="round"
-					/></svg
-				>
-			</button>
-		</div>
-	</header>
-
 	<!-- Main content -->
 	<main class="app-body">
-		{#if errorMsg}
-			<div class="error-toast" role="alert">
-				<div class="error-toast-body">
-					<p class="error-toast-title">{errorMsg}</p>
-					{#if errorId}
-						<p class="error-toast-sub">
-							Ref: <code class="error-id">{errorId}</code>
-						</p>
-					{/if}
-				</div>
-				{#if errorId}
-					<button type="button" class="error-toast-copy" onclick={copyId}>
-						{copied ? 'Copied!' : 'Copy'}
-					</button>
-				{/if}
-			</div>
+		{#if showError && errorMsg}
+			<ErrorBanner
+				message={errorMsg}
+				correlationId={errorId ?? undefined}
+				onDismiss={() => (dismissedFor = errorKey)}
+			/>
 		{/if}
 		{@render children()}
 	</main>
@@ -139,7 +81,7 @@
 		</a>
 	</nav>
 </div>
-<UpdatePrompt />
+<UpdatePrompt bottomOffset={68} />
 <KonamiCode />
 
 <style>
@@ -154,162 +96,13 @@
 		overflow: hidden;
 	}
 
-	/* ── Topbar ── */
-	.topbar {
-		position: fixed;
-		top: 0;
-		left: 50%;
-		transform: translateX(-50%);
-		width: 100%;
-		max-width: 480px;
-		z-index: 50;
-		height: calc(var(--topbar-h) + var(--safe-top));
-		padding: var(--safe-top) 12px 0;
-		display: flex;
-		align-items: center;
-		gap: 4px;
-		background: color-mix(in oklab, var(--color-bg-1) 82%, transparent);
-		backdrop-filter: blur(14px) saturate(140%);
-		-webkit-backdrop-filter: blur(14px) saturate(140%);
-		border-bottom: 1px solid var(--color-border-subtle);
-	}
-
-	.topbar-center {
-		position: absolute;
-		left: 50%;
-		top: var(--safe-top);
-		transform: translateX(-50%);
-		height: var(--topbar-h);
-		display: flex;
-		align-items: center;
-		pointer-events: none;
-	}
-
-	.topbar-title {
-		font-weight: 600;
-		font-size: 16px;
-		letter-spacing: -0.015em;
-		text-transform: capitalize;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		max-width: 180px;
-	}
-
-	.topbar-action {
-		width: 40px;
-		height: 40px;
-		display: grid;
-		place-items: center;
-		border-radius: 10px;
-		color: var(--color-text-primary);
-		background: transparent;
-		border: 0;
-		cursor: pointer;
-		-webkit-tap-highlight-color: transparent;
-		transition: background var(--duration-fast) var(--ease-out);
-		flex-shrink: 0;
-	}
-
-	.topbar-action:hover,
-	.topbar-action:active {
-		background: var(--color-border-subtle);
-	}
-
-	.topbar-action svg {
-		width: 22px;
-		height: 22px;
-	}
-
-	.topbar-right {
-		margin-left: auto;
-		display: flex;
-		gap: 2px;
-	}
-
-	.brand-mark {
-		width: 22px;
-		height: 22px;
-		border-radius: 6px;
-		background: linear-gradient(
-			135deg,
-			var(--color-accent),
-			color-mix(in oklab, var(--color-accent) 50%, #000)
-		);
-		box-shadow:
-			0 0 0 1px var(--color-border-default),
-			0 4px 12px var(--accent-glow);
-		position: relative;
-		flex-shrink: 0;
-	}
-
-	.brand-mark::after {
-		content: '';
-		position: absolute;
-		inset: 4px;
-		border-radius: 3px;
-		background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), transparent 60%);
-	}
-
 	/* ── App body ── */
 	.app-body {
 		flex: 1;
-		padding-top: calc(var(--topbar-h) + var(--safe-top));
+		padding-top: var(--safe-top);
 		padding-bottom: calc(var(--tabbar-h) + var(--safe-bot));
 		overflow-y: auto;
 		overscroll-behavior-y: contain;
-	}
-
-	/* ── Error toast ── */
-	.error-toast {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		margin: 12px 16px 0;
-		padding: 12px 14px;
-		border-radius: var(--radius-lg);
-		border: 1px solid color-mix(in oklab, #ef4444 30%, transparent);
-		background: color-mix(in oklab, #ef4444 6%, transparent);
-	}
-
-	.error-toast-body {
-		flex: 1;
-		min-width: 0;
-	}
-
-	.error-toast-title {
-		font-size: 13px;
-		font-weight: 600;
-		color: #ef4444;
-		margin: 0;
-	}
-
-	.error-toast-sub {
-		margin: 2px 0 0;
-		font-size: 12px;
-		color: color-mix(in oklab, #ef4444 70%, var(--color-text-subtle));
-	}
-
-	.error-id {
-		font-family: var(--font-mono);
-		font-size: 11px;
-		letter-spacing: 0.06em;
-		background: color-mix(in oklab, #ef4444 10%, transparent);
-		border-radius: var(--radius-sm);
-		padding: 1px 5px;
-	}
-
-	.error-toast-copy {
-		flex-shrink: 0;
-		font-size: 11px;
-		font-weight: 600;
-		font-family: var(--font-mono);
-		padding: 4px 10px;
-		border-radius: var(--radius-md);
-		border: 1px solid color-mix(in oklab, #ef4444 30%, transparent);
-		background: color-mix(in oklab, #ef4444 10%, transparent);
-		color: #ef4444;
-		cursor: pointer;
 	}
 
 	/* ── Bottom tab bar ── */

@@ -1,12 +1,35 @@
 <script lang="ts">
-	import type { ContainerInfo } from '$lib/server/docker';
-	import { Activity, TrendingDown, TrendingUp, Users } from '@lucide/svelte';
-	import { ctnName, ctnGroup } from '$lib/utils/containers';
+	import type { EnrichedContainer } from './+page.server';
+	import { Activity, MoreHorizontal, TrendingDown, TrendingUp, Users } from '@lucide/svelte';
+	import { enhance } from '$app/forms';
+	import { PageHeader } from '@nexo/ui';
+	import {
+		ctnName,
+		ctnGroup,
+		ctnHasIssue,
+		ctnIsHealthy,
+		ctnIsStopped
+	} from '$lib/utils/containers';
 	import SearchInput from '$lib/components/SearchInput.svelte';
 	import FilterChips from '$lib/components/FilterChips.svelte';
+	import BottomSheet from '$lib/components/BottomSheet.svelte';
+	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import ContainerCard from './ContainerCard.svelte';
 
-	let { data } = $props();
+	let { data, form } = $props();
+
+	// ── Greeting ──────────────────────────────────────────────────────────────
+	const firstName = $derived(
+		((data.profile?.displayName || data.profile?.name || data.user?.name) ?? '').split(' ')[0] ||
+			'there'
+	);
+	const todayLabel = $derived(
+		new Date().toLocaleDateString('de-DE', {
+			weekday: 'long',
+			day: '2-digit',
+			month: 'short'
+		})
+	);
 
 	// ── Grouping ──────────────────────────────────────────────────────────────
 
@@ -19,25 +42,42 @@
 	};
 
 	let filter = $state<'all' | 'running' | 'issues' | 'stopped'>('all');
+	let profileFilter = $state<'all' | 'production' | 'preview'>('all');
 	let query = $state('');
+	let menuOpen = $state(false);
+	let confirmOpen = $state(false);
+	let confirmProfile = $state<'production' | 'preview'>('production');
+	let busy = $state(false);
+	let menuWrap = $state<HTMLDivElement | null>(null);
+
+	function onMenuDocClick(e: MouseEvent) {
+		if (!menuOpen || !menuWrap) return;
+		if (!menuWrap.contains(e.target as Node)) menuOpen = false;
+	}
+
+	function onMenuKey(e: KeyboardEvent) {
+		if (e.key === 'Escape' && menuOpen) menuOpen = false;
+	}
 
 	const counts = $derived({
 		all: data.containers.length,
-		running: data.containers.filter(
-			(c) => c.State.toLowerCase() === 'running' && c.State.toLowerCase() !== 'restarting'
-		).length,
-		issues: data.containers.filter((c) => c.State.toLowerCase() === 'restarting').length,
-		stopped: data.containers.filter(
-			(c) => c.State.toLowerCase() === 'exited' || c.State.toLowerCase() === 'dead'
-		).length
+		running: data.containers.filter(ctnIsHealthy).length,
+		issues: data.containers.filter(ctnHasIssue).length,
+		stopped: data.containers.filter(ctnIsStopped).length
+	});
+
+	const profileCounts = $derived({
+		all: data.containers.length,
+		production: data.containers.filter((c) => c.Profile === 'production').length,
+		preview: data.containers.filter((c) => c.Profile === 'preview').length
 	});
 
 	const filtered = $derived(
 		data.containers.filter((c) => {
-			const s = c.State.toLowerCase();
-			if (filter === 'running' && s !== 'running') return false;
-			if (filter === 'issues' && s !== 'restarting') return false;
-			if (filter === 'stopped' && s !== 'exited' && s !== 'dead') return false;
+			if (filter === 'running' && !ctnIsHealthy(c)) return false;
+			if (filter === 'issues' && !ctnHasIssue(c)) return false;
+			if (filter === 'stopped' && !ctnIsStopped(c)) return false;
+			if (profileFilter !== 'all' && c.Profile !== profileFilter) return false;
 			if (query) {
 				const q = query.trim().toLowerCase();
 				const search = (ctnName(c) + ' ' + c.Image + ' ' + c.Status).toLowerCase();
@@ -48,7 +88,7 @@
 	);
 
 	const grouped = $derived(() => {
-		const g: Record<string, ContainerInfo[]> = {};
+		const g: Record<string, EnrichedContainer[]> = {};
 		for (const c of filtered) {
 			const grp = ctnGroup(c);
 			(g[grp] ??= []).push(c);
@@ -56,12 +96,12 @@
 		return g;
 	});
 
-	const runningCount = $derived(
-		data.containers.filter((c) => c.State.toLowerCase() === 'running').length
-	);
-	const issueCount = $derived(
-		data.containers.filter((c) => c.State.toLowerCase() === 'restarting').length
-	);
+	const runningCount = $derived(data.containers.filter(ctnIsHealthy).length);
+	const issueCount = $derived(data.containers.filter(ctnHasIssue).length);
+
+	function profileTargetCount(p: 'production' | 'preview'): number {
+		return data.containers.filter((c) => c.Profile === p).length;
+	}
 
 	// ── DB stats ──────────────────────────────────────────────────────────────
 	const totals = $derived(data.dbStats.totals);
@@ -74,22 +114,88 @@
 	]);
 </script>
 
+<svelte:window onclick={onMenuDocClick} onkeydown={onMenuKey} />
+
 <div class="screen">
-	<!-- Header -->
-	<div>
-		<div class="label-eyebrow">Containers</div>
-		<h1 class="screen-title">
-			{runningCount} running
-		</h1>
-		<div class="screen-sub">
-			{#if issueCount > 0}
-				<span style="color:var(--err-ink);font-weight:600">{issueCount} need attention</span> · {counts.stopped}
-				stopped
-			{:else}
-				All running · {counts.stopped} stopped
-			{/if}
-		</div>
+	<PageHeader title="Hey, {firstName}" subtitle={todayLabel}>
+		{#snippet actions()}
+			<div class="menu-wrap" bind:this={menuWrap}>
+				<button
+					class="hdr-action"
+					type="button"
+					aria-label="More"
+					aria-expanded={menuOpen}
+					aria-haspopup="menu"
+					onclick={() => (menuOpen = !menuOpen)}
+				>
+					<MoreHorizontal size={18} />
+				</button>
+				{#if menuOpen}
+					<div class="menu-pop" role="menu">
+						<button
+							class="pop-row"
+							type="button"
+							role="menuitem"
+							disabled={profileTargetCount('production') === 0}
+							onclick={() => {
+								menuOpen = false;
+								confirmProfile = 'production';
+								confirmOpen = true;
+							}}
+						>
+							<span class="pop-label">Restart all production</span>
+							<span class="pop-meta">{profileTargetCount('production')}</span>
+						</button>
+						<button
+							class="pop-row"
+							type="button"
+							role="menuitem"
+							disabled={profileTargetCount('preview') === 0}
+							onclick={() => {
+								menuOpen = false;
+								confirmProfile = 'preview';
+								confirmOpen = true;
+							}}
+						>
+							<span class="pop-label">Restart all preview</span>
+							<span class="pop-meta">{profileTargetCount('preview')}</span>
+						</button>
+						<button
+							class="pop-row"
+							type="button"
+							role="menuitem"
+							onclick={() => {
+								menuOpen = false;
+								location.reload();
+							}}
+						>
+							<span class="pop-label">Refresh status</span>
+						</button>
+					</div>
+				{/if}
+			</div>
+		{/snippet}
+		{#snippet avatar()}
+			<UserAvatarMenu />
+		{/snippet}
+	</PageHeader>
+
+	<!-- Summary heading -->
+	<div class="head-line">
+		{#if issueCount > 0}
+			<span class="err-text">{issueCount} need attention</span> · {counts.stopped} stopped
+		{:else}
+			All running · {counts.stopped} stopped
+		{/if}
 	</div>
+
+	{#if form?.success}
+		<div class="banner ok">Restarted {form.restarted} containers.</div>
+	{:else if form?.error === 'RESTART_PARTIAL'}
+		<div class="banner err">
+			Some containers failed to restart: {form.failed?.join(', ')}
+		</div>
+	{/if}
 
 	<!-- Summary cards -->
 	<div class="summary">
@@ -111,7 +217,7 @@
 	<!-- Search -->
 	<SearchInput bind:value={query} placeholder="Filter containers…" />
 
-	<!-- Chips -->
+	<!-- Status chips -->
 	<FilterChips
 		bind:value={filter}
 		options={[
@@ -119,6 +225,16 @@
 			{ value: 'running', label: 'Healthy', count: counts.running },
 			{ value: 'issues', label: 'Issues', count: issueCount },
 			{ value: 'stopped', label: 'Stopped', count: counts.stopped }
+		]}
+	/>
+
+	<!-- Profile chips -->
+	<FilterChips
+		bind:value={profileFilter}
+		options={[
+			{ value: 'all', label: 'Both', count: profileCounts.all },
+			{ value: 'production', label: 'Production', count: profileCounts.production },
+			{ value: 'preview', label: 'Preview', count: profileCounts.preview }
 		]}
 	/>
 
@@ -194,9 +310,155 @@
 	</div>
 </div>
 
+<BottomSheet bind:open={confirmOpen} title="Restart {confirmProfile} containers?">
+	<p class="confirm-body">
+		This will restart all <strong>{profileTargetCount(confirmProfile)}</strong> containers in the
+		<strong>{confirmProfile}</strong>
+		profile in parallel. Each container has 10s to stop gracefully.
+	</p>
+	<form
+		method="POST"
+		action="?/restartProfile"
+		use:enhance={() => {
+			busy = true;
+			return async ({ update }) => {
+				await update();
+				busy = false;
+				confirmOpen = false;
+			};
+		}}
+	>
+		<input type="hidden" name="profile" value={confirmProfile} />
+		<div class="confirm-actions">
+			<button
+				class="btn-secondary"
+				type="button"
+				onclick={() => (confirmOpen = false)}
+				disabled={busy}
+			>
+				Cancel
+			</button>
+			<button class="btn-danger" type="submit" disabled={busy}>
+				{busy ? 'Restarting…' : 'Restart all'}
+			</button>
+		</div>
+	</form>
+</BottomSheet>
+
 <style>
 	.screen {
-		gap: 16px; /* local reminder — matches global */
+		gap: 16px;
+	}
+
+	/* ── Header action button ── */
+	.hdr-action {
+		flex-shrink: 0;
+		width: 36px;
+		height: 36px;
+		border-radius: 999px;
+		display: grid;
+		place-items: center;
+		background: var(--color-surface-1);
+		border: 1px solid var(--color-border-default);
+		color: var(--color-text-subtle);
+		cursor: pointer;
+	}
+
+	.menu-wrap {
+		position: relative;
+		display: inline-flex;
+	}
+
+	.menu-pop {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		z-index: 60;
+		min-width: 220px;
+		padding: 6px;
+		background: var(--color-surface-1);
+		border: 1px solid var(--color-border-default);
+		border-radius: var(--radius-md, 12px);
+		box-shadow:
+			0 12px 32px -12px rgba(0, 0, 0, 0.18),
+			0 2px 6px rgba(0, 0, 0, 0.06);
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		animation: pop-in 140ms var(--ease-out, ease-out);
+	}
+
+	@keyframes pop-in {
+		from {
+			opacity: 0;
+			transform: translateY(-4px) scale(0.98);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	.pop-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 10px 12px;
+		font: inherit;
+		font-size: 13.5px;
+		color: var(--color-text-primary);
+		background: transparent;
+		border: none;
+		text-align: left;
+		border-radius: 8px;
+		cursor: pointer;
+	}
+	.pop-row:hover {
+		background: var(--color-bg-1);
+	}
+	.pop-row:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+	.pop-row:disabled:hover {
+		background: transparent;
+	}
+	.pop-label {
+		font-weight: 500;
+	}
+	.pop-meta {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--color-text-subtle);
+	}
+
+	.head-line {
+		font-size: 13px;
+		color: var(--color-text-subtle);
+		padding: 0 4px;
+	}
+
+	.err-text {
+		color: var(--err-ink);
+		font-weight: 600;
+	}
+
+	.banner {
+		padding: 10px 14px;
+		border-radius: var(--radius-md);
+		font-size: 13px;
+		border: 1px solid;
+	}
+	.banner.ok {
+		background: color-mix(in oklab, var(--accent-ink) 8%, transparent);
+		border-color: color-mix(in oklab, var(--accent-ink) 30%, transparent);
+		color: var(--accent-ink);
+	}
+	.banner.err {
+		background: color-mix(in oklab, var(--err-ink) 8%, transparent);
+		border-color: color-mix(in oklab, var(--err-ink) 30%, transparent);
+		color: var(--err-ink);
 	}
 
 	/* ── Summary cards ── */
@@ -355,5 +617,41 @@
 
 	.act-sep {
 		color: var(--color-text-faint);
+	}
+
+	/* ── Bottom-sheet menu ── */
+	.confirm-body {
+		color: var(--color-text-subtle);
+		font-size: 14px;
+		line-height: 1.5;
+		margin: 0 0 16px;
+	}
+
+	.confirm-actions {
+		display: flex;
+		gap: 8px;
+		justify-content: flex-end;
+	}
+
+	.btn-secondary,
+	.btn-danger {
+		padding: 10px 16px;
+		border-radius: 10px;
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		border: 1px solid var(--color-border-default);
+		background: var(--color-surface-1);
+		color: var(--color-text-primary);
+	}
+	.btn-danger {
+		background: var(--err-ink);
+		border-color: var(--err-ink);
+		color: white;
+	}
+	.btn-secondary:disabled,
+	.btn-danger:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 </style>
