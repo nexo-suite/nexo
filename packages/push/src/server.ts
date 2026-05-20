@@ -2,18 +2,33 @@ import webpush from 'web-push';
 import { db, pushSubscription } from '@nexo/db';
 import { and, eq } from 'drizzle-orm';
 
-let initialized = false;
+export type VapidConfig = {
+	subject: string;
+	publicKey: string;
+	privateKey: string;
+};
 
-function init() {
-	if (initialized) return;
-	const subject = process.env.VAPID_SUBJECT;
-	const publicKey = process.env.VAPID_PUBLIC_KEY;
-	const privateKey = process.env.VAPID_PRIVATE_KEY;
-	if (!subject || !publicKey || !privateKey) {
-		throw new Error('VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY must be set');
+let configured = false;
+
+/**
+ * Configure web-push with VAPID credentials. Call once at app boot — from
+ * `hooks.server.ts` (using `$env/dynamic/private`) for SvelteKit, or from the
+ * worker entrypoint (using `process.env`) for standalone Node scripts.
+ */
+export function initPush(config: VapidConfig): void {
+	if (!config.subject || !config.publicKey || !config.privateKey) {
+		throw new Error('initPush: subject, publicKey, privateKey are all required');
 	}
-	webpush.setVapidDetails(subject, publicKey, privateKey);
-	initialized = true;
+	webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
+	configured = true;
+}
+
+function ensureConfigured(): void {
+	if (!configured) {
+		throw new Error(
+			'Push not configured. Call initPush({ subject, publicKey, privateKey }) at app boot.'
+		);
+	}
 }
 
 export type PushPayload = {
@@ -45,7 +60,7 @@ export async function sendToUser(
 	app: string,
 	payload: PushPayload
 ): Promise<SendResult> {
-	init();
+	ensureConfigured();
 	const subs = await db
 		.select()
 		.from(pushSubscription)

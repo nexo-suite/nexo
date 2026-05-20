@@ -10,6 +10,7 @@
 		},
 		"./utils/recurrence": "./src/utils/recurrence.ts",
 		"./utils/ua-parser": "./src/utils/ua-parser.ts",
+		"./utils/format-relative": "./src/utils/format-relative.ts",
 		"./tokens.css": "./tokens.css",
 		"./base.css": "./base.css",
 		"./components.css": "./components.css"
@@ -19,10 +20,14 @@
 	"scripts": {
 		"type:check": "svelte-check --tsconfig ./tsconfig.json"
 	},
+	"dependencies": {
+		"@lucide/svelte": "catalog:"
+	},
 	"devDependencies": {
-		"@sveltejs/vite-plugin-svelte": "^7.1.2",
-		"svelte": "^5.55.7",
-		"svelte-check": "^4.4.8",
+		"@sveltejs/kit": "catalog:",
+		"@sveltejs/vite-plugin-svelte": "catalog:",
+		"svelte": "catalog:",
+		"svelte-check": "catalog:",
 		"typescript": "^5.9.3"
 	},
 	"peerDependencies": {

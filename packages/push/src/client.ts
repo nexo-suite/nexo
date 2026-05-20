@@ -35,24 +35,51 @@ export async function enableNotifications(opts: {
 	vapidPublicKey: string;
 	label?: string;
 }): Promise<EnableResult> {
-	if (!isSupported()) return { ok: false, reason: 'unsupported' };
+	console.info('[push] enableNotifications: start');
+	if (!isSupported()) {
+		console.info('[push] enableNotifications: unsupported');
+		return { ok: false, reason: 'unsupported' };
+	}
 
-	const reg = await navigator.serviceWorker.ready;
+	console.info('[push] enableNotifications: awaiting serviceWorker.ready');
+	const readyPromise = navigator.serviceWorker.ready;
+	const timeoutPromise = new Promise<never>((_, reject) =>
+		setTimeout(() => reject(new Error('serviceWorker.ready timed out after 5s')), 5000)
+	);
+	let reg: ServiceWorkerRegistration;
+	try {
+		reg = await Promise.race([readyPromise, timeoutPromise]);
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		console.error('[push] serviceWorker.ready failed:', msg);
+		return { ok: false, reason: `sw-ready-failed: ${msg}` };
+	}
+	console.info('[push] enableNotifications: SW ready', reg.active?.scriptURL);
+
+	console.info('[push] enableNotifications: requesting permission');
 	const perm = await Notification.requestPermission();
+	console.info('[push] enableNotifications: permission =', perm);
 	if (perm !== 'granted') return { ok: false, reason: perm };
 
 	let sub = await reg.pushManager.getSubscription();
 	if (!sub) {
+		if (!opts.vapidPublicKey || opts.vapidPublicKey.length < 80) {
+			console.error('[push] missing or malformed VAPID public key');
+			return { ok: false, reason: 'missing-vapid-key' };
+		}
 		try {
+			console.info('[push] enableNotifications: subscribing');
 			sub = await reg.pushManager.subscribe({
 				userVisibleOnly: true,
 				applicationServerKey: urlBase64ToUint8Array(opts.vapidPublicKey)
 			});
 		} catch (err) {
+			console.error('[push] subscribe failed:', err);
 			return { ok: false, reason: `subscribe-failed: ${(err as Error).message}` };
 		}
 	}
 
+	console.info('[push] enableNotifications: posting to /api/push/subscribe');
 	const res = await fetch('/api/push/subscribe', {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
@@ -63,7 +90,11 @@ export async function enableNotifications(opts: {
 		})
 	});
 
-	if (!res.ok) return { ok: false, reason: `server-${res.status}` };
+	if (!res.ok) {
+		console.error('[push] subscribe endpoint returned', res.status);
+		return { ok: false, reason: `server-${res.status}` };
+	}
+	console.info('[push] enableNotifications: success');
 	return { ok: true };
 }
 

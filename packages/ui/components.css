@@ -5,10 +5,14 @@
 
 /* ── Screen layout ── */
 .screen {
-	padding: 16px;
+	padding: 4px 16px 16px;
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
+}
+
+.page {
+	padding: 4px 16px 16px;
 }
 
 .fade-in {
@@ -365,36 +369,6 @@
 		opacity: 0.4;
 		transform: scale(0.75);
 	}
-}
-
-/* ── Section label (eyebrow above set-card) ── */
-.section-label {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	padding: 24px 4px 10px;
-	gap: 12px;
-}
-.sl-title {
-	font-family: var(--font-mono);
-	font-size: 10px;
-	letter-spacing: 0.14em;
-	text-transform: uppercase;
-	color: var(--color-text-subtle);
-	white-space: nowrap;
-}
-.sl-title b {
-	color: var(--color-text-primary);
-	font-weight: 600;
-	letter-spacing: 0.04em;
-}
-.sl-right {
-	font-size: 12px;
-	color: var(--color-text-faint);
-	font-family: var(--font-mono);
-	letter-spacing: 0.04em;
-	white-space: nowrap;
-	flex-shrink: 0;
 }
 
 /* ── Status banner (above-content notices) ── */

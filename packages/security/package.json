@@ -13,7 +13,7 @@
 		"type:check": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"@sveltejs/kit": "^2.60.1",
+		"@sveltejs/kit": "catalog:",
 		"@types/node": "catalog:"
 	}
 }

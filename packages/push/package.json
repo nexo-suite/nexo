@@ -19,12 +19,12 @@
 	},
 	"dependencies": {
 		"@nexo/db": "workspace:*",
-		"drizzle-orm": "^0.45.2",
-		"web-push": "^3.6.7"
+		"drizzle-orm": "catalog:",
+		"web-push": "catalog:"
 	},
 	"devDependencies": {
-		"@sveltejs/kit": "^2.60.1",
+		"@sveltejs/kit": "catalog:",
 		"@types/node": "catalog:",
-		"@types/web-push": "^3.6.4"
+		"@types/web-push": "catalog:"
 	}
 }
