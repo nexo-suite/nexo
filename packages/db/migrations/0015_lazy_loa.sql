@@ -1,0 +1,2 @@
+ALTER TABLE "flaschen"."prefs" ADD COLUMN "shift_min_minutes" smallint DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "flaschen"."prefs" ADD COLUMN "advance_notice_minutes" smallint DEFAULT 0 NOT NULL;

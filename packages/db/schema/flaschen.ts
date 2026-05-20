@@ -56,6 +56,7 @@ export const flaschenAccount = flaschenSchema.table('account', {
 	encryptedRefreshToken: text('encrypted_refresh_token').notNull(),
 	encryptedAccessToken: text('encrypted_access_token').notNull(),
 	accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }).notNull(),
+	refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
 	lastLoginAt: timestamp('last_login_at', { withTimezone: true }).notNull().defaultNow(),
 	lastPollAt: timestamp('last_poll_at', { withTimezone: true }),
 	lastPollOk: boolean('last_poll_ok'),
@@ -77,8 +78,13 @@ export const flaschenPrefs = flaschenSchema.table('prefs', {
 		.default(DEFAULT_WEEKLY_WINDOWS),
 	warehouseIds: jsonb('warehouse_ids').$type<number[]>().notNull().default([3]),
 	workgroupIds: jsonb('workgroup_ids').$type<number[]>().notNull().default([1]),
+	shiftMinMinutes: smallint('shift_min_minutes').notNull().default(0),
 	shiftMaxMinutes: smallint('shift_max_minutes').notNull().default(360),
+	advanceNoticeMinutes: smallint('advance_notice_minutes').notNull().default(0),
 	includeMarketplace: boolean('include_marketplace').notNull().default(true),
+	quietHoursEnabled: boolean('quiet_hours_enabled').notNull().default(false),
+	quietStartMinutes: smallint('quiet_start_minutes').notNull().default(1320),
+	quietEndMinutes: smallint('quiet_end_minutes').notNull().default(360),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
@@ -116,6 +122,7 @@ export const flaschenSeenOffer = flaschenSchema.table(
 		matched: boolean('matched').notNull().default(false),
 		borderline: boolean('borderline').notNull().default(false),
 		notified: boolean('notified').notNull().default(false),
+		stillAvailable: boolean('still_available').notNull().default(true),
 		offer: jsonb('offer').$type<ShiftOfferPayload>().notNull()
 	},
 	(t) => [

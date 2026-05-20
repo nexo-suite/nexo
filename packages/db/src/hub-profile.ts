@@ -37,3 +37,12 @@ export async function loadHubProfile(userId: string): Promise<HubProfile> {
 		weekStartDay: prefs?.weekStartDay ?? 'monday'
 	};
 }
+
+export async function loadUserLocale(userId: string): Promise<string | null> {
+	const [prefs] = await db
+		.select({ language: userPreferences.language })
+		.from(userPreferences)
+		.where(eq(userPreferences.userId, userId))
+		.limit(1);
+	return prefs?.language ?? null;
+}
