@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/nexo-suite/nexo/compare/i18n-v0.2.0...i18n-v0.3.0) (2026-05-20)
+
+
+### Features
+
+* **packages:** extract shared UI components and i18n locale cookie ([7258888](https://github.com/nexo-suite/nexo/commit/7258888e1f7f12dcfc43983db9f39e96488672d0))
+
 ## [0.2.0](https://github.com/krieger2501/nexo/compare/i18n-v0.1.0...i18n-v0.2.0) (2026-05-18)
 
 

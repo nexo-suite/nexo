@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/nexo-suite/nexo/compare/admin-v0.4.0...admin-v0.5.0) (2026-05-20)
+
+
+### Features
+
+* **admin:** container health monitoring, push notifications, user avatar menu ([f09ccea](https://github.com/nexo-suite/nexo/commit/f09ccea288c41f71e7bce73d3c09eccb6f7aac3f))
+
 ## [0.4.0](https://github.com/krieger2501/nexo/compare/admin-v0.3.0...admin-v0.4.0) (2026-05-19)
 
 

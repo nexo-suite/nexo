@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/nexo-suite/nexo/compare/landing-v0.4.0...landing-v0.5.0) (2026-05-20)
+
+
+### Features
+
+* **landing:** polish apps directory, sessions sheet, structured healthz ([94aa9b7](https://github.com/nexo-suite/nexo/commit/94aa9b7ad54bc7f9fdca88db880120eaaac5e124))
+
 ## [0.4.0](https://github.com/krieger2501/nexo/compare/landing-v0.3.0...landing-v0.4.0) (2026-05-19)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/nexo-suite/nexo/compare/auth-v0.4.0...auth-v0.5.0) (2026-05-20)
+
+
+### Features
+
+* **auth:** tighten hooks, structured healthz, app.d.ts types ([478c836](https://github.com/nexo-suite/nexo/commit/478c8361acd66446d6cba8afaf99ed05d596eb42))
+
 ## [0.4.0](https://github.com/krieger2501/nexo/compare/auth-v0.3.0...auth-v0.4.0) (2026-05-19)
 
 

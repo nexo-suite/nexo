@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/nexo-suite/nexo/compare/finance-v0.4.0...finance-v0.5.0) (2026-05-20)
+
+
+### Features
+
+* **finance:** adopt shared UI components, add user avatar menu ([d31f505](https://github.com/nexo-suite/nexo/commit/d31f505fc3796f2d47dd016e05c9b2d01c5bd353))
+
 ## [0.4.0](https://github.com/krieger2501/nexo/compare/finance-v0.3.0...finance-v0.4.0) (2026-05-19)
 
 

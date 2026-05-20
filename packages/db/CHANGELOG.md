@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/nexo-suite/nexo/compare/db-v0.3.0...db-v0.4.0) (2026-05-20)
+
+
+### Features
+
+* **db:** admin schema, flaschen.stillAvailable column, graceful shutdown ([935e9f1](https://github.com/nexo-suite/nexo/commit/935e9f100fc2e843a007e8244a8e2e4ee6e6e48e))
+
 ## [0.3.0](https://github.com/krieger2501/nexo/compare/db-v0.2.0...db-v0.3.0) (2026-05-19)
 
 
