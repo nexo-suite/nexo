@@ -43,7 +43,7 @@ packages/
 
 ```bash
 pnpm dev              # all SvelteKit apps (excludes bot)
-pnpm dev:finance      # single app
+pnpm dev --filter=@nexo/finance  # single app
 pnpm qc              # full quality gate: sort, format, sync, knip, lint, type:check, build, test
 pnpm db:generate     # generate migration SQL after schema change
 pnpm db:migrate      # apply migrations

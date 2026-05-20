@@ -5,19 +5,12 @@
 	"type": "module",
 	"scripts": {
 		"build": "turbo build",
-		"build:auth": "turbo build --filter=@nexo/auth",
-		"build:finance": "turbo build --filter=@nexo/finance",
-		"build:landing": "turbo build --filter=@nexo/landing",
 		"clean": "del '{apps,packages}/*/{build,dist,.svelte-kit,.turbo}' 'apps/*/src/lib/paraglide' .turbo",
 		"clean:deps": "del '{apps,packages}/*/node_modules' node_modules",
 		"db:generate": "turbo db:generate --filter=@nexo/db",
 		"db:migrate": "turbo db:migrate --filter=@nexo/db",
 		"db:studio": "turbo db:studio --filter=@nexo/db",
 		"dev": "turbo dev --filter=!@nexo/bot",
-		"dev:auth": "turbo dev --filter=@nexo/auth",
-		"dev:bot": "turbo dev --filter=@nexo/bot",
-		"dev:finance": "turbo dev --filter=@nexo/finance",
-		"dev:landing": "turbo dev --filter=@nexo/landing",
 		"docker:db": "docker compose --profile production up postgres -d",
 		"docker:down": "docker compose --profile production down",
 		"docker:logs": "docker compose logs -f",
@@ -58,7 +51,7 @@
 		"turbo": "^2.9.14",
 		"typescript": "^6.0.3",
 		"typescript-eslint": "^8.59.3",
-		"vite": "^8.0.13"
+		"vite": "catalog:"
 	},
 	"packageManager": "pnpm@11.1.3+sha512.c85357fe17ca12dd23dd7071822666dfd7e3cb76fe214e3370b5ea2fb34f2a231185509b63e717f3cd0acb38dd3f8d82bcd5e8172400ae678b70ea4fbed0896d",
 	"engines": {

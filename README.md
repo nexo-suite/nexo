@@ -49,7 +49,7 @@ A self-hosted personal app suite delivered as individual PWAs. Each app installs
 ## Quick start (local)
 
 ```bash
-git clone https://github.com/krieger2501/nexo
+git clone https://github.com/nexo-suite/nexo
 cd nexo
 pnpm install
 cp .env.example .env      # fill in OAuth credentials + secrets

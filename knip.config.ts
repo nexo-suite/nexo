@@ -19,7 +19,7 @@ const config: KnipConfig = {
 		'apps/admin': {
 			entry: SVELTE_ENTRY,
 			project: SVELTE_PROJECT,
-			ignoreDependencies: ['@nexo/ui', 'tailwindcss']
+			ignoreDependencies: ['tailwindcss']
 		},
 		'apps/finance': {
 			entry: SVELTE_ENTRY,
@@ -32,9 +32,9 @@ const config: KnipConfig = {
 			]
 		},
 		'apps/flaschen': {
-			entry: [...SVELTE_ENTRY, 'src/worker/index.ts', 'src/service-worker.ts'],
+			entry: SVELTE_ENTRY,
 			project: SVELTE_PROJECT,
-			ignoreDependencies: ['tailwindcss', 'web-push', 'workbox-window']
+			ignoreDependencies: ['tailwindcss', 'web-push']
 		},
 		'apps/bot': {
 			project: ['src/**/*.ts']
@@ -49,6 +49,10 @@ const config: KnipConfig = {
 		},
 		'packages/logger': {
 			project: ['src/**/*.ts']
+		},
+		'packages/ui': {
+			project: ['src/**/*.{ts,svelte}'],
+			ignoreUnresolved: [/^\$app\//]
 		}
 	}
 };
