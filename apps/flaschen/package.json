@@ -44,14 +44,14 @@
 		"@types/node": "catalog:",
 		"@types/web-push": "catalog:",
 		"@vite-pwa/sveltekit": "catalog:",
-		"esbuild": "^0.25.0",
+		"esbuild": "^0.27.7",
 		"svelte": "catalog:",
 		"svelte-check": "catalog:",
 		"tailwindcss": "catalog:",
-		"tsx": "^4.20.0",
+		"tsx": "^4.22.3",
 		"vite": "catalog:",
 		"vite-plugin-pwa": "^1.3.0",
 		"workbox-precaching": "catalog:",
-		"workbox-window": "^7.3.0"
+		"workbox-window": "^7.4.1"
 	}
 }
