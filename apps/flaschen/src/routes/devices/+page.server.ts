@@ -1,21 +1,35 @@
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
-import { db, pushSubscription } from '@nexo/db';
+import { db, flaschenAccount, flaschenPrefs, pushSubscription } from '@nexo/db';
 import { and, desc, eq } from 'drizzle-orm';
 import { env as publicEnv } from '$env/dynamic/public';
 import { logger } from '$lib/server/logger';
+import { loadPrefs } from '$lib/server/flaschenpost';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
-	const devices = await db
-		.select()
-		.from(pushSubscription)
-		.where(and(eq(pushSubscription.userId, userId), eq(pushSubscription.app, 'flaschen')))
-		.orderBy(desc(pushSubscription.createdAt));
+
+	const [devices, prefs, accountRow] = await Promise.all([
+		db
+			.select()
+			.from(pushSubscription)
+			.where(and(eq(pushSubscription.userId, userId), eq(pushSubscription.app, 'flaschen')))
+			.orderBy(desc(pushSubscription.createdAt)),
+		loadPrefs(userId),
+		db.select().from(flaschenAccount).where(eq(flaschenAccount.userId, userId)).limit(1)
+	]);
+
+	const account = accountRow[0] ?? null;
 
 	return {
 		devices,
-		vapidPublicKey: publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? ''
+		vapidPublicKey: publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '',
+		watching: prefs.enabled,
+		connection: !account
+			? ('never' as const)
+			: account.needsReconnect
+				? ('reconnect' as const)
+				: ('connected' as const)
 	};
 };
 
@@ -53,6 +67,34 @@ export const actions: Actions = {
 				.where(and(eq(pushSubscription.id, id), eq(pushSubscription.userId, userId)));
 		} catch (e) {
 			logger.error('remove device failed', { userId, error: String(e) });
+			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
+		}
+		return { success: true };
+	},
+
+	pause: async ({ locals }) => {
+		const userId = locals.user!.id;
+		try {
+			await db
+				.update(flaschenPrefs)
+				.set({ enabled: false, updatedAt: new Date() })
+				.where(eq(flaschenPrefs.userId, userId));
+		} catch (e) {
+			logger.error('pause prefs failed', { userId, error: String(e) });
+			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
+		}
+		return { success: true };
+	},
+
+	resume: async ({ locals }) => {
+		const userId = locals.user!.id;
+		try {
+			await db
+				.update(flaschenPrefs)
+				.set({ enabled: true, updatedAt: new Date() })
+				.where(eq(flaschenPrefs.userId, userId));
+		} catch (e) {
+			logger.error('resume prefs failed', { userId, error: String(e) });
 			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
 		return { success: true };

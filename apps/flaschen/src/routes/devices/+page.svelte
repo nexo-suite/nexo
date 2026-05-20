@@ -3,67 +3,114 @@
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { enhance } from '$app/forms';
-	import { BottomSheet } from '@nexo/ui';
+	import { BottomSheet, DeviceListRow, ErrorBanner, PageHeader, SectionLabel } from '@nexo/ui';
+	import { parseUserAgent, deviceIcon } from '@nexo/ui/utils/ua-parser';
+	import { formatRelative, defaultLabelFromUA } from '@nexo/ui/utils/format-relative';
+	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import {
 		enableNotifications,
-		disableNotifications,
 		getPermissionState,
+		getCurrentSubscription,
 		sendTest,
 		isStandalone,
 		type PermissionState
 	} from '@nexo/push/client';
-	import { Bell, BellOff, Send, Trash2, Pencil } from '@lucide/svelte';
+	import {
+		Send,
+		Trash2,
+		Pencil,
+		Pause,
+		Play,
+		BellPlus,
+		ExternalLink,
+		Plug,
+		Smartphone,
+		Share2
+	} from '@lucide/svelte';
 
 	let { data } = $props();
 
 	let permState = $state<PermissionState>('default');
+	let hasSubscription = $state(false);
+	let currentEndpoint = $state<string | null>(null);
 	let standalone = $state(true);
+	let mounted = $state(false);
 	let busy = $state(false);
+	let lastError = $state<string | null>(null);
 	let renamingId = $state<string | null>(null);
 	let renameLabel = $state('');
 	let renameSheetOpen = $state(false);
+	let removeSheetOpen = $state(false);
+	let removingId = $state<string | null>(null);
+	let removingLabel = $state<string>('');
+	let toastMessage = $state<string | null>(null);
+	let toastTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 
 	onMount(async () => {
 		permState = await getPermissionState();
+		const sub = await getCurrentSubscription();
+		hasSubscription = sub !== null;
+		currentEndpoint = sub?.endpoint ?? null;
 		standalone = isStandalone();
+		mounted = true;
 	});
+
+	async function refreshSub() {
+		permState = await getPermissionState();
+		const sub = await getCurrentSubscription();
+		hasSubscription = sub !== null;
+		currentEndpoint = sub?.endpoint ?? null;
+	}
 
 	async function onEnable() {
 		if (busy) return;
 		busy = true;
+		lastError = null;
 		try {
 			const r = await enableNotifications({
 				app: 'flaschen',
 				vapidPublicKey: data.vapidPublicKey,
 				label: defaultDeviceLabel()
 			});
-			permState = await getPermissionState();
-			if (r.ok) await invalidateAll();
+			await refreshSub();
+			if (r.ok) {
+				await invalidateAll();
+				flashToast(m.devices_toast_enabled());
+			} else {
+				lastError = r.reason;
+			}
+		} catch (err) {
+			lastError = err instanceof Error ? err.message : String(err);
 		} finally {
 			busy = false;
 		}
 	}
 
-	async function onDisable() {
-		if (busy) return;
-		busy = true;
-		try {
-			await disableNotifications();
-			permState = await getPermissionState();
-			await invalidateAll();
-		} finally {
-			busy = false;
-		}
+	function startRemove(id: string, label: string) {
+		removingId = id;
+		removingLabel = label;
+		removeSheetOpen = true;
 	}
 
 	async function onTest() {
 		if (busy) return;
 		busy = true;
+		lastError = null;
 		try {
-			await sendTest();
+			const r = await sendTest();
+			if (r.ok) flashToast(m.devices_toast_test_sent());
+			else lastError = 'test send failed';
 		} finally {
 			busy = false;
 		}
+	}
+
+	function flashToast(text: string) {
+		toastMessage = text;
+		if (toastTimer) clearTimeout(toastTimer);
+		toastTimer = setTimeout(() => {
+			toastMessage = null;
+		}, 2800);
 	}
 
 	function startRename(id: string, current: string | null) {
@@ -77,186 +124,269 @@
 		return defaultLabelFromUA(ua);
 	}
 
-	function defaultLabelFromUA(ua: string | null): string {
-		if (!ua) return 'Device';
-		if (/iPhone/i.test(ua)) return 'iPhone';
-		if (/iPad/i.test(ua)) return 'iPad';
-		if (/Android/i.test(ua)) return 'Android';
-		if (/Mac/i.test(ua)) return 'Mac';
-		if (/Windows/i.test(ua)) return 'Windows';
-		return 'Browser';
-	}
-
-	function deviceEmoji(ua: string | null): string {
-		if (!ua) return '📱';
-		if (/iPhone|Android/i.test(ua)) return '📱';
-		if (/iPad/i.test(ua)) return '📲';
-		if (/Mac|Windows|Linux/i.test(ua)) return '💻';
-		return '📱';
-	}
-
 	function focusOnMount(node: HTMLInputElement) {
 		node.focus();
 		node.select();
 	}
 
-	function formatRelative(d: Date | string | null): string {
-		if (!d) return '—';
-		const ms = Date.now() - new Date(d).getTime();
-		const min = Math.round(ms / 60000);
-		if (min < 1) return 'just now';
-		if (min < 60) return `${min} min ago`;
-		const h = Math.round(min / 60);
-		if (h < 24) return `${h} h ago`;
-		return `${Math.round(h / 24)} d ago`;
-	}
+	type HeroState =
+		| 'unsupported'
+		| 'blocked'
+		| 'connect-required'
+		| 'reconnect'
+		| 'off'
+		| 'paused'
+		| 'on';
 
-	const statusInfo = $derived.by(() => {
-		switch (permState) {
-			case 'granted':
+	const heroState = $derived.by((): HeroState => {
+		if (permState === 'unsupported') return 'unsupported';
+		if (permState === 'denied') return 'blocked';
+		if (data.connection === 'never') return 'connect-required';
+		if (data.connection === 'reconnect') return 'reconnect';
+		if (permState !== 'granted' || !hasSubscription) return 'off';
+		if (!data.watching) return 'paused';
+		return 'on';
+	});
+
+	type Tone = 'ok' | 'warn' | 'err' | 'accent';
+	type HeroInfo = {
+		title: string;
+		sub: string;
+		pill: string;
+		tone: Tone;
+	};
+
+	const heroInfo = $derived.by<HeroInfo>(() => {
+		switch (heroState) {
+			case 'on':
 				return {
-					tone: 'ok' as const,
-					icon: 'on' as const,
-					title: 'Notifications on',
-					desc: 'This device will receive push alerts for new shifts.'
+					title: m.devices_state_on_title(),
+					sub: m.devices_state_on_sub(),
+					pill: m.devices_pill_on(),
+					tone: 'ok'
 				};
-			case 'denied':
+			case 'paused':
 				return {
-					tone: 'err' as const,
-					icon: 'off' as const,
-					title: 'Notifications blocked',
-					desc: m.devices_denied()
+					title: m.devices_state_paused_title(),
+					sub: m.devices_state_paused_desc(),
+					pill: m.devices_pill_paused(),
+					tone: 'warn'
+				};
+			case 'off':
+				return {
+					title: m.devices_state_off_title(),
+					sub: m.devices_state_off_desc(),
+					pill: m.devices_pill_off(),
+					tone: 'warn'
+				};
+			case 'blocked':
+				return {
+					title: m.devices_state_blocked_title(),
+					sub: m.devices_denied(),
+					pill: m.devices_pill_blocked(),
+					tone: 'err'
 				};
 			case 'unsupported':
 				return {
-					tone: 'warn' as const,
-					icon: 'off' as const,
-					title: 'Not supported here',
-					desc: m.devices_unsupported()
+					title: m.devices_state_unsupported_title(),
+					sub: m.devices_unsupported(),
+					pill: m.devices_pill_unsupported(),
+					tone: 'warn'
 				};
-			default:
+			case 'connect-required':
 				return {
-					tone: 'idle' as const,
-					icon: 'off' as const,
-					title: 'Notifications off',
-					desc: 'Allow push to get a ping when a matching shift appears.'
+					title: m.devices_state_connect_title(),
+					sub: m.devices_state_connect_desc(),
+					pill: m.devices_pill_setup(),
+					tone: 'accent'
+				};
+			case 'reconnect':
+				return {
+					title: m.devices_state_reconnect_title(),
+					sub: m.devices_state_reconnect_desc(),
+					pill: m.devices_pill_reconnect(),
+					tone: 'err'
 				};
 		}
 	});
+
+	const showA2hsHint = $derived(!standalone && permState !== 'unsupported');
 </script>
 
 <div class="page">
-	<header class="header">
-		<h1 class="title">{m.devices_title()}</h1>
-		<p class="subtitle">{m.devices_subtitle()}</p>
-	</header>
+	<PageHeader title={m.devices_title()}>
+		{#snippet avatar()}<UserAvatarMenu />{/snippet}
+	</PageHeader>
 
-	{#if !standalone && permState !== 'unsupported'}
-		<p class="ios-note">On iPhone, push only works after adding this app to the Home Screen.</p>
+	<!-- Hero -->
+	{#if !mounted}
+		<section class="hero hero-skeleton" aria-busy="true">
+			<div class="hero-head">
+				<span class="hero-eyebrow">{m.devices_eyebrow()}</span>
+				<span class="sk-pill"></span>
+			</div>
+			<div class="orb-wrap"><span class="orb sk-orb"></span></div>
+			<div class="hero-body">
+				<span class="sk-line sk-line-lg"></span>
+				<span class="sk-line"></span>
+				<span class="sk-line sk-line-sm"></span>
+			</div>
+		</section>
+	{:else}
+		<section class="hero" data-hero-state={heroState}>
+			<div class="hero-head">
+				<span class="hero-eyebrow">{m.devices_eyebrow()}</span>
+				<span class="hero-pill" data-tone={heroInfo.tone}>
+					<span class="dot"></span>
+					{heroInfo.pill}
+				</span>
+			</div>
+
+			<div class="orb-wrap" aria-hidden="true">
+				<span class="orb">
+					<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<path
+							d="M9.5 2h5v3l1.2 2.4A4 4 0 0 1 16 9.6V20a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V9.6a4 4 0 0 1 .3-2.2L9.5 5V2Z"
+							stroke="currentColor"
+							stroke-width="1.5"
+							stroke-linejoin="round"
+						/>
+						<path d="M9 12h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+					</svg>
+					<span class="orb-slash"></span>
+				</span>
+			</div>
+
+			<div class="hero-body">
+				<h1 class="hero-title">{heroInfo.title}</h1>
+				<p class="hero-sub">{heroInfo.sub}</p>
+
+				<div class="hero-actions">
+					{#if heroState === 'on'}
+						<form method="POST" action="?/pause" use:enhance>
+							<button type="submit" class="btn secondary" disabled={busy}>
+								<Pause size={14} strokeWidth={1.8} />
+								{m.devices_pause()}
+							</button>
+						</form>
+						<button type="button" class="btn ghost" onclick={onTest} disabled={busy}>
+							<Send size={14} strokeWidth={1.8} />
+							{m.devices_test_push()}
+						</button>
+					{:else if heroState === 'paused'}
+						<form method="POST" action="?/resume" use:enhance>
+							<button type="submit" class="btn primary" disabled={busy}>
+								<Play size={14} strokeWidth={1.8} />
+								{m.devices_resume()}
+							</button>
+						</form>
+						<a class="btn ghost" href="/settings#quiet">
+							{m.devices_adjust_quiet()}
+						</a>
+					{:else if heroState === 'off'}
+						<!-- Empty state below provides the primary CTA; hero stays status-only. -->
+					{:else if heroState === 'blocked'}
+						<a
+							class="btn primary"
+							href="https://support.apple.com/guide/iphone/iph7c3d96bbb/ios"
+							target="_blank"
+							rel="noreferrer"
+						>
+							<ExternalLink size={14} strokeWidth={1.8} />
+							{m.devices_open_browser_settings()}
+						</a>
+					{:else if heroState === 'unsupported'}
+						<button type="button" class="btn primary" disabled>
+							<Smartphone size={14} strokeWidth={1.8} />
+							{m.devices_show_a2hs()}
+						</button>
+					{:else if heroState === 'connect-required' || heroState === 'reconnect'}
+						<a class="btn primary" href="/settings?connect=1">
+							<Plug size={14} strokeWidth={1.8} />
+							{m.devices_connect_flaschenpost()}
+						</a>
+					{/if}
+				</div>
+			</div>
+		</section>
 	{/if}
 
-	<!-- ─── Status hero ─── -->
-	<section
-		class="hero"
-		class:hero-ok={statusInfo.tone === 'ok'}
-		class:hero-warn={statusInfo.tone === 'warn'}
-		class:hero-err={statusInfo.tone === 'err'}
-	>
-		<div class="hero-wash"></div>
-		<div class="hero-icon">
-			{#if statusInfo.icon === 'on'}
-				<Bell size={26} strokeWidth={1.6} />
-			{:else}
-				<BellOff size={26} strokeWidth={1.6} />
-			{/if}
-		</div>
-		<div class="hero-text">
-			<div class="hero-title">{statusInfo.title}</div>
-			<div class="hero-desc">{statusInfo.desc}</div>
-		</div>
+	{#if lastError}
+		<ErrorBanner label="Push error" message={lastError} onDismiss={() => (lastError = null)} />
+	{/if}
 
-		{#if permState === 'default'}
-			<button type="button" class="hero-cta" onclick={onEnable} disabled={busy}> Turn on </button>
-		{:else if permState === 'granted'}
-			<div class="hero-actions">
-				<button
-					type="button"
-					class="hero-icon-btn"
-					onclick={onTest}
-					disabled={busy}
-					title={m.devices_test()}
-				>
-					<Send size={16} strokeWidth={1.8} />
-				</button>
-				<button
-					type="button"
-					class="hero-icon-btn"
-					onclick={onDisable}
-					disabled={busy}
-					title="Turn off"
-				>
-					<BellOff size={16} strokeWidth={1.8} />
-				</button>
-			</div>
-		{/if}
-	</section>
+	<!-- Devices section -->
+	<SectionLabel title={m.devices_list_title()} right={String(data.devices.length)} />
 
-	<!-- ─── Devices list ─── -->
-	<div class="section-label">
-		<span class="sl-title"><b>{m.devices_list_title()}</b></span>
-		{#if data.devices.length > 0}
-			<span class="sl-right">{data.devices.length}</span>
-		{/if}
-	</div>
-
-	<div class="set-card">
+	<div class="dev-list">
 		{#if data.devices.length === 0}
-			<div class="empty">
-				<div class="empty-emoji">📵</div>
-				<div class="empty-text">{m.devices_no_devices()}</div>
+			<div class="dev-empty">
+				<div class="glyph"><Smartphone size={22} strokeWidth={1.7} /></div>
+				<h3>{m.devices_empty_title()}</h3>
+				<p>{m.devices_empty_desc()}</p>
+				{#if heroState === 'off'}
+					<button type="button" class="btn primary" onclick={onEnable} disabled={busy}>
+						<BellPlus size={14} strokeWidth={1.8} />
+						{m.devices_add_this_device()}
+					</button>
+				{/if}
 			</div>
 		{:else}
-			{#each data.devices as dev (dev.id)}
-				<div class="set-row device-row" style="cursor: default">
-					<div class="sr-icon">{deviceEmoji(dev.userAgent)}</div>
-					<div class="sr-text">
-						<div class="sr-label">{dev.label ?? defaultLabelFromUA(dev.userAgent)}</div>
-						<div class="sr-desc">
-							Added {formatRelative(dev.createdAt)}{#if dev.lastUsedAt}
-								· last push {formatRelative(dev.lastUsedAt)}{/if}
-						</div>
-					</div>
-					<div class="device-actions">
+			{#each data.devices as device (device.id)}
+				{@const parsed = parseUserAgent(device.userAgent)}
+				{@const isCurrent = currentEndpoint !== null && device.endpoint === currentEndpoint}
+				{@const meta = `Added ${formatRelative(device.createdAt)}${device.lastUsedAt ? ` · last push ${formatRelative(device.lastUsedAt)}` : ''}`}
+				<DeviceListRow
+					icon={deviceIcon(parsed.device, parsed.os)}
+					label={device.label ?? defaultLabelFromUA(device.userAgent)}
+					metaLines={[meta]}
+					{isCurrent}
+					currentLabel={m.devices_this_device()}
+				>
+					{#snippet actions()}
 						<button
 							type="button"
-							class="icon-btn"
-							onclick={() => startRename(dev.id, dev.label)}
+							class="rm"
+							onclick={() => startRename(device.id, device.label)}
 							aria-label={m.devices_rename()}
 						>
 							<Pencil size={14} strokeWidth={1.8} />
 						</button>
-						<form method="POST" action="?/remove" use:enhance>
-							<input type="hidden" name="id" value={dev.id} />
-							<button
-								type="submit"
-								class="icon-btn icon-btn-danger"
-								aria-label={m.devices_remove()}
-							>
-								<Trash2 size={14} strokeWidth={1.8} />
-							</button>
-						</form>
-					</div>
-				</div>
+						<button
+							type="button"
+							class="rm rm-danger"
+							onclick={() =>
+								startRemove(device.id, device.label ?? defaultLabelFromUA(device.userAgent))}
+							aria-label={m.devices_remove()}
+						>
+							<Trash2 size={14} strokeWidth={1.8} />
+						</button>
+					{/snippet}
+				</DeviceListRow>
 			{/each}
 		{/if}
 	</div>
+
+	{#if showA2hsHint}
+		<aside class="a2hs-hint">
+			<div class="ico"><Share2 size={14} strokeWidth={1.7} /></div>
+			<p class="a2hs-text">
+				{m.devices_a2hs_lead()}<b>{m.devices_a2hs_emph()}</b>{m.devices_a2hs_tail()}
+			</p>
+		</aside>
+	{/if}
 </div>
 
-<!-- ─── Rename sheet ─── -->
+<!-- Toast -->
+{#if toastMessage}
+	<div class="toast" role="status">{toastMessage}</div>
+{/if}
+
+<!-- Rename sheet -->
 <BottomSheet
 	bind:open={renameSheetOpen}
 	title={m.devices_rename()}
-	subtitle="Give this device a recognizable name."
+	subtitle={m.devices_rename_sub()}
 >
 	<form
 		method="POST"
@@ -270,7 +400,7 @@
 	>
 		<input type="hidden" name="id" value={renamingId ?? ''} />
 		<label class="field">
-			<span class="field-label">Label</span>
+			<span class="field-label">{m.devices_label()}</span>
 			<input
 				type="text"
 				name="label"
@@ -280,7 +410,7 @@
 				use:focusOnMount
 			/>
 		</label>
-		<div class="sheet-actions sheet-actions-row">
+		<div class="sheet-actions">
 			<button type="button" class="sheet-cancel" onclick={() => (renameSheetOpen = false)}>
 				{m.connect_cancel()}
 			</button>
@@ -289,238 +419,61 @@
 	</form>
 </BottomSheet>
 
+<!-- Remove confirmation sheet -->
+<BottomSheet
+	bind:open={removeSheetOpen}
+	title={m.devices_remove_confirm_title()}
+	subtitle={m.devices_remove_confirm_desc({ label: removingLabel })}
+>
+	<form
+		method="POST"
+		action="?/remove"
+		use:enhance={() =>
+			async ({ update }) => {
+				await update({ reset: false });
+				removeSheetOpen = false;
+				removingId = null;
+			}}
+	>
+		<input type="hidden" name="id" value={removingId ?? ''} />
+		<div class="sheet-actions">
+			<button type="button" class="sheet-cancel" onclick={() => (removeSheetOpen = false)}>
+				{m.connect_cancel()}
+			</button>
+			<button type="submit" class="sheet-done sheet-done-danger">
+				{m.devices_remove_confirm_cta()}
+			</button>
+		</div>
+	</form>
+</BottomSheet>
+
 <style>
 	.page {
-		padding: 4px 0 16px;
-	}
-
-	.header {
-		padding: 4px 2px 16px;
-	}
-	.title {
-		font-size: 26px;
-		font-weight: 600;
-		letter-spacing: -0.025em;
-		margin: 0;
-	}
-	.subtitle {
-		font-size: 13px;
-		color: var(--color-text-subtle);
-		margin: 4px 0 0;
-	}
-
-	.ios-note {
-		margin: -8px 4px 14px;
-		padding: 0;
-		font-size: 12px;
-		color: var(--color-text-faint);
-		line-height: 1.5;
-	}
-
-	/* ─── Hero ─── */
-	.hero {
-		position: relative;
-		overflow: hidden;
 		display: flex;
-		align-items: center;
+		flex-direction: column;
 		gap: 14px;
-		padding: 18px;
-		border-radius: var(--radius-2xl, 22px);
-		background: var(--color-surface-1);
-		border: 1px solid var(--color-border-default);
-	}
-	.hero-wash {
-		pointer-events: none;
-		position: absolute;
-		inset: -40% -10% auto auto;
-		width: 70%;
-		height: 70%;
-		background: radial-gradient(
-			circle at 70% 30%,
-			color-mix(in oklab, var(--color-text-faint) 18%, transparent) 0%,
-			transparent 70%
-		);
-		opacity: 0.7;
-	}
-	.hero-ok .hero-wash {
-		background: radial-gradient(
-			circle at 70% 30%,
-			color-mix(in oklab, var(--ok) 26%, transparent) 0%,
-			transparent 70%
-		);
-	}
-	.hero-warn .hero-wash {
-		background: radial-gradient(
-			circle at 70% 30%,
-			color-mix(in oklab, var(--warn) 22%, transparent) 0%,
-			transparent 70%
-		);
-	}
-	.hero-err .hero-wash {
-		background: radial-gradient(
-			circle at 70% 30%,
-			color-mix(in oklab, var(--err) 24%, transparent) 0%,
-			transparent 70%
-		);
 	}
 
-	.hero-icon {
-		position: relative;
-		display: grid;
-		place-items: center;
-		width: 52px;
-		height: 52px;
-		border-radius: 999px;
-		background: var(--color-bg-2);
-		color: var(--color-text-subtle);
-		flex-shrink: 0;
-	}
-	.hero-ok .hero-icon {
-		background: color-mix(in oklab, var(--ok) 18%, var(--color-surface-1));
-		color: var(--ok);
-	}
-	.hero-warn .hero-icon {
-		background: color-mix(in oklab, var(--warn) 18%, var(--color-surface-1));
-		color: var(--warn);
-	}
-	.hero-err .hero-icon {
-		background: color-mix(in oklab, var(--err) 18%, var(--color-surface-1));
-		color: var(--err);
-	}
-
-	.hero-text {
-		position: relative;
-		flex: 1;
-		min-width: 0;
-	}
-	.hero-title {
-		font-size: 16px;
-		font-weight: 600;
-		letter-spacing: -0.01em;
-	}
-	.hero-desc {
-		font-size: 12.5px;
-		color: var(--color-text-subtle);
-		margin-top: 3px;
-		line-height: 1.4;
-	}
-
-	.hero-cta {
-		position: relative;
-		padding: 10px 16px;
+	/* Toast */
+	.toast {
+		position: fixed;
+		left: 50%;
+		bottom: calc(env(safe-area-inset-bottom, 0) + 80px);
+		transform: translateX(-50%);
+		max-width: calc(100vw - 32px);
+		padding: 10px 14px;
 		font-size: 13px;
-		font-weight: 600;
+		font-weight: 500;
+		color: var(--text-primary);
+		background: var(--surface-1);
+		border: 1px solid var(--border-strong);
 		border-radius: 999px;
-		background: var(--color-accent);
-		color: #fff;
-		border: none;
-		cursor: pointer;
-		flex-shrink: 0;
-		transition: opacity 150ms ease;
-	}
-	.hero-cta:disabled {
-		opacity: 0.5;
-		cursor: progress;
-	}
-
-	.hero-actions {
-		position: relative;
-		display: flex;
-		gap: 6px;
-		flex-shrink: 0;
-	}
-	.hero-icon-btn {
-		display: grid;
-		place-items: center;
-		width: 36px;
-		height: 36px;
-		border-radius: 999px;
-		background: var(--color-surface-1);
-		border: 1px solid var(--color-border-default);
-		color: var(--color-text-muted);
-		cursor: pointer;
-		transition: background 120ms ease;
-	}
-	.hero-icon-btn:active:not(:disabled) {
-		background: var(--color-bg-1);
-	}
-	.hero-icon-btn:disabled {
-		opacity: 0.5;
-		cursor: progress;
-	}
-
-	/* ─── Section labels ─── */
-	.section-label {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		padding: 22px 4px 8px;
-		gap: 12px;
-	}
-	.sl-title {
-		font-family: var(--font-mono);
-		font-size: 10px;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--color-text-faint);
-	}
-	.sl-title b {
-		color: var(--color-text-subtle);
-		font-weight: 600;
-		letter-spacing: 0.04em;
-	}
-	.sl-right {
-		font-family: var(--font-mono);
-		font-size: 11px;
-		letter-spacing: 0.06em;
-		color: var(--color-text-faint);
-	}
-
-	/* ─── Empty ─── */
-	.empty {
-		padding: 32px 20px;
+		box-shadow: 0 12px 30px -12px rgb(0 0 0 / 0.25);
+		z-index: 50;
 		text-align: center;
 	}
-	.empty-emoji {
-		font-size: 28px;
-		margin-bottom: 8px;
-		opacity: 0.7;
-	}
-	.empty-text {
-		font-size: 13px;
-		color: var(--color-text-subtle);
-	}
 
-	/* ─── Device row ─── */
-	.device-row {
-		gap: 10px;
-	}
-	.device-actions {
-		display: flex;
-		gap: 6px;
-		flex-shrink: 0;
-	}
-	.icon-btn {
-		width: 32px;
-		height: 32px;
-		display: grid;
-		place-items: center;
-		background: var(--color-bg-1);
-		border: 1px solid var(--color-border-default);
-		border-radius: 999px;
-		color: var(--color-text-muted);
-		cursor: pointer;
-		transition: all 120ms ease;
-	}
-	.icon-btn:active {
-		background: var(--color-bg-2);
-	}
-	.icon-btn-danger:hover {
-		color: var(--err);
-		border-color: var(--err);
-	}
-
-	/* ─── Sheet form ─── */
+	/* Sheet form */
 	.field {
 		display: block;
 		margin-bottom: 14px;
@@ -529,23 +482,21 @@
 		display: block;
 		font-size: 12px;
 		font-weight: 600;
-		color: var(--color-text-subtle);
+		color: var(--text-subtle);
 		margin-bottom: 6px;
 	}
 	.field input {
 		width: 100%;
 		padding: 12px;
 		font-size: 14px;
-		border: 1px solid var(--color-border-default);
-		border-radius: var(--radius-md, 12px);
-		background: var(--color-surface-1);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-md);
+		background: var(--surface-1);
 	}
 	.sheet-actions {
-		padding: 14px 0 4px;
-	}
-	.sheet-actions-row {
 		display: flex;
 		gap: 8px;
+		padding: 14px 0 4px;
 	}
 	.sheet-done {
 		flex: 1;
@@ -553,11 +504,14 @@
 		font: inherit;
 		font-size: 15px;
 		font-weight: 600;
-		border-radius: var(--radius-md, 12px);
+		border-radius: var(--radius-md);
 		border: none;
-		background: var(--color-accent);
+		background: var(--accent);
 		color: #fff;
 		cursor: pointer;
+	}
+	.sheet-done-danger {
+		background: var(--err);
 	}
 	.sheet-cancel {
 		flex: 1;
@@ -565,10 +519,72 @@
 		font: inherit;
 		font-size: 15px;
 		font-weight: 600;
-		border-radius: var(--radius-md, 12px);
-		border: 1px solid var(--color-border-default);
-		background: var(--color-bg-1);
-		color: var(--color-text);
+		border-radius: var(--radius-md);
+		border: 1px solid var(--border-default);
+		background: var(--bg-1);
+		color: var(--text-primary);
 		cursor: pointer;
+	}
+
+	/* Device row action buttons (inside DeviceListRow's actions snippet) */
+	.rm {
+		appearance: none;
+		border: 0;
+		background: transparent;
+		color: var(--text-faint);
+		cursor: pointer;
+		width: 26px;
+		height: 26px;
+		border-radius: 6px;
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+	}
+	.rm:hover {
+		color: var(--err-ink);
+		background: var(--err-soft);
+	}
+	.rm-danger:hover {
+		color: var(--err-ink);
+		background: var(--err-soft);
+	}
+
+	/* Hero skeleton (shown until onMount has read browser push state) */
+	.hero-skeleton .sk-pill {
+		display: inline-block;
+		width: 56px;
+		height: 18px;
+		border-radius: 999px;
+		background: var(--bg-2);
+	}
+	.hero-skeleton .sk-orb {
+		opacity: 0.45;
+	}
+	.hero-skeleton .sk-line {
+		display: block;
+		height: 12px;
+		border-radius: 6px;
+		background: var(--bg-2);
+		margin: 8px auto;
+		width: 70%;
+	}
+	.hero-skeleton .sk-line-lg {
+		height: 18px;
+		width: 55%;
+	}
+	.hero-skeleton .sk-line-sm {
+		width: 40%;
+	}
+	.hero-skeleton {
+		animation: sk-pulse 1.6s ease-in-out infinite;
+	}
+	@keyframes sk-pulse {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.55;
+		}
 	}
 </style>
