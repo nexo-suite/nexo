@@ -1,6 +1,8 @@
 <script lang="ts">
 	import BottomSheet from '$lib/components/layout/BottomSheet.svelte';
 	import Toggle from '$lib/components/ui/Toggle.svelte';
+	import { PageHeader } from '@nexo/ui';
+	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { Plus } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
@@ -55,6 +57,9 @@
 			.reduce((s: number, a: Account) => s + a.balance, 0)
 	);
 	const includedCount = $derived(data.accounts.filter((a: Account) => a.includeInTotal).length);
+	const headerSubtitle = $derived(
+		`${data.accounts.length} account${data.accounts.length !== 1 ? 's' : ''} · ${includedCount} included`
+	);
 
 	function getEmoji(account: Account): string {
 		return account.emoji || defaultEmoji[account.type] || '📋';
@@ -100,27 +105,23 @@
 	}
 </script>
 
-<div class="px-5 pt-5 pb-6">
-	<!-- Header -->
-	<div class="flex items-start justify-between">
-		<div>
-			<h1 class="text-text-primary text-[26px] leading-tight font-semibold">Accounts</h1>
-			<p class="text-text-subtle mt-0.5 text-[13px]">
-				{data.accounts.length} account{data.accounts.length !== 1 ? 's' : ''} &middot; {includedCount}
-				included
-			</p>
-		</div>
-		<button
-			type="button"
-			onclick={openNew}
-			class="border-border-default bg-surface-1 flex h-[38px] w-[38px] items-center justify-center rounded-full border"
-		>
-			<Plus size={18} class="text-text-muted" />
-		</button>
-	</div>
+<div class="page">
+	<PageHeader title="Accounts" subtitle={headerSubtitle}>
+		{#snippet actions()}
+			<button
+				type="button"
+				onclick={openNew}
+				aria-label="Add account"
+				class="border-border-default bg-surface-1 text-text-muted active:bg-bg-1 active:text-text-primary grid size-[38px] place-items-center rounded-full border transition-colors"
+			>
+				<Plus size={18} strokeWidth={1.6} />
+			</button>
+		{/snippet}
+		{#snippet avatar()}<UserAvatarMenu />{/snippet}
+	</PageHeader>
 
 	<!-- Totals grid -->
-	<div class="mt-5 grid grid-cols-2 gap-3">
+	<div class="mt-3.5 grid grid-cols-2 gap-3">
 		<!-- Liquid -->
 		<div
 			class="rounded-[var(--radius-lg)] border px-4 py-3"
@@ -148,7 +149,7 @@
 	<!-- Account list -->
 	{#if data.accounts.length > 0}
 		<div
-			class="border-border-default bg-surface-1 mt-5 overflow-hidden rounded-[var(--radius-xl)] border"
+			class="border-border-default bg-surface-1 mt-3.5 overflow-hidden rounded-[var(--radius-xl)] border"
 		>
 			{#each data.accounts as account, i (account.id)}
 				<button
@@ -185,7 +186,7 @@
 		</div>
 	{:else}
 		<div
-			class="border-border-default mt-5 rounded-[var(--radius-xl)] border border-dashed p-8 text-center"
+			class="border-border-default mt-3.5 rounded-[var(--radius-xl)] border border-dashed p-8 text-center"
 		>
 			<p class="text-text-subtle text-sm">No accounts yet. Tap the + button to create one.</p>
 		</div>

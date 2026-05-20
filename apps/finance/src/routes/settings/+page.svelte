@@ -1,11 +1,18 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { beforeNavigate, goto } from '$app/navigation';
 	import { dev } from '$app/environment';
 	import { env } from '$env/dynamic/public';
 	import { getLocale } from '$lib/paraglide/runtime.js';
 	import BottomSheet from '$lib/components/layout/BottomSheet.svelte';
-	import { ProfileHubCard, SaveBar, Toggle } from '@nexo/ui';
+	import {
+		PageHeader,
+		ProfileHubCard,
+		SaveBar,
+		SectionLabel,
+		Toggle,
+		UnsavedGuard
+	} from '@nexo/ui';
+	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 
 	let { data, form: _form } = $props();
 
@@ -108,29 +115,12 @@
 	}
 
 	// ─── Navigation guard ────────────────────────────────────────────────────
-	let unsavedSheetOpen = $state(false);
-	let pendingNavUrl = $state<string | null>(null);
-
-	beforeNavigate(({ cancel, to, type }) => {
-		if (type === 'form') return;
-		if (dirty && !unsavedSheetOpen) {
-			cancel();
-			pendingNavUrl = to?.url.pathname ?? null;
-			unsavedSheetOpen = true;
-		}
-	});
-
-	function discardAndGo() {
-		// Reset to original values so dirty becomes false and beforeNavigate won't block
+	function discardChanges() {
 		selectedCurrency = data.currency ?? 'EUR';
 		selectedDefaultAccount = data.defaultAccountId ?? '';
 		hideCents = data.hideCents ?? false;
 		forecastWindow = data.forecastDays ?? '90';
 		includeDebt = data.includeDebtInForecast ?? true;
-		unsavedSheetOpen = false;
-		if (pendingNavUrl) {
-			goto(pendingNavUrl);
-		}
 	}
 
 	const hubUrl = $derived(
@@ -143,10 +133,12 @@
 </script>
 
 <div class="page">
-	<div class="header">
-		<h1 class="title">Settings</h1>
-		<p class="subtitle">Finance-specific knobs live here. Everything global is in the hub.</p>
-	</div>
+	<PageHeader
+		title="Settings"
+		subtitle="Finance-specific knobs live here. Everything global is in the hub."
+	>
+		{#snippet avatar()}<UserAvatarMenu />{/snippet}
+	</PageHeader>
 
 	<!-- ─── Profile (read-only — managed in hub) ─── -->
 	<ProfileHubCard
@@ -160,10 +152,7 @@
 	/>
 
 	<!-- ─── Finance — app-specific (editable) ─── -->
-	<div class="section-label">
-		<span class="sl-title"><b>Finance</b> · just this app</span>
-		<span class="sl-right">v{__APP_VERSION__}</span>
-	</div>
+	<SectionLabel title="Finance" subtitle="just this app" right={`v${__APP_VERSION__}`} />
 
 	<form
 		id="settings-form"
@@ -527,43 +516,11 @@
 </BottomSheet>
 
 <!-- ─── Unsaved changes confirmation ─── -->
-<BottomSheet
-	bind:open={unsavedSheetOpen}
-	title="Unsaved changes"
-	subtitle="You have settings that haven't been saved yet."
->
-	<div class="unsaved-actions">
-		<button
-			type="submit"
-			form="settings-form"
-			class="unsaved-btn save"
-			onclick={() => (unsavedSheetOpen = false)}>Save & stay</button
-		>
-		<button type="button" class="unsaved-btn discard" onclick={discardAndGo}>Discard & leave</button
-		>
-	</div>
-</BottomSheet>
+<UnsavedGuard {dirty} formId="settings-form" onDiscard={discardChanges} />
 
 <style>
 	.page {
 		padding: 4px 16px 16px;
-	}
-
-	.header {
-		padding: 4px 2px 16px;
-	}
-
-	.title {
-		font-size: 26px;
-		font-weight: 600;
-		letter-spacing: -0.025em;
-		margin: 0;
-	}
-
-	.subtitle {
-		font-size: 13px;
-		color: var(--color-text-subtle);
-		margin: 4px 0 0;
 	}
 
 	.form {
@@ -689,35 +646,5 @@
 	}
 	.footer-link:hover {
 		text-decoration: underline;
-	}
-
-	/* ─── Unsaved navigation sheet ─── */
-	.unsaved-actions {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-	.unsaved-btn {
-		width: 100%;
-		height: 48px;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		border-radius: var(--radius-md);
-		border: none;
-		cursor: pointer;
-		transition: opacity var(--dur-fast, 150ms) var(--ease-out);
-	}
-	.unsaved-btn:active {
-		opacity: 0.85;
-	}
-	.unsaved-btn.save {
-		background: var(--color-accent);
-		color: #fff;
-	}
-	.unsaved-btn.discard {
-		background: var(--color-bg-1);
-		border: 1px solid var(--color-border-default);
-		color: var(--color-text-muted);
 	}
 </style>

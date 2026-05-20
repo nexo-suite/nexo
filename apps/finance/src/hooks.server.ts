@@ -1,8 +1,9 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { getAuth } from '$lib/server/auth';
-import { initDb, withUser, userAppAccess } from '@nexo/db';
+import { initDb, registerShutdown, withUser, userAppAccess, loadUserLocale } from '@nexo/db';
 import { csrfHandle } from '@nexo/security';
+import { ensureUserLocaleCookie } from '@nexo/i18n';
 import { and, eq } from 'drizzle-orm';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
@@ -12,6 +13,7 @@ import { paraglideMiddleware } from '$lib/paraglide/server.js';
 import { getTextDirection } from '$lib/paraglide/runtime.js';
 
 initDb(env.DATABASE_URL!);
+registerShutdown();
 
 const appHandle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/_app/')) return resolve(event);
@@ -63,14 +65,19 @@ const securityHeaders: Handle = async ({ event, resolve }) => {
 	return response;
 };
 
-const i18nHandle: Handle = ({ event, resolve }) =>
-	paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
+const i18nHandle: Handle = async ({ event, resolve }) => {
+	await ensureUserLocaleCookie(event, {
+		getSession: (request) => getAuth().api.getSession({ headers: request.headers }),
+		loadLocale: loadUserLocale
+	});
+	return paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
 		event.request = localizedRequest;
 		return resolve(event, {
 			transformPageChunk: ({ html }) =>
 				html.replace('%lang%', locale).replace('%dir%', getTextDirection(locale))
 		});
 	});
+};
 
 export const handle = sequence(
 	i18nHandle,

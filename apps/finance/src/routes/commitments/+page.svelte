@@ -1,5 +1,7 @@
 <script lang="ts">
 	import BottomSheet from '$lib/components/layout/BottomSheet.svelte';
+	import { PageHeader } from '@nexo/ui';
+	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { Plus, ChevronRight, ArrowUpRight, ArrowDownLeft } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
 	import { formatCurrency, getIntlLocale } from '$lib/utils';
@@ -104,12 +106,10 @@
 	);
 </script>
 
-<div class="px-4 pt-1">
-	<!-- Header -->
-	<div class="px-1 pt-1 pb-4">
-		<h1 class="text-[26px] font-semibold tracking-tight">Commitments</h1>
-		<div class="text-text-subtle mt-1 text-[13px]">Money earmarked for the future.</div>
-	</div>
+<div class="page">
+	<PageHeader title="Commitments" subtitle="Money earmarked for the future.">
+		{#snippet avatar()}<UserAvatarMenu />{/snippet}
+	</PageHeader>
 
 	<!-- Total committed card -->
 	{#if totalCommitted > 0}

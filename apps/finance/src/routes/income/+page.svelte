@@ -1,6 +1,8 @@
 <script lang="ts">
 	import IncomeForm from '$lib/components/income/IncomeForm.svelte';
 	import Tabs from '$lib/components/ui/Tabs.svelte';
+	import { PageHeader } from '@nexo/ui';
+	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { Plus } from '@lucide/svelte';
 	import { normalizeToMonthly, formatCurrency, getIntlLocale } from '$lib/utils';
 
@@ -188,24 +190,20 @@
 	}
 </script>
 
-<div class="flex flex-col gap-5 px-4 pt-5 pb-8">
-	<!-- Header -->
-	<header class="flex items-start justify-between">
-		<div>
-			<h1 class="text-text-primary text-[26px] leading-tight font-semibold tracking-tight">
-				Income
-			</h1>
-			<p class="text-text-subtle mt-0.5 text-[13px]">Track what comes in, on cadence.</p>
-		</div>
-		<button
-			type="button"
-			onclick={openNew}
-			class="bg-income flex h-[38px] w-[38px] items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-95"
-			aria-label="Add income"
-		>
-			<Plus size={18} strokeWidth={2.5} />
-		</button>
-	</header>
+<div class="page flex flex-col gap-5">
+	<PageHeader title="Income" subtitle="Track what comes in, on cadence.">
+		{#snippet actions()}
+			<button
+				type="button"
+				onclick={openNew}
+				class="bg-income flex h-[38px] w-[38px] items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-95"
+				aria-label="Add income"
+			>
+				<Plus size={18} strokeWidth={2.5} />
+			</button>
+		{/snippet}
+		{#snippet avatar()}<UserAvatarMenu />{/snippet}
+	</PageHeader>
 
 	<!-- Tabs -->
 	<Tabs tabs={incomeTabs} active={activeTab} onchange={switchTab} />

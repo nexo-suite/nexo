@@ -2,6 +2,8 @@
 	import { resolveMonthlyDate, toDateStr } from '$lib/dateUtils';
 	import { formatCurrency, getIntlLocale } from '$lib/utils';
 	import FlowPip from '$lib/components/ui/FlowPip.svelte';
+	import { PageHeader } from '@nexo/ui';
+	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { TrendingUp, TrendingDown, AlertTriangle } from '@lucide/svelte';
 
 	import { SvelteDate } from 'svelte/reactivity';
@@ -189,12 +191,10 @@
 	});
 </script>
 
-<div class="px-4 pt-1">
-	<!-- Header -->
-	<div class="px-1 pt-1 pb-4">
-		<h1 class="text-[26px] font-semibold tracking-tight">Forecast</h1>
-		<div class="text-text-subtle mt-1 text-[13px]">90-day cashflow trajectory.</div>
-	</div>
+<div class="page">
+	<PageHeader title="Forecast" subtitle="90-day cashflow trajectory.">
+		{#snippet avatar()}<UserAvatarMenu />{/snippet}
+	</PageHeader>
 
 	<!-- Top pair -->
 	<div class="mb-3.5 grid grid-cols-2 gap-2.5">

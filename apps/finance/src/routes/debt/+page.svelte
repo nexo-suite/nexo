@@ -1,6 +1,8 @@
 <script lang="ts">
 	import BottomSheet from '$lib/components/layout/BottomSheet.svelte';
 	import Toggle from '$lib/components/ui/Toggle.svelte';
+	import { PageHeader } from '@nexo/ui';
+	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { Plus, Check, ChevronRight } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
 
@@ -88,21 +90,20 @@
 	}
 </script>
 
-<div class="px-4 pt-4 pb-6">
-	<!-- Header -->
-	<div class="mb-5 flex items-start justify-between">
-		<div>
-			<h1 class="text-text-primary text-[26px] leading-tight font-semibold">Debt</h1>
-			<p class="text-text-subtle mt-0.5 text-[13px]">Money in motion between friends.</p>
-		</div>
-		<button
-			type="button"
-			onclick={openNew}
-			class="bg-text-primary text-bg-0 flex h-[38px] w-[38px] items-center justify-center rounded-full"
-		>
-			<Plus size={18} stroke-width={2.5} />
-		</button>
-	</div>
+<div class="page">
+	<PageHeader title="Debt" subtitle="Money in motion between friends.">
+		{#snippet actions()}
+			<button
+				type="button"
+				onclick={openNew}
+				aria-label="Add debt"
+				class="bg-text-primary text-bg-0 flex h-[38px] w-[38px] items-center justify-center rounded-full"
+			>
+				<Plus size={18} stroke-width={2.5} />
+			</button>
+		{/snippet}
+		{#snippet avatar()}<UserAvatarMenu />{/snippet}
+	</PageHeader>
 
 	<!-- Totals grid -->
 	<div class="mb-6 grid grid-cols-2 gap-3">

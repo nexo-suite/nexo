@@ -1,6 +1,8 @@
 <script lang="ts">
 	import ExpenseForm from '$lib/components/expenses/ExpenseForm.svelte';
 	import Tabs from '$lib/components/ui/Tabs.svelte';
+	import { PageHeader } from '@nexo/ui';
+	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { Plus } from '@lucide/svelte';
 	import { normalizeToMonthly, formatCurrency, getIntlLocale } from '$lib/utils';
 
@@ -211,24 +213,20 @@
 	}
 </script>
 
-<div class="flex flex-col gap-5 px-4 pt-5 pb-8">
-	<!-- Header -->
-	<header class="flex items-start justify-between">
-		<div>
-			<h1 class="text-text-primary text-[26px] leading-tight font-semibold tracking-tight">
-				Expenses
-			</h1>
-			<p class="text-text-subtle mt-0.5 text-[13px]">Track what goes out, on cadence.</p>
-		</div>
-		<button
-			type="button"
-			onclick={openNew}
-			class="bg-expense flex h-[38px] w-[38px] items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-95"
-			aria-label="Add expense"
-		>
-			<Plus size={18} strokeWidth={2.5} />
-		</button>
-	</header>
+<div class="page flex flex-col gap-5">
+	<PageHeader title="Expenses" subtitle="Track what goes out, on cadence.">
+		{#snippet actions()}
+			<button
+				type="button"
+				onclick={openNew}
+				class="bg-expense flex h-[38px] w-[38px] items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-95"
+				aria-label="Add expense"
+			>
+				<Plus size={18} strokeWidth={2.5} />
+			</button>
+		{/snippet}
+		{#snippet avatar()}<UserAvatarMenu />{/snippet}
+	</PageHeader>
 
 	<!-- Tabs -->
 	<Tabs tabs={expenseTabs} active={activeTab} onchange={switchTab} />

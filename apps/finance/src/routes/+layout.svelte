@@ -2,9 +2,8 @@
 	import '../app.css';
 	import { page, navigating } from '$app/state';
 	import { userMessage } from '@nexo/errors';
-	import { Toast } from '@nexo/ui';
+	import { Toast, UpdatePrompt } from '@nexo/ui';
 	import BottomNav from '$lib/components/layout/BottomNav.svelte';
-	import UpdatePrompt from '$lib/components/layout/UpdatePrompt.svelte';
 	import KonamiCode from '$lib/components/KonamiCode.svelte';
 
 	let { children } = $props();
@@ -47,7 +46,7 @@
 {#if !isLoginPage}
 	<BottomNav />
 {/if}
-<UpdatePrompt />
+<UpdatePrompt bottomOffset="calc(var(--tab-h) + 18px)" />
 <KonamiCode />
 
 <style>
