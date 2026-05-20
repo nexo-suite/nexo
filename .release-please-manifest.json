@@ -4,11 +4,11 @@
 	"packages/errors": "0.2.0",
 	"packages/logger": "0.2.0",
 	"packages/i18n": "0.3.0",
-	"packages/email": "0.2.0",
+	"packages/email": "0.2.1",
 	"apps/finance": "0.5.0",
 	"apps/auth": "0.5.0",
 	"apps/admin": "0.5.0",
 	"apps/landing": "0.5.0",
 	"apps/bot": "0.2.1",
-	"apps/flaschen": "0.2.0"
+	"apps/flaschen": "0.2.1"
 }

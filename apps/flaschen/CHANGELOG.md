@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.1](https://github.com/nexo-suite/nexo/compare/flaschen-v0.2.0...flaschen-v0.2.1) (2026-05-20)
+
+
+### Bug Fixes
+
+* **flaschen:** bump esbuild to satisfy vite 8 peer range ([dd12de9](https://github.com/nexo-suite/nexo/commit/dd12de95f9f46cb4b75b0be586937ef2f1bd9032))
+
+
+### Reverts
+
+* **flaschen:** "chore(deps): bump esbuild to satisfy vite 8 peer range" ([8c57b2e](https://github.com/nexo-suite/nexo/commit/8c57b2e2bf8d98c2d827e3fd431061f053ea2108))
+
 ## [0.2.0](https://github.com/nexo-suite/nexo/compare/flaschen-v0.1.0...flaschen-v0.2.0) (2026-05-20)
 
 
