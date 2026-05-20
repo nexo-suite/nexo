@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Home, Settings, Bell } from '@lucide/svelte';
+	import { LayoutDashboard, Bell, SlidersHorizontal, Settings } from '@lucide/svelte';
 	import { m } from '$lib/paraglide/messages.js';
 
 	const tabs = $derived([
-		{ href: '/', label: m.nav_home(), icon: Home },
+		{ href: '/', label: m.nav_dashboard(), icon: LayoutDashboard },
+		{ href: '/filters', label: m.nav_filters(), icon: SlidersHorizontal },
 		{ href: '/devices', label: m.nav_devices(), icon: Bell },
 		{ href: '/settings', label: m.nav_settings(), icon: Settings }
 	]);
@@ -14,7 +15,10 @@
 
 <nav class="bottom-nav">
 	{#each tabs as item (item.href)}
-		{@const active = item.href === '/' ? url.pathname === '/' : url.pathname.startsWith(item.href)}
+		{@const active =
+			item.href === '/'
+				? url.pathname === '/'
+				: url.pathname === item.href || url.pathname.startsWith(item.href + '/')}
 		<a href={item.href} class="tab" class:active>
 			{#if active}
 				<span class="indicator"></span>
