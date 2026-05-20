@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Plugin, UserConfig } from 'vite';
 
 const pkg = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf-8'));
+const workspaceRoot = dirname(fileURLToPath(import.meta.url));
 
 function stripNobleSideEffects(): Plugin {
 	return {
@@ -21,5 +23,10 @@ export const sharedConfig: UserConfig = {
 	},
 	define: {
 		__APP_VERSION__: JSON.stringify(pkg.version ?? '0.0.0')
+	},
+	server: {
+		fs: {
+			allow: [workspaceRoot]
+		}
 	}
 };
