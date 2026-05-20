@@ -24,9 +24,11 @@ export function parseOfferStart(isoString: string, tz = 'Europe/Berlin'): Tempor
 	return Temporal.PlainDateTime.from(naive).toZonedDateTime(tz);
 }
 
-/** Returns Berlin-aligned [from, to] UTC ISO strings covering today through
- *  today + days days. Used as the worker's request range so we don't miss
- *  early-morning shifts on the boundary days. */
+/** Returns Berlin-aligned [from, to] ISO strings covering today through
+ *  today + days days. The Flaschenpost API rejects values whose time-of-day
+ *  is anything other than `T00:00:00` (returns 500), so we format as the
+ *  Berlin local *date* with a literal `T00:00:00Z` suffix — the API treats
+ *  the offset as wall-clock and only validates the time component. */
 export function rangeForDays(
 	days: number,
 	now: Date = new Date(),
@@ -34,11 +36,10 @@ export function rangeForDays(
 ): { from: string; to: string } {
 	const today = Temporal.Instant.fromEpochMilliseconds(now.getTime())
 		.toZonedDateTimeISO(tz)
-		.startOfDay();
-	const fromZ = today;
-	const toZ = today.add({ days }).with({ hour: 23, minute: 59, second: 59, millisecond: 999 });
+		.toPlainDate();
+	const end = today.add({ days });
 	return {
-		from: fromZ.toInstant().toString(),
-		to: toZ.toInstant().toString()
+		from: `${today.toString()}T00:00:00Z`,
+		to: `${end.toString()}T00:00:00Z`
 	};
 }

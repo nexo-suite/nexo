@@ -21,22 +21,13 @@ export class OAuthError extends Error {
 			return false;
 		}
 	}
-
-	get isInvalidCredentials(): boolean {
-		if (this.status !== 400 && this.status !== 401) return false;
-		try {
-			const parsed = JSON.parse(this.body) as { error?: string };
-			return parsed.error === 'invalid_grant' || parsed.error === 'invalid_request';
-		} catch {
-			return false;
-		}
-	}
 }
 
 export type ParsedTokens = {
 	accessToken: string;
 	refreshToken: string;
 	expiresAt: Date;
+	refreshExpiresAt: Date | null;
 	employeeId: string | null;
 	scope: string | null;
 };
@@ -83,9 +74,21 @@ function parseTokenResponse(payload: unknown): ParsedTokens {
 		accessToken,
 		refreshToken,
 		expiresAt: new Date(Date.now() + expiresIn * 1000),
+		refreshExpiresAt: extractRefreshExpiry(refreshToken, p),
 		employeeId,
 		scope: typeof p.scope === 'string' ? p.scope : null
 	};
+}
+
+function extractRefreshExpiry(refreshToken: string, payload: Record<string, unknown>): Date | null {
+	const ttl = Number(payload.refresh_expires_in ?? 0);
+	if (ttl > 0) return new Date(Date.now() + ttl * 1000);
+
+	const claims = decodeJwtPayload(refreshToken);
+	if (!claims) return null;
+	const exp = claims.exp;
+	if (typeof exp === 'number' && exp > 0) return new Date(exp * 1000);
+	return null;
 }
 
 async function postForm(body: URLSearchParams): Promise<ParsedTokens> {
@@ -97,18 +100,6 @@ async function postForm(body: URLSearchParams): Promise<ParsedTokens> {
 	const text = await res.text();
 	if (!res.ok) throw new OAuthError(`token endpoint returned ${res.status}`, res.status, text);
 	return parseTokenResponse(JSON.parse(text));
-}
-
-export async function passwordGrant(username: string, password: string): Promise<ParsedTokens> {
-	return postForm(
-		new URLSearchParams({
-			grant_type: 'password',
-			client_id: clientId(),
-			username,
-			password,
-			scope: 'openid profile email offline_access'
-		})
-	);
 }
 
 export async function refreshGrant(refreshToken: string): Promise<ParsedTokens> {

@@ -7,8 +7,8 @@ import {
 	type FlaschenPrefs,
 	type ShiftOfferPayload
 } from '@nexo/db';
-import { eq, sql } from 'drizzle-orm';
-import { dedupeKey, matchesWindow, withinMaxLength } from './match';
+import { and, eq, notInArray, sql } from 'drizzle-orm';
+import { dedupeKey, matchesWindow, withinLengthRange, meetsAdvanceNotice } from './match';
 
 const DEFAULT_PREFS: Omit<FlaschenPrefs, 'userId' | 'updatedAt'> = {
 	enabled: true,
@@ -23,8 +23,13 @@ const DEFAULT_PREFS: Omit<FlaschenPrefs, 'userId' | 'updatedAt'> = {
 	},
 	warehouseIds: [3],
 	workgroupIds: [1],
+	shiftMinMinutes: 0,
 	shiftMaxMinutes: 360,
-	includeMarketplace: true
+	advanceNoticeMinutes: 0,
+	includeMarketplace: true,
+	quietHoursEnabled: false,
+	quietStartMinutes: 1320,
+	quietEndMinutes: 360
 };
 
 export async function loadPrefs(userId: string): Promise<FlaschenPrefs> {
@@ -73,12 +78,28 @@ export async function reconcileOffers(
 	let newOffers = 0;
 	let newMatches = 0;
 
+	const liveKeys = offers.map(dedupeKey);
+	if (liveKeys.length === 0) {
+		await db
+			.update(flaschenSeenOffer)
+			.set({ stillAvailable: false })
+			.where(eq(flaschenSeenOffer.userId, userId));
+	} else {
+		await db
+			.update(flaschenSeenOffer)
+			.set({ stillAvailable: false })
+			.where(
+				and(eq(flaschenSeenOffer.userId, userId), notInArray(flaschenSeenOffer.dedupeKey, liveKeys))
+			);
+	}
+
 	for (const offer of offers) {
 		const key = dedupeKey(offer);
 		const inWindow = matchesWindow(prefs, overrides, offer);
-		const okLength = withinMaxLength(prefs, offer);
-		const isStrictMatch = inWindow && okLength;
-		const isBorderline = inWindow && !okLength;
+		const okLength = withinLengthRange(prefs, offer);
+		const okNotice = meetsAdvanceNotice(prefs, offer);
+		const isStrictMatch = inWindow && okLength && okNotice;
+		const isBorderline = inWindow && !isStrictMatch;
 
 		const result = await db
 			.insert(flaschenSeenOffer)
@@ -88,7 +109,8 @@ export async function reconcileOffers(
 				offer,
 				matched: isStrictMatch,
 				borderline: isBorderline,
-				notified: false
+				notified: false,
+				stillAvailable: true
 			})
 			.onConflictDoUpdate({
 				target: [flaschenSeenOffer.userId, flaschenSeenOffer.dedupeKey],
@@ -96,7 +118,8 @@ export async function reconcileOffers(
 					lastSeenAt: new Date(),
 					offer,
 					matched: isStrictMatch,
-					borderline: isBorderline
+					borderline: isBorderline,
+					stillAvailable: true
 				}
 			})
 			.returning({
