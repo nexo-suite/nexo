@@ -1,0 +1,1 @@
+ALTER TABLE "flaschen"."seen_offer" ADD COLUMN "still_available" boolean DEFAULT true NOT NULL;
