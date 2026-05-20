@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { DeviceListRow } from '@nexo/ui';
 
 	type Session = {
 		id: string;
@@ -29,84 +30,83 @@
 	const sorted = $derived(
 		[...sessions].sort((a, b) => (b.isCurrent ? 1 : 0) - (a.isCurrent ? 1 : 0))
 	);
+
+	function buildMetaLines(s: Session): string[] {
+		const lines: string[] = [];
+		lines.push(`${s.browser} · ${s.os}${s.ip ? ` · ${s.ip}` : ''}`);
+		if (s.isCurrent) {
+			lines.push('Active now');
+		} else if (s.lastActive) {
+			lines.push(
+				`Last active ${new Date(s.lastActive).toLocaleDateString('en', {
+					month: 'short',
+					day: 'numeric'
+				})}`
+			);
+		}
+		return lines;
+	}
 </script>
 
 <p class="sheet-sub">Where you're signed in right now.</p>
 <div class="session-list">
 	{#each sorted as session (session.id)}
-		<div class="session-item" class:current={session.isCurrent}>
-			<div class="session-icon">{session.icon}</div>
-			<div class="session-info">
-				<div class="session-top">
-					{#if renamingSessionId === session.id}
-						<form
-							method="POST"
-							action="?/renameSession"
-							use:enhance={() => {
-								return async ({ update }) => {
-									await update({ reset: false });
-									renamingSessionId = null;
-								};
-							}}
-						>
-							<input type="hidden" name="sessionId" value={session.id} />
-							<input
-								class="session-rename-input"
-								type="text"
-								name="name"
-								bind:value={renameValue}
-								placeholder="Name this session"
-								maxlength="32"
-							/>
-							<button type="submit" class="session-rename-save">Done</button>
-						</form>
-					{:else}
-						<span class="session-name">{session.name ?? session.summary}</span>
-						{#if session.isCurrent}
-							<span class="session-badge">This device</span>
-						{/if}
-					{/if}
-				</div>
-				<div class="session-meta">
-					{session.browser} · {session.os}{session.ip ? ` · ${session.ip}` : ''}
-				</div>
-				<div class="session-meta">
-					{#if session.isCurrent}
-						Active now
-					{:else if session.lastActive}
-						Last active {new Date(session.lastActive).toLocaleDateString('en', {
-							month: 'short',
-							day: 'numeric'
-						})}
-					{/if}
-				</div>
-			</div>
-			<div class="session-actions">
-				<button
-					type="button"
-					class="session-action-btn"
-					onclick={() => {
-						renamingSessionId = session.id;
-						renameValue = session.name ?? '';
-					}}
-					aria-label="Rename">✏️</button
-				>
-				{#if !session.isCurrent}
+		<DeviceListRow
+			icon={session.icon}
+			label={session.name ?? session.summary}
+			metaLines={buildMetaLines(session)}
+			isCurrent={session.isCurrent}
+		>
+			{#snippet actions()}
+				{#if renamingSessionId === session.id}
 					<form
 						method="POST"
-						action="?/revokeSession"
+						action="?/renameSession"
 						use:enhance={() => {
 							return async ({ update }) => {
 								await update({ reset: false });
+								renamingSessionId = null;
 							};
 						}}
 					>
 						<input type="hidden" name="sessionId" value={session.id} />
-						<button type="submit" class="session-action-btn danger" aria-label="Revoke">✕</button>
+						<input
+							class="session-rename-input"
+							type="text"
+							name="name"
+							bind:value={renameValue}
+							placeholder="Name this session"
+							maxlength="32"
+						/>
+						<button type="submit" class="session-rename-save">Done</button>
 					</form>
+				{:else}
+					<button
+						type="button"
+						class="session-action-btn"
+						onclick={() => {
+							renamingSessionId = session.id;
+							renameValue = session.name ?? '';
+						}}
+						aria-label="Rename">✏️</button
+					>
+					{#if !session.isCurrent}
+						<form
+							method="POST"
+							action="?/revokeSession"
+							use:enhance={() => {
+								return async ({ update }) => {
+									await update({ reset: false });
+								};
+							}}
+						>
+							<input type="hidden" name="sessionId" value={session.id} />
+							<button type="submit" class="session-action-btn danger" aria-label="Revoke">✕</button>
+						</form>
+					{/if}
 				{/if}
-			</div>
-		</div>
+			{/snippet}
+		</DeviceListRow>
 	{/each}
 </div>
 {#if sessions.length > 1}
@@ -134,65 +134,6 @@
 	.session-list {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
-	}
-	.session-item {
-		display: flex;
-		align-items: flex-start;
-		gap: 12px;
-		padding: 12px 0;
-		border-bottom: 1px solid var(--color-border-subtle, #f0f0f0);
-	}
-	.session-item:last-child {
-		border-bottom: none;
-	}
-	.session-item.current {
-		background: color-mix(in oklab, var(--color-accent, #16a34a) 5%, transparent);
-		border-radius: var(--radius-md, 12px);
-		padding: 12px;
-		margin: 0 -4px;
-	}
-	.session-icon {
-		font-size: 22px;
-		flex-shrink: 0;
-		width: 32px;
-		text-align: center;
-		padding-top: 2px;
-	}
-	.session-info {
-		flex: 1;
-		min-width: 0;
-	}
-	.session-top {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		flex-wrap: wrap;
-	}
-	.session-top form {
-		display: flex;
-		gap: 6px;
-		flex: 1;
-	}
-	.session-name {
-		font-size: 14px;
-		font-weight: 500;
-		color: var(--color-text-primary, #18181b);
-	}
-	.session-badge {
-		font-size: 10px;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		padding: 2px 6px;
-		border-radius: 999px;
-		background: color-mix(in oklab, var(--color-accent, #16a34a) 15%, transparent);
-		color: color-mix(in oklab, var(--color-accent, #16a34a) 80%, #000);
-	}
-	.session-meta {
-		font-size: 12px;
-		color: var(--color-text-muted, #a1a1aa);
-		margin-top: 2px;
 	}
 	.session-rename-input {
 		flex: 1;
@@ -217,12 +158,6 @@
 		background: var(--color-accent, #16a34a);
 		color: #fff;
 		cursor: pointer;
-	}
-	.session-actions {
-		display: flex;
-		gap: 4px;
-		flex-shrink: 0;
-		padding-top: 2px;
 	}
 	.session-action-btn {
 		width: 28px;

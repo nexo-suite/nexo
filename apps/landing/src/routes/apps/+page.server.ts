@@ -193,6 +193,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		allowedApps,
 		displayName: profile.displayName ?? '',
 		weekStartDay: profile.weekStartDay,
+		language: profile.language,
+		theme: profile.theme,
 		financeGlance,
 		flaschenGlance,
 		sessions: sessionList
@@ -207,15 +209,19 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const displayName = (form.get('displayName') as string)?.trim() || null;
 		const weekStartDay = (form.get('weekStartDay') as string)?.trim() || 'monday';
+		const languageRaw = (form.get('language') as string)?.trim() || 'auto';
+		const language = ['en', 'de', 'tr', 'auto'].includes(languageRaw) ? languageRaw : 'auto';
+		const themeRaw = (form.get('theme') as string)?.trim() || 'system';
+		const theme = ['light', 'dark', 'system'].includes(themeRaw) ? themeRaw : 'system';
 
 		try {
 			await withUser(userId, (tx) =>
 				tx
 					.insert(userPreferences)
-					.values({ userId, displayName, weekStartDay })
+					.values({ userId, displayName, weekStartDay, language, theme })
 					.onConflictDoUpdate({
 						target: userPreferences.userId,
-						set: { displayName, weekStartDay, updatedAt: new Date() }
+						set: { displayName, weekStartDay, language, theme, updatedAt: new Date() }
 					})
 			);
 		} catch {

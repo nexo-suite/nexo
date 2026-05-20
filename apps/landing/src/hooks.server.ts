@@ -1,5 +1,6 @@
-import { initDb } from '@nexo/db';
+import { initDb, registerShutdown, loadUserLocale } from '@nexo/db';
 import { csrfHandle } from '@nexo/security';
+import { ensureUserLocaleCookie } from '@nexo/i18n';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { getAuth } from '$lib/server/auth';
@@ -9,15 +10,21 @@ import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
 
 initDb(env.DATABASE_URL!);
+registerShutdown();
 
-const i18nHandle: Handle = ({ event, resolve }) =>
-	paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
+const i18nHandle: Handle = async ({ event, resolve }) => {
+	await ensureUserLocaleCookie(event, {
+		getSession: (request) => getAuth().api.getSession({ headers: request.headers }),
+		loadLocale: loadUserLocale
+	});
+	return paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
 		event.request = localizedRequest;
 		return resolve(event, {
 			transformPageChunk: ({ html }) =>
 				html.replace('%lang%', locale).replace('%dir%', getTextDirection(locale))
 		});
 	});
+};
 
 const appHandle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname === '/healthz') return resolve(event);

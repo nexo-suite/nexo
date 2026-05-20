@@ -40,7 +40,12 @@
 		{ value: 'saturday', label: 'Saturday', desc: 'Middle East', icon: '🌙' }
 	];
 
-	const initialLocale = getLocale();
+	// svelte-ignore state_referenced_locally
+	const dbLocale =
+		data.language && data.language !== 'auto'
+			? (locales.find((l) => l === data.language) ?? null)
+			: null;
+	const initialLocale = dbLocale ?? getLocale();
 	let selectedLocale = $state(initialLocale);
 	// svelte-ignore state_referenced_locally
 	let displayName = $state(data.displayName ?? '');
@@ -516,6 +521,8 @@
 		<!-- Hidden form inputs for save action -->
 		<input type="hidden" name="displayName" value={displayName} />
 		<input type="hidden" name="weekStartDay" value={weekStartDay} />
+		<input type="hidden" name="language" value={selectedLocale} />
+		<input type="hidden" name="theme" value={data.theme ?? 'system'} />
 	</form>
 
 	<SaveBar visible={dirty} formId="settings-form" />
