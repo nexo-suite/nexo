@@ -74,7 +74,11 @@ export const actions: Actions = {
 			return fail(500, { error: 'SAVE_FAILED', correlationId: locals.correlationId });
 		}
 		sendInviteEmail({ apiKey: RESEND_KEY(), to: email, landingUrl: LANDING_URL() }).catch((e) =>
-			console.error('invite email failed:', e)
+			logger.error('invite email failed', {
+				email,
+				error: String(e),
+				correlationId: locals.correlationId
+			})
 		);
 		return { addSuccess: true };
 	},
@@ -156,7 +160,14 @@ export const actions: Actions = {
 					name: user.name ?? user.email,
 					apps: grantedAppInfos,
 					landingUrl: LANDING_URL()
-				}).catch((e) => console.error('access email failed:', e));
+				}).catch((e) =>
+					logger.error('access email failed', {
+						userId,
+						apps: toGrant,
+						error: String(e),
+						correlationId: locals.correlationId
+					})
+				);
 			}
 		}
 

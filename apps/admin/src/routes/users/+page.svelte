@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
+	import { PageHeader } from '@nexo/ui';
+	import { UserPlus } from '@lucide/svelte';
+	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import UserListView from './UserListView.svelte';
 	import UserDetailView from './UserDetailView.svelte';
 	import InviteView from './InviteView.svelte';
@@ -60,13 +63,24 @@
 </script>
 
 {#if view === 'list'}
+	<div class="page" style="padding-bottom: 0;">
+		<PageHeader title="Users" subtitle="{counts.active} active · {counts.invited} invited">
+			{#snippet actions()}
+				<button class="hdr-action" type="button" aria-label="Invite user" onclick={openInvite}>
+					<UserPlus size={18} strokeWidth={1.7} />
+				</button>
+			{/snippet}
+			{#snippet avatar()}
+				<UserAvatarMenu />
+			{/snippet}
+		</PageHeader>
+	</div>
 	<UserListView
 		entries={filteredEntries}
 		{counts}
 		bind:searchQuery
 		bind:filterStatus
 		onopendetail={openDetail}
-		onopeninvite={openInvite}
 	/>
 {:else if view === 'detail' && selectedEntry}
 	<UserDetailView
@@ -78,3 +92,18 @@
 {:else if view === 'invite'}
 	<InviteView bind:inviteEmail bind:inviteSent {form} onclose={closeDetail} />
 {/if}
+
+<style>
+	.hdr-action {
+		flex-shrink: 0;
+		width: 36px;
+		height: 36px;
+		border-radius: 999px;
+		display: grid;
+		place-items: center;
+		background: var(--color-surface-1);
+		border: 1px solid var(--color-border-default);
+		color: var(--color-text-subtle);
+		cursor: pointer;
+	}
+</style>

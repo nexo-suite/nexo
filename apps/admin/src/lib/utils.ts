@@ -1,6 +1,8 @@
-export function fmtRelative(iso: string | null): string {
-	if (!iso || iso.startsWith('0001')) return '—';
-	const diff = Date.now() - new Date(iso).getTime();
+export function fmtRelative(iso: string | number | null): string {
+	if (iso == null) return '—';
+	if (typeof iso === 'string' && (!iso || iso.startsWith('0001'))) return '—';
+	const t = typeof iso === 'number' ? iso : new Date(iso).getTime();
+	const diff = Date.now() - t;
 	const s = Math.floor(diff / 1000);
 	if (s < 60) return `${s}s ago`;
 	const m = Math.floor(s / 60);

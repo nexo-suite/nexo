@@ -1,8 +1,17 @@
 import { db, users, accounts, expenses, income, debts } from '@nexo/db';
 import { count, gte, and } from 'drizzle-orm';
-import { dockerGet } from '$lib/server/docker';
-import type { ContainerInfo } from '$lib/server/docker';
-import type { PageServerLoad } from './$types';
+import { dockerGet, dockerAction } from '$lib/server/docker';
+import type { ContainerInfo, ContainerInspect } from '$lib/server/docker';
+import { ctnComposeProfile, ctnName } from '$lib/utils/containers';
+import { requireOwner } from '$lib/server/auth';
+import { logger } from '$lib/server/logger';
+import { fail } from '@sveltejs/kit';
+import type { PageServerLoad, Actions } from './$types';
+
+export interface EnrichedContainer extends ContainerInfo {
+	RestartCount: number;
+	Profile: 'production' | 'preview' | 'unknown';
+}
 
 function startOf(unit: 'day' | 'week' | 'month'): Date {
 	const now = new Date();
@@ -23,7 +32,7 @@ export const load: PageServerLoad = async () => {
 	const monthStart = startOf('month');
 
 	const [
-		containers,
+		rawContainers,
 		totalUsers,
 		totalAccounts,
 		totalExpenses,
@@ -76,6 +85,19 @@ export const load: PageServerLoad = async () => {
 			.where(and(gte(income.createdAt, monthStart)))
 	]);
 
+	const containers: EnrichedContainer[] = await Promise.all(
+		rawContainers.map(async (c) => {
+			const inspect = await dockerGet<ContainerInspect>(`/containers/${c.Id}/json`).catch(
+				() => null
+			);
+			return {
+				...c,
+				RestartCount: inspect?.RestartCount ?? 0,
+				Profile: ctnComposeProfile(c)
+			};
+		})
+	);
+
 	return {
 		containers,
 		dbStats: {
@@ -105,4 +127,50 @@ export const load: PageServerLoad = async () => {
 			}
 		}
 	};
+};
+
+export const actions: Actions = {
+	restartProfile: async ({ request, locals }) => {
+		requireOwner(locals);
+		const data = await request.formData();
+		const profile = String(data.get('profile') ?? '');
+		if (profile !== 'production' && profile !== 'preview') {
+			return fail(400, {
+				error: 'BAD_PROFILE' as const,
+				failed: [] as string[],
+				correlationId: locals.correlationId
+			});
+		}
+
+		const list = await dockerGet<ContainerInfo[]>(
+			`/containers/json?filters=${encodeURIComponent(JSON.stringify({ network: [`nexo-${profile}`] }))}`
+		).catch(() => [] as ContainerInfo[]);
+
+		logger.info('restartProfile', {
+			profile,
+			count: list.length,
+			correlationId: locals.correlationId
+		});
+
+		const results = await Promise.allSettled(
+			list.map((c) => dockerAction(`/containers/${c.Id}/restart?t=10`))
+		);
+		const failed = results
+			.map((r, i) => ({ r, name: ctnName(list[i]!) }))
+			.filter(({ r }) => r.status === 'rejected')
+			.map(({ name }) => name);
+
+		if (failed.length > 0) {
+			logger.error('restartProfile partial failure', {
+				failed,
+				correlationId: locals.correlationId
+			});
+			return fail(500, {
+				error: 'RESTART_PARTIAL' as const,
+				failed,
+				correlationId: locals.correlationId
+			});
+		}
+		return { success: true as const, restarted: list.length };
+	}
 };
