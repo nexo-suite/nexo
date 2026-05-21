@@ -23,7 +23,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 FROM fetch AS build
 COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install -r --offline --frozen-lockfile
+    pnpm install -r --prefer-offline --frozen-lockfile
 
 ARG GIT_COMMIT=dev
 ENV GIT_COMMIT=$GIT_COMMIT

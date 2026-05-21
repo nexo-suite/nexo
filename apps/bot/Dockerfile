@@ -20,7 +20,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 FROM fetch AS build
 COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install -r --offline --frozen-lockfile
+    pnpm install -r --prefer-offline --frozen-lockfile
 
 RUN pnpm turbo run build --filter=@nexo/bot
 
@@ -31,11 +31,12 @@ RUN addgroup -S app && adduser -S app -G app
 
 # Production-only install: still needs the lockfile + manifests, which the
 # fetch stage already brought in. Add the bot + logger manifests, then
-# offline-install only their prod deps.
+# install only their prod deps (offline-first, falls back to network if a
+# tarball is missing from the BuildKit cache mount).
 COPY apps/bot/package.json ./apps/bot/
 COPY packages/logger/package.json ./packages/logger/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install -r --offline --frozen-lockfile --prod \
+    pnpm install -r --prefer-offline --frozen-lockfile --prod \
       --filter=@nexo/bot --filter=@nexo/logger
 
 # Workspace package compiled output — Node resolves @nexo/logger via the
