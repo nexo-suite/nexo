@@ -8,17 +8,12 @@ body:
       value: |
         Thanks for taking the time to report this. The more detail you can give, the faster it gets fixed.
 
-  - type: dropdown
+  - type: input
     id: app
     attributes:
       label: Which app?
-      options:
-        - finance
-        - admin
-        - auth
-        - landing
-        - flaschen
-        - other / not sure
+      description: One of finance, admin, auth, landing, flaschen — or "other" if unsure.
+      placeholder: finance
     validations:
       required: true
 
@@ -58,17 +53,12 @@ body:
     validations:
       required: false
 
-  - type: dropdown
+  - type: input
     id: device
     attributes:
       label: Device / browser
-      options:
-        - iPhone (PWA installed)
-        - iPhone (Safari)
-        - Android (PWA installed)
-        - Android (Chrome / Firefox)
-        - Desktop (Chrome / Firefox / Safari / Edge)
-        - Other
+      description: Auto-detected from your user-agent — edit if it's wrong.
+      placeholder: e.g. iPhone (Safari), Desktop (Chrome / Firefox / Safari / Edge)
     validations:
       required: true
 

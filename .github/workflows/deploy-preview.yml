@@ -1,5 +1,12 @@
 name: Deploy Preview
 
+# Bot dispatches this with a specific PR number + SHA. The bot owns all
+# user-facing PR comment state via webhooks (registry_package, workflow_run);
+# this workflow only does the SSH deploy. The run-name embeds the PR number
+# so the bot can match the workflow_run.completed webhook back to its state.
+
+run-name: 'Deploy preview · PR #${{ inputs.pr_number }} @ ${{ inputs.sha }}'
+
 on:
   workflow_dispatch:
     inputs:
@@ -9,13 +16,9 @@ on:
       sha:
         description: Commit SHA to deploy
         required: true
-      comment_id:
-        description: Bot comment ID to update
-        required: true
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   deploy:
@@ -32,61 +35,20 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: PR_NUMBER
           script: |
             set -e
             cd /home/deploy/nexo
             git fetch --prune origin
             git checkout ${{ inputs.sha }}
 
+            # Pull prebuilt :pr-<num> images (pushed by CI on this PR).
+            export PREVIEW_TAG="pr-${PR_NUMBER}"
             docker compose --profile preview \
               --env-file .env.preview \
-              up -d --build
-
-      - name: Update bot comment — success
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        if: success()
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.issues.updateComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: ${{ inputs.comment_id }},
-              body: [
-                '### Nexo Preview',
-                '',
-                '**Status:** ✅ Live @ `${{ inputs.sha }}`',
-                '',
-                '| App | URL |',
-                '|---|---|',
-                '| Landing | https://preview.krieger2501.de |',
-                '| Finance | https://finance.preview.krieger2501.de |',
-                '| Auth | https://auth.preview.krieger2501.de |',
-                '| Admin | https://admin.preview.krieger2501.de |',
-                '',
-                '- [ ] Redeploy',
-                '',
-                '<!-- nexo-preview pr:${{ inputs.pr_number }} -->',
-              ].join('\n'),
-            });
-
-      - name: Update bot comment — failure
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        if: failure()
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.issues.updateComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: ${{ inputs.comment_id }},
-              body: [
-                '### Nexo Preview',
-                '',
-                '**Status:** ❌ Deploy failed @ `${{ inputs.sha }}` — [view run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})',
-                '',
-                '- [ ] Retry deploy',
-                '',
-                '<!-- nexo-preview pr:${{ inputs.pr_number }} -->',
-              ].join('\n'),
-            });
+              pull
+            docker compose --profile preview \
+              --env-file .env.preview \
+              up -d
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}

@@ -1,0 +1,43 @@
+name: PR Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  delete-pr-images:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [db, auth, admin, finance, flaschen, landing, bot]
+    steps:
+      - name: Delete :pr-${{ github.event.number }} from ghcr.io/nexo-suite/nexo-${{ matrix.app }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.number }}
+          PKG: nexo-${{ matrix.app }}
+        run: |
+          set -e
+          # Find any package version whose tag list contains pr-<num>, then delete it.
+          # The tag → version mapping is what GHCR exposes; deleting the version
+          # untags it and reclaims the storage.
+          version_ids=$(gh api --paginate \
+            "/orgs/nexo-suite/packages/container/${PKG}/versions?per_page=100" \
+            --jq ".[] | select(.metadata.container.tags | index(\"pr-${PR_NUM}\")) | .id" \
+            || true)
+
+          if [ -z "$version_ids" ]; then
+            echo "No pr-${PR_NUM} image found for ${PKG} — nothing to clean up."
+            exit 0
+          fi
+
+          for id in $version_ids; do
+            echo "Deleting ${PKG} version ${id} (tagged pr-${PR_NUM})"
+            gh api --method DELETE \
+              "/orgs/nexo-suite/packages/container/${PKG}/versions/${id}"
+          done

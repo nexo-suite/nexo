@@ -1,0 +1,54 @@
+name: GHCR Cleanup
+
+on:
+  schedule:
+    # Sundays at 04:30 UTC — off-peak, after the Monday Renovate batch settles.
+    - cron: '30 4 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  prune-main-shas:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [db, auth, admin, finance, flaschen, landing, bot]
+    steps:
+      - name: Prune old :main-<sha> images for nexo-${{ matrix.app }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PKG: nexo-${{ matrix.app }}
+          KEEP: 20
+        run: |
+          set -e
+          # Strategy: list all package versions; identify those whose tags are
+          # ONLY :main-<sha> patterns (i.e. not also tagged :latest, :main, or
+          # any v*); keep the KEEP newest, delete the rest. This preserves
+          # released versions and the rolling :main / :latest pointers while
+          # bounding storage growth from per-commit pushes.
+          all=$(gh api --paginate \
+            "/orgs/nexo-suite/packages/container/${PKG}/versions?per_page=100")
+
+          to_delete=$(echo "$all" | jq -r '
+            map(select(
+              (.metadata.container.tags | length) > 0
+              and (.metadata.container.tags | all(test("^main-[a-f0-9]+$")))
+            ))
+            | sort_by(.created_at) | reverse
+            | .['"$KEEP"':] | .[] | .id
+          ')
+
+          if [ -z "$to_delete" ]; then
+            echo "Nothing to prune for ${PKG}."
+            exit 0
+          fi
+
+          for id in $to_delete; do
+            echo "Deleting ${PKG} version ${id}"
+            gh api --method DELETE \
+              "/orgs/nexo-suite/packages/container/${PKG}/versions/${id}"
+          done
