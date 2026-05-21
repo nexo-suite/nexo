@@ -18,6 +18,7 @@
 
 	let { container, healthz: initialHealthz, history = [], fmtRelative }: Props = $props();
 
+	// svelte-ignore state_referenced_locally
 	let healthz = $state<HealthzResult | null>(initialHealthz ?? null);
 	let lastChecked = $state<number>(Date.now());
 	let busy = $state(false);

@@ -3,11 +3,13 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db, users, sessions, oauthAccounts, verifications } from '@nexo/db';
 
 export interface ConsumerAuthOptions {
-	secret: string;
-	baseURL: string;
+	secret: string | undefined;
+	baseURL: string | undefined;
 }
 
 export function createConsumerAuth({ secret, baseURL }: ConsumerAuthOptions) {
+	if (!secret) throw new Error('BETTER_AUTH_SECRET is required');
+	if (!baseURL) throw new Error('PUBLIC_AUTH_URL is required');
 	return betterAuth({
 		secret,
 		baseURL,
