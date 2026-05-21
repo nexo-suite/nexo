@@ -197,7 +197,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 		theme: profile.theme,
 		financeGlance,
 		flaschenGlance,
-		sessions: sessionList
+		sessions: sessionList,
+		diagnostics: {
+			userId,
+			email: locals.user.email ?? null,
+			correlationId: null as string | null
+		}
 	};
 };
 

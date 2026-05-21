@@ -3,7 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { beforeNavigate } from '$app/navigation';
 	import { getLocale, setLocale, locales } from '$lib/paraglide/runtime.js';
-	import { BottomSheet, SaveBar, Toast } from '@nexo/ui';
+	import { BottomSheet, SaveBar, SectionLabel, Toast, AboutDiagnostics } from '@nexo/ui';
 	import SessionsSheet from '$lib/components/apps/SessionsSheet.svelte';
 	import AppGrid from '$lib/components/apps/AppGrid.svelte';
 	import type { PageData, ActionData } from './$types';
@@ -40,18 +40,28 @@
 		{ value: 'saturday', label: 'Saturday', desc: 'Middle East', icon: '🌙' }
 	];
 
-	// svelte-ignore state_referenced_locally
-	const dbLocale =
-		data.language && data.language !== 'auto'
-			? (locales.find((l) => l === data.language) ?? null)
-			: null;
-	const initialLocale = dbLocale ?? getLocale();
-	let selectedLocale = $state(initialLocale);
+	const initialLocale = $derived.by(() => {
+		const fromDb =
+			data.language && data.language !== 'auto'
+				? (locales.find((l) => l === data.language) ?? null)
+				: null;
+		return fromDb ?? getLocale();
+	});
+	let selectedLocale = $state(
+		(() => {
+			const fromDb =
+				data.language && data.language !== 'auto'
+					? (locales.find((l) => l === data.language) ?? null)
+					: null;
+			return fromDb ?? getLocale();
+		})()
+	);
 	// svelte-ignore state_referenced_locally
 	let displayName = $state(data.displayName ?? '');
 	// svelte-ignore state_referenced_locally
 	let weekStartDay = $state(data.weekStartDay ?? 'monday');
 	let pendingNav = $state<{ proceed: () => void } | null>(null);
+	let saving = $state(false);
 
 	type SheetField =
 		| 'name'
@@ -218,7 +228,7 @@
 	];
 
 	beforeNavigate(({ cancel, to }) => {
-		if (!dirty || !to) return;
+		if (saving || !dirty || !to) return;
 		cancel();
 		pendingNav = {
 			proceed: () => {
@@ -229,7 +239,7 @@
 	});
 
 	$effect(() => {
-		if (!dirty) return;
+		if (saving || !dirty) return;
 		const handler = (e: BeforeUnloadEvent) => {
 			e.preventDefault();
 		};
@@ -300,19 +310,22 @@
 	/>
 
 	<!-- Settings: Profile -->
-	<div class="sec">
-		<span class="sec-title"><b>Profile</b></span>
-		<span class="sec-right">same across all apps</span>
-	</div>
+	<SectionLabel title="Profile" subtitle="same across all apps" />
 
 	<form
 		id="settings-form"
 		method="POST"
 		action="?/save"
 		use:enhance={() => {
+			saving = true;
+			const localeChanged = selectedLocale !== getLocale();
 			return async ({ update }) => {
-				setLocale(selectedLocale);
 				await update({ reset: false });
+				if (localeChanged) {
+					setLocale(selectedLocale);
+				} else {
+					saving = false;
+				}
 			};
 		}}
 	>
@@ -424,10 +437,7 @@
 		</div>
 
 		<!-- Data -->
-		<div class="sec">
-			<span class="sec-title"><b>Data</b></span>
-			<span class="sec-right">your stuff</span>
-		</div>
+		<SectionLabel title="Data" subtitle="your stuff" />
 
 		<div class="set-card">
 			<button type="button" class="set-row stub-row" onclick={() => openSheet('backups')}>
@@ -475,9 +485,7 @@
 		</div>
 
 		<!-- Account -->
-		<div class="sec">
-			<span class="sec-title"><b>Account</b></span>
-		</div>
+		<SectionLabel title="Account" />
 
 		<div class="set-card">
 			<button type="button" class="set-row" onclick={() => openSheet('sessions')}>
@@ -527,9 +535,20 @@
 
 	<SaveBar visible={dirty} formId="settings-form" />
 
+	<!-- About / diagnostics -->
+	<AboutDiagnostics
+		appName="Nexo"
+		appKey="landing"
+		version={__APP_VERSIONS__.landing}
+		commit={__APP_COMMIT__}
+		buildTime={__APP_BUILD_TIME__}
+		email={data.diagnostics.email}
+		userId={data.diagnostics.userId}
+		correlationId={data.diagnostics.correlationId ?? undefined}
+	/>
+
 	<!-- Footer -->
 	<footer class="app-footer">
-		NEXO · v0.4 · <span class="footer-link">privacy</span> · <span class="footer-link">github</span>
 		<span class="wink">made by Kevin, for the people he likes</span>
 	</footer>
 
@@ -888,37 +907,6 @@
 		stroke-width: 1.8;
 	}
 
-	/* ─── Section labels ─── */
-	.sec {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		padding: 28px 4px 12px;
-		gap: 12px;
-	}
-	.sec-title {
-		font-family: var(--font-mono);
-		font-size: 10px;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--color-text-subtle);
-		white-space: nowrap;
-	}
-	.sec-title b,
-	.sec-title :global(b) {
-		color: var(--color-text-primary);
-		font-weight: 600;
-		letter-spacing: 0.04em;
-	}
-	.sec-right {
-		font-size: 12px;
-		color: var(--color-text-faint);
-		font-family: var(--font-mono);
-		letter-spacing: 0.04em;
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
-
 	/* ─── Settings card ─── */
 	.set-card {
 		background: var(--color-surface-1);
@@ -1076,10 +1064,6 @@
 		color: var(--color-text-faint);
 		letter-spacing: 0.06em;
 		line-height: 1.7;
-	}
-	.footer-link {
-		cursor: default;
-		opacity: 0.6;
 	}
 	.wink {
 		display: block;
