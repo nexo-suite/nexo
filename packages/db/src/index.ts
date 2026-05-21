@@ -18,9 +18,9 @@ export { registerShutdown, onShutdown } from './shutdown.js';
 let _client: ReturnType<typeof postgres> | undefined;
 let _db: ReturnType<typeof drizzle> | undefined;
 
-export function initDb(url: string) {
+export function initDb(url: string, opts: { max?: number } = {}) {
 	if (_db) return;
-	_client = postgres(url);
+	_client = postgres(url, { max: opts.max ?? 8 });
 	_db = drizzle(_client, {
 		schema: { ...authSchema, ...financeSchema, ...flaschenSchema, ...pushSchema, ...adminSchema }
 	});

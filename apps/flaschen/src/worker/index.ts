@@ -31,7 +31,7 @@ if (!DATABASE_URL) {
 	logger.error('DATABASE_URL is not set');
 	process.exit(1);
 }
-initDb(DATABASE_URL);
+initDb(DATABASE_URL, { max: 5 });
 
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT;
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
