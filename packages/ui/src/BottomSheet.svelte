@@ -211,8 +211,8 @@
 
 	.sheet-content {
 		overflow-y: auto;
-		padding: 0 20px calc(20px + env(safe-area-inset-bottom, 0px));
-		max-height: 70vh;
+		padding: 0 20px calc(32px + env(safe-area-inset-bottom, 0px));
+		max-height: 85dvh;
 	}
 
 	@keyframes fade-in {

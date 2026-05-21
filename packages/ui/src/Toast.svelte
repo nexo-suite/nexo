@@ -67,8 +67,11 @@
 	}
 
 	.toast-wrapper.success {
-		border-color: var(--color-accent, #16a34a);
-		background: color-mix(in oklab, var(--color-accent, #16a34a) 6%, var(--color-surface-1, #fff));
+		border-color: var(--ok, #16a34a);
+		background: color-mix(in oklab, var(--ok, #16a34a) 6%, var(--color-surface-1, #fff));
+	}
+	.toast-wrapper.success .toast-message {
+		color: var(--ok-ink, #15803d);
 	}
 
 	.toast-body {

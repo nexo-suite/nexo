@@ -46,6 +46,9 @@ textarea {
 	--dur-fast: var(--duration-fast);
 	--dur-base: var(--duration-base);
 	--dur-slow: var(--duration-slow);
+
+	--safe-top: env(safe-area-inset-top, 0px);
+	--safe-bot: env(safe-area-inset-bottom, 0px);
 }
 
 /* ─── Portrait-only on phones ─── */
