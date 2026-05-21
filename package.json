@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "turbo build",
+		"build:packages": "turbo build --filter='./packages/*'",
 		"clean": "del '{apps,packages}/*/{build,dist,.svelte-kit,.turbo}' 'apps/*/src/lib/paraglide' .turbo",
 		"clean:deps": "del '{apps,packages}/*/node_modules' node_modules",
 		"db:generate": "turbo db:generate --filter=@nexo/db",
@@ -26,7 +27,7 @@
 		"package:check": "sort-package-json --check \"{apps,packages}/*/package.json\" package.json",
 		"package:format": "sort-package-json \"{apps,packages}/*/package.json\" package.json",
 		"preview": "turbo preview",
-		"qc": "run-s package:check format:check sync translate knip lint type:check build test",
+		"qc": "run-s package:check format:check sync translate build:packages knip lint type:check build test",
 		"sync": "pnpm --filter './apps/*' --filter '!@nexo/bot' exec svelte-kit sync",
 		"test": "turbo test:unit",
 		"test:e2e": "turbo test:e2e",

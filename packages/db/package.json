@@ -4,15 +4,24 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": {
+			"types": "./dist/src/index.d.ts",
+			"default": "./dist/src/index.js"
+		}
 	},
+	"files": [
+		"dist",
+		"package.json"
+	],
 	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"clean": "rm -rf dist",
 		"db:generate": "dotenv -e ../../.env.local -e ../../.env -- drizzle-kit generate",
 		"db:migrate": "dotenv -e ../../.env.local -e ../../.env -- drizzle-kit migrate",
 		"db:studio": "dotenv -e ../../.env.local -e ../../.env -- drizzle-kit studio",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
-		"qc": "run-s lint type:check",
+		"qc": "run-s lint type:check build",
 		"type:check": "tsc --noEmit"
 	},
 	"dependencies": {

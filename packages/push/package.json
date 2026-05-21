@@ -4,17 +4,41 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts",
-		"./schema": "./src/schema.ts",
-		"./server": "./src/server.ts",
-		"./routes": "./src/routes.ts",
-		"./client": "./src/client.ts",
-		"./sw": "./src/sw.ts"
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./schema": {
+			"types": "./dist/schema.d.ts",
+			"default": "./dist/schema.js"
+		},
+		"./server": {
+			"types": "./dist/server.d.ts",
+			"default": "./dist/server.js"
+		},
+		"./routes": {
+			"types": "./dist/routes.d.ts",
+			"default": "./dist/routes.js"
+		},
+		"./client": {
+			"types": "./dist/client.d.ts",
+			"default": "./dist/client.js"
+		},
+		"./sw": {
+			"types": "./dist/sw.d.ts",
+			"default": "./dist/sw.js"
+		}
 	},
+	"files": [
+		"dist",
+		"package.json"
+	],
 	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"clean": "rm -rf dist",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
-		"qc": "run-s lint type:check",
+		"qc": "run-s lint type:check build",
 		"type:check": "tsc --noEmit"
 	},
 	"dependencies": {
