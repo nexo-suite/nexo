@@ -1,10 +1,11 @@
 import { db, healthCheckRun } from '@nexo/db';
 import { lt } from 'drizzle-orm';
+import { env } from '$env/dynamic/private';
 import { logger } from './logger';
 import { dockerGet, fetchHealthz } from './docker';
 import type { ContainerInfo, ContainerInspect } from './docker';
 
-const TICK_INTERVAL_MS = Number(process.env.ADMIN_HEALTH_TICK_MS ?? 30_000);
+const TICK_INTERVAL_MS = Number(env.ADMIN_HEALTH_TICK_MS ?? 30_000);
 const PRUNE_EVERY_N_TICKS = 60;
 const RETENTION_DAYS = 7;
 const FAIL_STREAK_FOR_ALERT = 2;

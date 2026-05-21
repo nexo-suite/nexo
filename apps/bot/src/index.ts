@@ -378,16 +378,20 @@ webhooks.on('workflow_run.completed', async ({ payload }) => {
 
 const middleware = createNodeMiddleware(webhooks, { path: '/webhook' });
 
-const BOT_VERSION = (() => {
-	try {
-		const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
-		return typeof pkg.version === 'string' ? pkg.version : '0.0.0';
-	} catch {
-		return '0.0.0';
-	}
-})();
-const BOT_COMMIT = process.env.GIT_COMMIT ?? process.env.GITHUB_SHA?.slice(0, 7) ?? 'dev';
-const BOT_BUILD_TIME = process.env.BUILD_TIME ?? new Date().toISOString();
+const BOT_VERSION =
+	process.env.APP_VERSION ??
+	(() => {
+		try {
+			const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+			return typeof pkg.version === 'string' ? pkg.version : '0.0.0';
+		} catch {
+			return '0.0.0';
+		}
+	})();
+const BOT_COMMIT =
+	process.env.APP_COMMIT ?? process.env.GIT_COMMIT ?? process.env.GITHUB_SHA?.slice(0, 7) ?? 'dev';
+const BOT_BUILD_TIME =
+	process.env.APP_BUILD_TIME ?? process.env.BUILD_TIME ?? new Date().toISOString();
 
 createServer((req, res) => {
 	if (req.url === '/healthz' || req.url === '/health') {

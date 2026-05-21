@@ -79,6 +79,9 @@ services:
       ADMIN_URL: https://admin.krieger2501.de
       FLASCHEN_URL: https://flaschen.krieger2501.de
       PUBLIC_LANDING_URL: https://krieger2501.de
+      APP_VERSION: ${APP_VERSION_AUTH:-}
+      APP_COMMIT: ${APP_COMMIT:-}
+      APP_BUILD_TIME: ${APP_BUILD_TIME:-}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -127,6 +130,9 @@ services:
       VAPID_SUBJECT: ${VAPID_SUBJECT}
       PROTOCOL_HEADER: x-forwarded-proto
       HOST_HEADER: x-forwarded-host
+      APP_VERSION: ${APP_VERSION_ADMIN:-}
+      APP_COMMIT: ${APP_COMMIT:-}
+      APP_BUILD_TIME: ${APP_BUILD_TIME:-}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -165,6 +171,9 @@ services:
       PUBLIC_LANDING_URL: https://krieger2501.de
       PROTOCOL_HEADER: x-forwarded-proto
       HOST_HEADER: x-forwarded-host
+      APP_VERSION: ${APP_VERSION_FINANCE:-}
+      APP_COMMIT: ${APP_COMMIT:-}
+      APP_BUILD_TIME: ${APP_BUILD_TIME:-}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -210,6 +219,9 @@ services:
       FLASCHEN_API_TZ_MODE: ${FLASCHEN_API_TZ_MODE:-local-naive}
       PROTOCOL_HEADER: x-forwarded-proto
       HOST_HEADER: x-forwarded-host
+      APP_VERSION: ${APP_VERSION_FLASCHEN:-}
+      APP_COMMIT: ${APP_COMMIT:-}
+      APP_BUILD_TIME: ${APP_BUILD_TIME:-}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -247,6 +259,9 @@ services:
       FLASCHEN_POLL_INTERVAL_MS: ${FLASCHEN_POLL_INTERVAL_MS:-180000}
       FLASCHEN_POLL_JITTER_MS: ${FLASCHEN_POLL_JITTER_MS:-30000}
       FLASCHEN_API_TZ_MODE: ${FLASCHEN_API_TZ_MODE:-local-naive}
+      APP_VERSION: ${APP_VERSION_FLASCHEN:-}
+      APP_COMMIT: ${APP_COMMIT:-}
+      APP_BUILD_TIME: ${APP_BUILD_TIME:-}
     healthcheck:
       test:
         [
@@ -289,6 +304,10 @@ services:
       PUBLIC_LANDING_URL: https://krieger2501.de
       DATABASE_URL: ${DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      APP_VERSION: ${APP_VERSION_LANDING:-}
+      APP_VERSIONS_JSON: ${APP_VERSIONS_JSON:-}
+      APP_COMMIT: ${APP_COMMIT:-}
+      APP_BUILD_TIME: ${APP_BUILD_TIME:-}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -480,6 +499,9 @@ services:
       GH_REPO_OWNER: ${GH_REPO_OWNER}
       GH_REPO_NAME: ${GH_REPO_NAME}
       GITHUB_TOKEN: ${GITHUB_TOKEN}
+      APP_VERSION: ${APP_VERSION_BOT:-}
+      APP_COMMIT: ${APP_COMMIT:-}
+      APP_BUILD_TIME: ${APP_BUILD_TIME:-}
     healthcheck:
       test:
         [

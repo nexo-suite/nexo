@@ -41,9 +41,12 @@ export const sharedConfig: UserConfig = {
 		extensions: ['.ts', '.js', '.svelte']
 	},
 	define: {
-		__APP_VERSION__: JSON.stringify(pkg.version ?? '0.0.0'),
-		__APP_COMMIT__: JSON.stringify(appCommit),
-		__APP_BUILD_TIME__: JSON.stringify(appBuildTime)
+		// Build-time fallbacks. Runtime code prefers process.env.APP_VERSION
+		// etc., set by docker-compose from release-please outputs. These
+		// kick in for `pnpm dev` and any environment without those vars.
+		__APP_VERSION_FALLBACK__: JSON.stringify(pkg.version ?? '0.0.0'),
+		__APP_COMMIT_FALLBACK__: JSON.stringify(appCommit),
+		__APP_BUILD_TIME_FALLBACK__: JSON.stringify(appBuildTime)
 	},
 	server: {
 		fs: {

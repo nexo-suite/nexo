@@ -263,9 +263,9 @@
 	<AboutDiagnostics
 		appName="Nexo Flaschen"
 		appKey="flaschen"
-		version={__APP_VERSION__}
-		commit={__APP_COMMIT__}
-		buildTime={__APP_BUILD_TIME__}
+		version={data.appMeta.version}
+		commit={data.appMeta.commit}
+		buildTime={data.appMeta.buildTime}
 		email={data.diagnostics.email}
 		userId={data.diagnostics.userId}
 		correlationId={data.diagnostics.correlationId}

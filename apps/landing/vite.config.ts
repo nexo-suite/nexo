@@ -26,7 +26,8 @@ export default mergeConfig(
 	sharedConfig,
 	defineConfig({
 		define: {
-			__APP_VERSIONS__: JSON.stringify(appVersions)
+			// Fallback for `pnpm dev` and environments without APP_VERSIONS_JSON.
+			__APP_VERSIONS_FALLBACK__: JSON.stringify(appVersions)
 		},
 		plugins: [
 			paraglideVitePlugin({

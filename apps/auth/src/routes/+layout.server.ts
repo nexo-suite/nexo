@@ -1,5 +1,4 @@
 import { env } from '$env/dynamic/private';
-import { loadHubProfile } from '@nexo/db';
 import type { LayoutServerLoad } from './$types';
 
 const appMeta = {
@@ -8,7 +7,4 @@ const appMeta = {
 	buildTime: env.APP_BUILD_TIME ?? env.BUILD_TIME ?? __APP_BUILD_TIME_FALLBACK__
 };
 
-export const load: LayoutServerLoad = async ({ locals }) => {
-	const profile = locals.user ? await loadHubProfile(locals.user.id) : null;
-	return { user: locals.user, profile, correlationId: locals.correlationId, appMeta };
-};
+export const load: LayoutServerLoad = () => ({ appMeta });

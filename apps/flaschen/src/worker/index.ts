@@ -98,16 +98,20 @@ let lastKeepaliveAt: number | null = null;
 let accountsSeen = 0;
 const startedAt = Date.now();
 
-const WORKER_VERSION = (() => {
-	try {
-		const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
-		return typeof pkg.version === 'string' ? pkg.version : '0.0.0';
-	} catch {
-		return '0.0.0';
-	}
-})();
-const WORKER_COMMIT = process.env.GIT_COMMIT ?? process.env.GITHUB_SHA?.slice(0, 7) ?? 'dev';
-const WORKER_BUILD_TIME = process.env.BUILD_TIME ?? new Date().toISOString();
+const WORKER_VERSION =
+	process.env.APP_VERSION ??
+	(() => {
+		try {
+			const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+			return typeof pkg.version === 'string' ? pkg.version : '0.0.0';
+		} catch {
+			return '0.0.0';
+		}
+	})();
+const WORKER_COMMIT =
+	process.env.APP_COMMIT ?? process.env.GIT_COMMIT ?? process.env.GITHUB_SHA?.slice(0, 7) ?? 'dev';
+const WORKER_BUILD_TIME =
+	process.env.APP_BUILD_TIME ?? process.env.BUILD_TIME ?? new Date().toISOString();
 const HEALTH_PORT = Number(process.env.WORKER_HEALTH_PORT ?? 3004);
 
 async function tick(): Promise<void> {

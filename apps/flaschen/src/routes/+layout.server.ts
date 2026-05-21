@@ -1,6 +1,13 @@
 import type { LayoutServerLoad } from './$types';
+import { env } from '$env/dynamic/private';
 import { db, flaschenAccount, loadHubProfile } from '@nexo/db';
 import { eq } from 'drizzle-orm';
+
+const appMeta = {
+	version: env.APP_VERSION ?? __APP_VERSION_FALLBACK__,
+	commit: env.APP_COMMIT ?? env.GIT_COMMIT ?? __APP_COMMIT_FALLBACK__,
+	buildTime: env.APP_BUILD_TIME ?? env.BUILD_TIME ?? __APP_BUILD_TIME_FALLBACK__
+};
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	const userId = locals.user?.id ?? null;
@@ -23,6 +30,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		user: locals.user,
 		profile,
 		correlationId: locals.correlationId,
-		connection
+		connection,
+		appMeta
 	};
 };

@@ -151,7 +151,7 @@
 				accent: 'var(--color-accent-finance)',
 				desc: 'Track accounts, categorize spend, see where the month went.',
 				href: env.PUBLIC_FINANCE_URL ?? '#',
-				meta: `v${__APP_VERSIONS__.finance}`
+				meta: `v${data.appVersions.finance}`
 			},
 			data.allowedApps.includes('flaschen') && {
 				id: 'flaschen',
@@ -171,7 +171,7 @@
 				accent: '#3b82f6',
 				desc: 'Services, users, logs — the control room.',
 				href: env.PUBLIC_ADMIN_URL ?? '#',
-				meta: `v${__APP_VERSIONS__.admin}`
+				meta: `v${data.appVersions.admin}`
 			}
 		].filter(Boolean) as LiveApp[]
 	);
@@ -268,7 +268,7 @@
 			<span class="brand-mark"></span>
 			<span>Nexo</span>
 		</span>
-		<span class="version">v{__APP_VERSIONS__.landing}</span>
+		<span class="version">v{data.appVersions.landing}</span>
 	</div>
 
 	<!-- Profile hero -->
@@ -539,9 +539,9 @@
 	<AboutDiagnostics
 		appName="Nexo"
 		appKey="landing"
-		version={__APP_VERSIONS__.landing}
-		commit={__APP_COMMIT__}
-		buildTime={__APP_BUILD_TIME__}
+		version={data.appVersions.landing}
+		commit={data.appMeta.commit}
+		buildTime={data.appMeta.buildTime}
 		email={data.diagnostics.email}
 		userId={data.diagnostics.userId}
 		correlationId={data.diagnostics.correlationId ?? undefined}

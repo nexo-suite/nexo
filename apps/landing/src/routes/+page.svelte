@@ -97,7 +97,7 @@
 	<meta property="og:url" content="https://krieger2501.de" />
 </svelte:head>
 
-<HeroSection version={__APP_VERSIONS__.landing} />
+<HeroSection version={data.appVersions.landing} />
 <AppsSection {apps} {firstName} {authUrl} />
 <InstallSection {steps} bind:activeStep />
 <AboutSection />

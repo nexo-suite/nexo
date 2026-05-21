@@ -1,9 +1,9 @@
 import type { User } from 'better-auth';
 
 declare global {
-	const __APP_VERSION__: string;
-	const __APP_COMMIT__: string;
-	const __APP_BUILD_TIME__: string;
+	const __APP_VERSION_FALLBACK__: string;
+	const __APP_COMMIT_FALLBACK__: string;
+	const __APP_BUILD_TIME_FALLBACK__: string;
 
 	namespace App {
 		interface Error {
