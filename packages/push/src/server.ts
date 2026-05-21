@@ -1,6 +1,9 @@
 import webpush from 'web-push';
 import { db, pushSubscription } from '@nexo/db';
+import { createLogger } from '@nexo/logger';
 import { and, eq } from 'drizzle-orm';
+
+const logger = createLogger('push');
 
 export type VapidConfig = {
 	subject: string;
@@ -10,17 +13,17 @@ export type VapidConfig = {
 
 let configured = false;
 
-/**
- * Configure web-push with VAPID credentials. Call once at app boot — from
- * `hooks.server.ts` (using `$env/dynamic/private`) for SvelteKit, or from the
- * worker entrypoint (using `process.env`) for standalone Node scripts.
- */
 export function initPush(config: VapidConfig): void {
 	if (!config.subject || !config.publicKey || !config.privateKey) {
 		throw new Error('initPush: subject, publicKey, privateKey are all required');
 	}
 	webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
 	configured = true;
+	logger.info('initPush configured', {
+		subject: config.subject,
+		publicKeyFingerprint: config.publicKey.slice(0, 8) + '…' + config.publicKey.slice(-4),
+		publicKeyLength: config.publicKey.length
+	});
 }
 
 function ensureConfigured(): void {
@@ -50,23 +53,43 @@ export type SendResult = {
 	failed: number;
 };
 
-/**
- * Deliver `payload` to every push subscription belonging to `userId` for `app`.
- * Stale endpoints (404/410) are deleted; other errors are counted but not thrown
- * so a single bad endpoint never blocks delivery to the rest.
- */
+function endpointHost(endpoint: string): string {
+	try {
+		return new URL(endpoint).host;
+	} catch {
+		return 'invalid-url';
+	}
+}
+
 export async function sendToUser(
 	userId: string,
 	app: string,
-	payload: PushPayload
+	payload: PushPayload,
+	opts: { correlationId?: string } = {}
 ): Promise<SendResult> {
 	ensureConfigured();
+	const { correlationId } = opts;
 	const subs = await db
 		.select()
 		.from(pushSubscription)
 		.where(and(eq(pushSubscription.userId, userId), eq(pushSubscription.app, app)));
 
-	if (subs.length === 0) return { sent: 0, pruned: 0, failed: 0 };
+	logger.info('sendToUser: lookup', {
+		correlationId,
+		userId,
+		app,
+		subscriptionCount: subs.length,
+		title: payload.title
+	});
+
+	if (subs.length === 0) {
+		logger.warn('sendToUser: no subscriptions — push will not be delivered', {
+			correlationId,
+			userId,
+			app
+		});
+		return { sent: 0, pruned: 0, failed: 0 };
+	}
 
 	const json = JSON.stringify(payload);
 	let sent = 0;
@@ -75,6 +98,7 @@ export async function sendToUser(
 
 	await Promise.all(
 		subs.map(async (s) => {
+			const host = endpointHost(s.endpoint);
 			try {
 				await webpush.sendNotification(
 					{ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
@@ -85,17 +109,53 @@ export async function sendToUser(
 					.set({ lastUsedAt: new Date() })
 					.where(eq(pushSubscription.id, s.id));
 				sent++;
+				logger.info('sendToUser: delivered', {
+					correlationId,
+					userId,
+					app,
+					subscriptionId: s.id,
+					endpointHost: host
+				});
 			} catch (err: unknown) {
-				const status = (err as { statusCode?: number })?.statusCode;
+				const e = err as { statusCode?: number; body?: string; message?: string };
+				const status = e?.statusCode;
 				if (status === 404 || status === 410) {
 					await db.delete(pushSubscription).where(eq(pushSubscription.id, s.id));
 					pruned++;
+					logger.info('sendToUser: pruned stale subscription', {
+						correlationId,
+						userId,
+						app,
+						subscriptionId: s.id,
+						endpointHost: host,
+						statusCode: status
+					});
 				} else {
 					failed++;
+					logger.error('sendToUser: dispatch failed', {
+						correlationId,
+						userId,
+						app,
+						subscriptionId: s.id,
+						endpointHost: host,
+						statusCode: status,
+						body: e?.body,
+						error: e?.message ?? String(err)
+					});
 				}
 			}
 		})
 	);
+
+	logger.info('sendToUser: summary', {
+		correlationId,
+		userId,
+		app,
+		sent,
+		pruned,
+		failed,
+		total: subs.length
+	});
 
 	return { sent, pruned, failed };
 }

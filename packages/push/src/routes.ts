@@ -1,13 +1,14 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json, error } from '@sveltejs/kit';
 import { db, pushSubscription } from '@nexo/db';
+import { createLogger } from '@nexo/logger';
 import { and, eq } from 'drizzle-orm';
 import { sendToUser, type PushPayload } from './server.js';
 
-// Each app populates `locals.user` in its hooks, but the shared package
-// can't reach those App.Locals augmentations — narrow on read.
+const logger = createLogger('push');
+
 type SessionUser = { id: string; email: string; name: string };
-type LocalsWithUser = { user?: SessionUser | null };
+type LocalsWithUser = { user?: SessionUser | null; correlationId?: string };
 
 type SubscribeBody = {
 	subscription: {
@@ -33,15 +34,32 @@ function parseSubscribe(body: unknown): SubscribeBody | null {
 	};
 }
 
+function endpointHost(endpoint: string): string {
+	try {
+		return new URL(endpoint).host;
+	} catch {
+		return 'invalid-url';
+	}
+}
+
 export function subscribeHandler(app: string): RequestHandler {
 	return async ({ request, locals }) => {
-		const user = (locals as LocalsWithUser).user;
-		if (!user) throw error(401, 'unauthorized');
+		const l = locals as LocalsWithUser;
+		const user = l.user;
+		const correlationId = l.correlationId;
+		if (!user) {
+			logger.warn('subscribe: unauthorized', { app, correlationId });
+			throw error(401, 'unauthorized');
+		}
 
 		const body = parseSubscribe(await request.json().catch(() => null));
-		if (!body) throw error(400, 'invalid subscription');
+		if (!body) {
+			logger.warn('subscribe: invalid body', { app, userId: user.id, correlationId });
+			throw error(400, 'invalid subscription');
+		}
 
 		const userAgent = request.headers.get('user-agent') ?? null;
+		const host = endpointHost(body.subscription.endpoint);
 
 		await db
 			.insert(pushSubscription)
@@ -66,19 +84,37 @@ export function subscribeHandler(app: string): RequestHandler {
 				}
 			});
 
+		logger.info('subscribe: stored', {
+			correlationId,
+			userId: user.id,
+			app,
+			endpointHost: host,
+			label: body.label ?? null
+		});
+
 		return json({ ok: true });
 	};
 }
 
 export function unsubscribeHandler(app: string): RequestHandler {
 	return async ({ request, locals }) => {
-		const user = (locals as LocalsWithUser).user;
-		if (!user) throw error(401, 'unauthorized');
+		const l = locals as LocalsWithUser;
+		const user = l.user;
+		const correlationId = l.correlationId;
+		if (!user) {
+			logger.warn('unsubscribe: unauthorized', { app, correlationId });
+			throw error(401, 'unauthorized');
+		}
 
 		const body = (await request.json().catch(() => null)) as { endpoint?: string } | null;
-		if (!body?.endpoint) throw error(400, 'missing endpoint');
+		if (!body?.endpoint) {
+			logger.warn('unsubscribe: missing endpoint', { app, userId: user.id, correlationId });
+			throw error(400, 'missing endpoint');
+		}
 
-		await db
+		const host = endpointHost(body.endpoint);
+
+		const result = await db
 			.delete(pushSubscription)
 			.where(
 				and(
@@ -88,6 +124,14 @@ export function unsubscribeHandler(app: string): RequestHandler {
 				)
 			);
 
+		logger.info('unsubscribe: removed', {
+			correlationId,
+			userId: user.id,
+			app,
+			endpointHost: host,
+			rowCount: (result as { rowCount?: number }).rowCount ?? null
+		});
+
 		return json({ ok: true });
 	};
 }
@@ -96,9 +140,15 @@ export type TestPayloadFactory = (user: SessionUser) => PushPayload;
 
 export function testHandler(app: string, payloadFor: TestPayloadFactory): RequestHandler {
 	return async ({ locals }) => {
-		const user = (locals as LocalsWithUser).user;
-		if (!user) throw error(401, 'unauthorized');
-		const result = await sendToUser(user.id, app, payloadFor(user));
+		const l = locals as LocalsWithUser;
+		const user = l.user;
+		const correlationId = l.correlationId;
+		if (!user) {
+			logger.warn('test: unauthorized', { app, correlationId });
+			throw error(401, 'unauthorized');
+		}
+		logger.info('test: invoked', { correlationId, userId: user.id, app });
+		const result = await sendToUser(user.id, app, payloadFor(user), { correlationId });
 		return json({ ok: true, ...result });
 	};
 }
