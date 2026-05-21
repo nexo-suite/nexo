@@ -1,4 +1,4 @@
-import { LANGUAGES, DEFAULT_LANGUAGE, type Language } from './types';
+import { LANGUAGES, DEFAULT_LANGUAGE, type Language } from './types.js';
 
 /**
  * Parse an Accept-Language header and return the best matching supported language.
