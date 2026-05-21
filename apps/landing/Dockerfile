@@ -4,9 +4,9 @@
 # adapter-node build/ output is included in `pnpm deploy` (build/ is
 # .gitignored, which pnpm pack would otherwise honour).
 #
-# Build-time PUBLIC_* args are written to apps/landing/.env so $env/static
-# usages get resolved at build time. Runtime envs in docker-compose still
-# apply for $env/dynamic usages.
+# All PUBLIC_* values are read via $env/dynamic/public at runtime, so the
+# same image works for prod and preview — the deploy supplies URLs via
+# compose env.
 
 FROM node:24-alpine AS fetch
 WORKDIR /app
@@ -25,14 +25,9 @@ COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install -r --offline --frozen-lockfile
 
-ARG PUBLIC_FINANCE_URL=https://finance.krieger2501.de
-ARG PUBLIC_ADMIN_URL=https://admin.krieger2501.de
-ARG PUBLIC_AUTH_URL=https://auth.krieger2501.de
-ARG PUBLIC_LANDING_URL=https://krieger2501.de
-RUN printf "PUBLIC_FINANCE_URL=%s\nPUBLIC_ADMIN_URL=%s\nPUBLIC_AUTH_URL=%s\nPUBLIC_LANDING_URL=%s\n" \
-    "$PUBLIC_FINANCE_URL" "$PUBLIC_ADMIN_URL" "$PUBLIC_AUTH_URL" "$PUBLIC_LANDING_URL" > apps/landing/.env
-
-RUN pnpm --filter=@nexo/landing run build
+ARG GIT_COMMIT=dev
+ENV GIT_COMMIT=$GIT_COMMIT
+RUN pnpm turbo run build --filter=@nexo/landing
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm --filter=@nexo/landing --prod --legacy deploy /prod/landing

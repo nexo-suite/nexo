@@ -44,7 +44,7 @@ services:
     init: true
     networks: [production]
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -92,7 +92,7 @@ services:
     group_add:
       - '${DOCKER_GID:-988}'
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -138,7 +138,7 @@ services:
     init: true
     networks: [production]
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -176,7 +176,7 @@ services:
     init: true
     networks: [production]
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -247,6 +247,18 @@ services:
       FLASCHEN_POLL_INTERVAL_MS: ${FLASCHEN_POLL_INTERVAL_MS:-180000}
       FLASCHEN_POLL_JITTER_MS: ${FLASCHEN_POLL_JITTER_MS:-30000}
       FLASCHEN_API_TZ_MODE: ${FLASCHEN_API_TZ_MODE:-local-naive}
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3004/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -258,7 +270,7 @@ services:
     init: true
     networks: [production]
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -302,9 +314,7 @@ services:
 
   migrate_preview:
     profiles: [preview]
-    build:
-      context: .
-      dockerfile: packages/db/Dockerfile
+    image: ghcr.io/nexo-suite/nexo-db:${PREVIEW_TAG:-main}
     networks: [preview]
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -315,14 +325,12 @@ services:
 
   auth_preview:
     profiles: [preview]
-    build:
-      context: .
-      dockerfile: apps/auth/Dockerfile
+    image: ghcr.io/nexo-suite/nexo-auth:${PREVIEW_TAG:-main}
     restart: unless-stopped
     init: true
     networks: [preview]
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -347,16 +355,14 @@ services:
 
   admin_preview:
     profiles: [preview]
-    build:
-      context: .
-      dockerfile: apps/admin/Dockerfile
+    image: ghcr.io/nexo-suite/nexo-admin:${PREVIEW_TAG:-main}
     restart: unless-stopped
     init: true
     networks: [preview]
     group_add:
       - '${DOCKER_GID:-988}'
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -383,14 +389,12 @@ services:
 
   finance_preview:
     profiles: [preview]
-    build:
-      context: .
-      dockerfile: apps/finance/Dockerfile
+    image: ghcr.io/nexo-suite/nexo-finance:${PREVIEW_TAG:-main}
     restart: unless-stopped
     init: true
     networks: [preview]
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -409,22 +413,22 @@ services:
 
   landing_preview:
     profiles: [preview]
-    build:
-      context: .
-      dockerfile: apps/landing/Dockerfile
-      args:
-        PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
+    image: ghcr.io/nexo-suite/nexo-landing:${PREVIEW_TAG:-main}
     restart: unless-stopped
     init: true
     networks: [preview]
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
     environment:
       PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
+      PUBLIC_FLASCHEN_URL: https://flaschen.preview.krieger2501.de
+      PUBLIC_ADMIN_URL: https://admin.preview.krieger2501.de
+      PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
+      PUBLIC_LANDING_URL: https://preview.krieger2501.de
     depends_on:
       migrate_preview:
         condition: service_completed_successfully
@@ -476,6 +480,18 @@ services:
       GH_REPO_OWNER: ${GH_REPO_OWNER}
       GH_REPO_NAME: ${GH_REPO_NAME}
       GITHUB_TOKEN: ${GITHUB_TOKEN}
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3003/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
 
   caddy:
     profiles: [server]

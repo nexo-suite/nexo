@@ -23,7 +23,9 @@ COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install -r --offline --frozen-lockfile
 
-RUN pnpm --filter=@nexo/flaschen run build
+ARG GIT_COMMIT=dev
+ENV GIT_COMMIT=$GIT_COMMIT
+RUN pnpm turbo run build --filter=@nexo/flaschen
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm --filter=@nexo/flaschen --prod --legacy deploy /prod/flaschen
@@ -38,6 +40,10 @@ COPY --from=build --chown=app:app /prod/flaschen .
 USER app
 ENV NODE_ENV=production
 ENV PORT=3000
+ARG GIT_COMMIT=dev
+ARG BUILD_TIME=
+ENV GIT_COMMIT=$GIT_COMMIT
+ENV BUILD_TIME=$BUILD_TIME
 EXPOSE 3000
 
 CMD ["node", "build"]

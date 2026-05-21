@@ -1,10 +1,9 @@
 # syntax=docker/dockerfile:1.7
 #
-# The bot can't use `pnpm deploy` like the SvelteKit apps: tsc emits raw
-# `import { ... } from '@nexo/logger'` and Node 24 refuses to strip types
-# from any path under node_modules. `pnpm deploy` materializes workspace
-# packages into node_modules, so we instead keep them as a symlink to
-# /app/packages/logger (outside node_modules) via a regular `pnpm install`.
+# The bot consumes @nexo/logger as a workspace symlink. Logger emits
+# compiled JS to packages/logger/dist via tsc; we copy that dist/ into
+# the runtime image so Node resolves the package's exports map to real
+# .js files (no type-stripping under node_modules required).
 
 FROM node:24-alpine AS fetch
 WORKDIR /app
@@ -23,7 +22,7 @@ COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install -r --offline --frozen-lockfile
 
-RUN pnpm --filter=@nexo/bot run build
+RUN pnpm turbo run build --filter=@nexo/bot
 
 
 FROM fetch
@@ -39,16 +38,23 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install -r --offline --frozen-lockfile --prod \
       --filter=@nexo/bot --filter=@nexo/logger
 
-# Workspace package source — must stay outside node_modules so Node can
-# strip types from /app/packages/logger/src/index.ts.
-COPY --from=build --chown=app:app /app/packages/logger/src ./packages/logger/src
+# Workspace package compiled output — Node resolves @nexo/logger via the
+# package.json exports map to dist/index.js.
+COPY --from=build --chown=app:app /app/packages/logger/dist ./packages/logger/dist
 COPY --from=build --chown=app:app /app/apps/bot/dist ./apps/bot/dist
 RUN chown -R app:app /app
 
 USER app
 ENV NODE_ENV=production
 ENV PORT=3003
+ARG GIT_COMMIT=dev
+ARG BUILD_TIME=
+ENV GIT_COMMIT=$GIT_COMMIT
+ENV BUILD_TIME=$BUILD_TIME
 WORKDIR /app/apps/bot
 EXPOSE 3003
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3003/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["node", "dist/index.js"]

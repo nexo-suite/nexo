@@ -21,7 +21,9 @@ COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install -r --offline --frozen-lockfile
 
-RUN pnpm --filter=@nexo/admin run build
+ARG GIT_COMMIT=dev
+ENV GIT_COMMIT=$GIT_COMMIT
+RUN pnpm turbo run build --filter=@nexo/admin
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm --filter=@nexo/admin --prod --legacy deploy /prod/admin
