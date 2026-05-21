@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/nexo-suite/nexo/compare/flaschen-v0.2.1...flaschen-v0.2.2) (2026-05-21)
+
+
+### Bug Fixes
+
+* **infra:** switch Docker installs from --offline to --prefer-offline ([8dbd86b](https://github.com/nexo-suite/nexo/commit/8dbd86baef9501c117dfa2320ccda4f11f7fa0f9))
+
 ## [0.2.1](https://github.com/nexo-suite/nexo/compare/flaschen-v0.2.0...flaschen-v0.2.1) (2026-05-20)
 
 

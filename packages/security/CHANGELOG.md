@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/nexo-suite/nexo/compare/security-v0.2.0...security-v0.3.0) (2026-05-21)
+
+
+### Features
+
+* **security:** add shared auth helpers ([e2bbfb6](https://github.com/nexo-suite/nexo/commit/e2bbfb672548df4c655d42563ad9b7cc2f4e4041))
+
 ## [0.2.0](https://github.com/nexo-suite/nexo/compare/security-v0.1.0...security-v0.2.0) (2026-05-21)
 
 

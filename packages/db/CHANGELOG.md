@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/nexo-suite/nexo/compare/db-v0.4.0...db-v0.5.0) (2026-05-21)
+
+
+### Features
+
+* **db:** add migration 0018 and schema updates ([138213c](https://github.com/nexo-suite/nexo/commit/138213cd3c49ccaa3b1734aa50ddcbab94194105))
+
 ## [0.4.0](https://github.com/nexo-suite/nexo/compare/db-v0.3.0...db-v0.4.0) (2026-05-20)
 
 

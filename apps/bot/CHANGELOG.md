@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/nexo-suite/nexo/compare/bot-v0.2.1...bot-v0.3.0) (2026-05-21)
+
+
+### Features
+
+* **bot:** split webhook deploy into comments and state modules ([a2148ca](https://github.com/nexo-suite/nexo/commit/a2148ca6674a6369efa1d8727d88480ef9f91446))
+
+
+### Bug Fixes
+
+* **infra:** switch Docker installs from --offline to --prefer-offline ([8dbd86b](https://github.com/nexo-suite/nexo/commit/8dbd86baef9501c117dfa2320ccda4f11f7fa0f9))
+
 ## [0.2.1](https://github.com/krieger2501/nexo/compare/bot-v0.2.0...bot-v0.2.1) (2026-05-19)
 
 

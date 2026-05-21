@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/nexo-suite/nexo/compare/auth-v0.5.0...auth-v0.6.0) (2026-05-21)
+
+
+### Features
+
+* **auth:** typed app.d.ts and structured healthz ([a5b8e6e](https://github.com/nexo-suite/nexo/commit/a5b8e6eb831d6c8660614b4e1e688779962fbe7a))
+
+
+### Bug Fixes
+
+* **infra:** switch Docker installs from --offline to --prefer-offline ([8dbd86b](https://github.com/nexo-suite/nexo/commit/8dbd86baef9501c117dfa2320ccda4f11f7fa0f9))
+
 ## [0.5.0](https://github.com/nexo-suite/nexo/compare/auth-v0.4.0...auth-v0.5.0) (2026-05-20)
 
 
