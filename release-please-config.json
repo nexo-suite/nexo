@@ -20,6 +20,8 @@
 		"packages/logger": { "component": "logger" },
 		"packages/i18n": { "component": "i18n" },
 		"packages/email": { "component": "email" },
+		"packages/push": { "component": "push" },
+		"packages/security": { "component": "security" },
 		"apps/finance": { "component": "finance" },
 		"apps/auth": { "component": "auth" },
 		"apps/admin": { "component": "admin" },
