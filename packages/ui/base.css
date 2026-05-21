@@ -49,6 +49,10 @@ textarea {
 
 	--safe-top: env(safe-area-inset-top, 0px);
 	--safe-bot: env(safe-area-inset-bottom, 0px);
+
+	/* ── Layout (single source of truth — see packages/ui/src/PageShell.svelte) ── */
+	--tab-h: 60px;
+	--app-max-w: 448px;
 }
 
 /* ─── Portrait-only on phones ─── */
