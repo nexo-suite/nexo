@@ -1,55 +1,72 @@
+# Global options
+{
+	email mail@krieger2501.de
+}
+
 # Shared snippets
-(security_headers) {
+# Apps already emit X-Frame-Options, X-Content-Type-Options, Referrer-Policy,
+# HSTS and Permissions-Policy in hooks.server.ts. Caddy keeps HSTS as
+# defense-in-depth (so 502/error pages Caddy serves directly still get it),
+# strips the Server banner, compresses, and emits JSON access logs.
+(common) {
+	encode zstd gzip
+	header -Server
 	header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-	header X-Content-Type-Options "nosniff"
+	log {
+		output stdout
+		format json {
+			time_format iso8601
+		}
+	}
 }
 
 # Production
 krieger2501.de {
-	import security_headers
+	import common
 	reverse_proxy landing:3000
 }
 
 auth.krieger2501.de {
-	import security_headers
+	import common
 	reverse_proxy auth:3000
 }
 
 admin.krieger2501.de {
-	import security_headers
+	import common
 	reverse_proxy admin:3000 {
+		# /services/[name]/logs returns text/event-stream; disable proxy buffering.
 		flush_interval -1
 	}
 }
 
 finance.krieger2501.de {
-	import security_headers
+	import common
 	reverse_proxy finance:3000
 }
 
 flaschen.krieger2501.de {
-	import security_headers
+	import common
 	reverse_proxy flaschen:3000
 }
 
 # Preview
 preview.krieger2501.de {
-	import security_headers
+	import common
 	reverse_proxy landing_preview:3000
 }
 
 auth.preview.krieger2501.de {
-	import security_headers
+	import common
 	reverse_proxy auth_preview:3000
 }
 
 finance.preview.krieger2501.de {
-	import security_headers
+	import common
 	reverse_proxy finance_preview:3000
 }
 
 admin.preview.krieger2501.de {
-	import security_headers
+	import common
 	reverse_proxy admin_preview:3000 {
 		flush_interval -1
 	}
@@ -57,12 +74,12 @@ admin.preview.krieger2501.de {
 
 # Bot
 bot.krieger2501.de {
-	import security_headers
+	import common
 	reverse_proxy bot:3003
 }
 
 # Observability
 grafana.krieger2501.de {
-	import security_headers
+	import common
 	reverse_proxy grafana:3000
 }
