@@ -40,14 +40,37 @@ const config: KnipConfig = {
 			project: ['src/**/*.ts']
 		},
 		'packages/db': {
-			entry: ['src/migrate.ts'],
-			project: ['src/**/*.ts'],
+			entry: ['src/index.ts', 'src/migrate.ts', 'schema/*.ts'],
+			project: ['src/**/*.ts', 'schema/**/*.ts'],
 			drizzle: false
 		},
 		'packages/email': {
+			entry: ['src/index.ts'],
 			project: ['src/**/*.{ts,tsx}']
 		},
+		'packages/errors': {
+			project: ['src/**/*.ts']
+		},
+		'packages/i18n': {
+			project: ['src/**/*.ts']
+		},
 		'packages/logger': {
+			entry: ['src/index.ts'],
+			project: ['src/**/*.ts']
+		},
+		'packages/push': {
+			entry: [
+				'src/index.ts',
+				'src/schema.ts',
+				'src/server.ts',
+				'src/routes.ts',
+				'src/client.ts',
+				'src/sw.ts'
+			],
+			project: ['src/**/*.ts']
+		},
+		'packages/security': {
+			entry: ['src/index.ts'],
 			project: ['src/**/*.ts']
 		},
 		'packages/ui': {

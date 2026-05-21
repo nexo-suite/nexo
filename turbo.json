@@ -19,7 +19,9 @@
 		},
 		"lint": {},
 		"lint:fix": { "cache": false },
-		"test:unit": {},
+		"test:unit": {
+			"dependsOn": ["^build"]
+		},
 		"test:e2e": {
 			"dependsOn": ["build"]
 		},

@@ -4,13 +4,26 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
 	},
+	"files": [
+		"dist",
+		"package.json"
+	],
 	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"clean": "rm -rf dist",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
-		"qc": "run-s lint type:check",
+		"qc": "run-s lint type:check build",
 		"type:check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@nexo/db": "workspace:*",
+		"better-auth": "catalog:"
 	},
 	"devDependencies": {
 		"@sveltejs/kit": "catalog:",

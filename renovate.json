@@ -1,14 +1,23 @@
 {
 	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"extends": ["config:recommended", ":dependencyDashboard", ":semanticCommits"],
+	"extends": [
+		"config:recommended",
+		":dependencyDashboard",
+		":semanticCommits",
+		"helpers:pinGitHubActionDigests"
+	],
 	"timezone": "Europe/Berlin",
 	"schedule": ["before 5am on Monday"],
 	"labels": ["dependencies"],
 	"commitMessagePrefix": "chore(deps):",
-	"prConcurrentLimit": 6,
-	"lockFileMaintenance": {
-		"enabled": true,
-		"schedule": ["before 5am on Monday"]
+	"prConcurrentLimit": 10,
+	"prHourlyLimit": 0,
+	"minimumReleaseAge": "3 days",
+	"osvVulnerabilityAlerts": true,
+	"vulnerabilityAlerts": {
+		"labels": ["security"],
+		"minimumReleaseAge": "0 days",
+		"schedule": ["at any time"]
 	},
 	"packageRules": [
 		{
@@ -86,15 +95,20 @@
 			"matchPackageNames": ["@types/node"]
 		},
 		{
-			"description": "GitHub Actions",
-			"groupName": "GitHub Actions",
+			"description": "Major updates require explicit dashboard approval",
+			"matchUpdateTypes": ["major"],
+			"dependencyDashboardApproval": true
+		},
+		{
+			"description": "GitHub Actions — pinned by digest, automerge non-major",
 			"matchManagers": ["github-actions"],
+			"matchUpdateTypes": ["minor", "patch", "digest"],
 			"automerge": true,
 			"automergeType": "pr",
 			"automergeStrategy": "rebase"
 		},
 		{
-			"description": "Automerge non-major devDependencies",
+			"description": "Automerge non-major devDependencies after release-age window",
 			"matchDepTypes": ["devDependencies"],
 			"matchUpdateTypes": ["minor", "patch"],
 			"automerge": true,
