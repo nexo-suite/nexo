@@ -6,7 +6,7 @@ import {
 	flaschenDateOverride,
 	flaschenPollLog
 } from '@nexo/db';
-import { and, eq, gte } from 'drizzle-orm';
+import { and, eq, gte, isNull, lt, or } from 'drizzle-orm';
 import { createLogger } from '@nexo/logger';
 import { sendToUser, initPush } from '@nexo/push/server';
 import {
@@ -16,10 +16,13 @@ import {
 	rangeForDays,
 	formatOfferBody,
 	dedupeKey,
+	keepaliveRefresh,
 	ReconnectRequiredError,
 	OAuthError
 } from '../lib/server/flaschenpost';
 import { Temporal } from '@js-temporal/polyfill';
+import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
 
 const logger = createLogger('flaschen-worker');
 
@@ -45,6 +48,9 @@ initPush({
 
 const POLL_INTERVAL_MS = Number(process.env.FLASCHEN_POLL_INTERVAL_MS ?? 180_000);
 const POLL_JITTER_MS = Number(process.env.FLASCHEN_POLL_JITTER_MS ?? 30_000);
+const KEEPALIVE_INTERVAL_MS = Number(
+	process.env.FLASCHEN_KEEPALIVE_INTERVAL_MS ?? 20 * 60 * 60_000
+);
 const QUIET_HOURS = parseQuietHours(process.env.FLASCHEN_QUIET_HOURS ?? '22-06');
 const TZ = 'Europe/Berlin';
 
@@ -82,26 +88,104 @@ function jitter(): number {
 
 let stopping = false;
 let inflightTick: Promise<void> | null = null;
+
+// ── Health state ───────────────────────────────────────────────────────────
+let lastTickAt: number | null = null;
+let lastTickOk = false;
+let lastTickLatencyMs = 0;
+let lastTickError: string | null = null;
+let lastKeepaliveAt: number | null = null;
+let accountsSeen = 0;
+const startedAt = Date.now();
+
+const WORKER_VERSION = (() => {
+	try {
+		const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+		return typeof pkg.version === 'string' ? pkg.version : '0.0.0';
+	} catch {
+		return '0.0.0';
+	}
+})();
+const WORKER_COMMIT = process.env.GIT_COMMIT ?? process.env.GITHUB_SHA?.slice(0, 7) ?? 'dev';
+const WORKER_BUILD_TIME = process.env.BUILD_TIME ?? new Date().toISOString();
+const HEALTH_PORT = Number(process.env.WORKER_HEALTH_PORT ?? 3004);
+
 async function tick(): Promise<void> {
 	if (stopping) return;
+	const t0 = Date.now();
+
+	await keepalivePass().catch((e) => {
+		logger.error('keepalive pass uncaught', { error: String(e) });
+	});
+
 	if (inQuietHours()) {
 		logger.info('skipped poll (quiet hours)', {});
+		lastTickAt = Date.now();
+		lastTickOk = true;
+		lastTickLatencyMs = Date.now() - t0;
+		lastTickError = null;
 		return;
 	}
 
-	const accounts = await db
-		.select()
-		.from(flaschenAccount)
-		.where(eq(flaschenAccount.needsReconnect, false));
+	try {
+		const accounts = await db
+			.select()
+			.from(flaschenAccount)
+			.where(eq(flaschenAccount.needsReconnect, false));
 
-	logger.info('tick', { accounts: accounts.length });
+		accountsSeen = accounts.length;
+		logger.info('tick', { accounts: accounts.length });
 
-	for (const acct of accounts) {
-		if (stopping) return;
-		await pollOne(acct.userId).catch((e) => {
-			logger.error('poll uncaught', { userId: acct.userId, error: String(e) });
-		});
+		for (const acct of accounts) {
+			if (stopping) return;
+			await pollOne(acct.userId).catch((e) => {
+				logger.error('poll uncaught', { userId: acct.userId, error: String(e) });
+			});
+		}
+		lastTickOk = true;
+		lastTickError = null;
+	} catch (e) {
+		lastTickOk = false;
+		lastTickError = e instanceof Error ? e.message : String(e);
+		logger.error('tick failed', { error: lastTickError });
+	} finally {
+		lastTickAt = Date.now();
+		lastTickLatencyMs = Date.now() - t0;
 	}
+}
+
+/** Refresh tokens for all linked (non-disconnected) users that haven't
+ * refreshed recently, regardless of poll-paused state or quiet hours. The
+ * goal is to keep the refresh_token alive during long inactive stretches and
+ * surface server-side revocations as `needsReconnect` sooner than the next
+ * actual poll would. */
+async function keepalivePass(): Promise<void> {
+	const cutoff = new Date(Date.now() - KEEPALIVE_INTERVAL_MS);
+	const due = await db
+		.select({ userId: flaschenAccount.userId })
+		.from(flaschenAccount)
+		.where(
+			and(
+				eq(flaschenAccount.needsReconnect, false),
+				or(isNull(flaschenAccount.lastRefreshAt), lt(flaschenAccount.lastRefreshAt, cutoff))
+			)
+		);
+
+	if (due.length === 0) return;
+	logger.info('keepalive', { due: due.length });
+
+	for (const { userId } of due) {
+		if (stopping) return;
+		try {
+			const result = await keepaliveRefresh(userId);
+			if (result.needsReconnect) {
+				logger.warn('keepalive marked needsReconnect', { userId });
+			}
+		} catch (e) {
+			logger.error('keepalive failed', { userId, error: String(e) });
+		}
+	}
+	lastKeepaliveAt = Date.now();
 }
 
 async function pollOne(userId: string): Promise<void> {
@@ -214,6 +298,7 @@ async function shutdown(signal: string): Promise<void> {
 			logger.error('tick failed during shutdown', { error: String(e) });
 		}
 	}
+	healthServer.close();
 	try {
 		await closeDb();
 	} catch (e) {
@@ -225,9 +310,54 @@ async function shutdown(signal: string): Promise<void> {
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));
 
+// ── Health server ──────────────────────────────────────────────────────────
+// Considers the worker healthy when the most recent tick completed within
+// 3× the poll interval — catches a wedged loop without flapping on a single
+// slow tick.
+const healthServer = createServer((req, res) => {
+	if (req.url !== '/healthz' && req.url !== '/health') {
+		res.writeHead(404).end();
+		return;
+	}
+	const now = Date.now();
+	const tickStaleMs = lastTickAt === null ? Infinity : now - lastTickAt;
+	const tickMaxAgeMs = POLL_INTERVAL_MS * 3 + POLL_JITTER_MS;
+	const tickFresh = tickStaleMs <= tickMaxAgeMs;
+	const ok = lastTickAt !== null && lastTickOk && tickFresh;
+
+	const body = {
+		ok,
+		version: WORKER_VERSION,
+		commit: WORKER_COMMIT,
+		buildTime: WORKER_BUILD_TIME,
+		uptime_ms: now - startedAt,
+		lastTickAt: lastTickAt ? new Date(lastTickAt).toISOString() : null,
+		lastTickOk,
+		lastTickError,
+		lastKeepaliveAt: lastKeepaliveAt ? new Date(lastKeepaliveAt).toISOString() : null,
+		accountsSeen,
+		checks: {
+			tick: {
+				ok: tickFresh && lastTickOk,
+				latency_ms: lastTickLatencyMs,
+				...(tickFresh
+					? {}
+					: { error: `last tick was ${tickStaleMs}ms ago (max ${tickMaxAgeMs}ms)` }),
+				...(lastTickError ? { error: lastTickError } : {})
+			}
+		},
+		latency_ms: 0
+	};
+	res.writeHead(ok ? 200 : 503, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+});
+healthServer.listen(HEALTH_PORT, () => {
+	logger.info('health server listening', { port: HEALTH_PORT });
+});
+
 logger.info('starting', {
 	pollIntervalMs: POLL_INTERVAL_MS,
 	jitterMs: POLL_JITTER_MS,
+	keepaliveIntervalMs: KEEPALIVE_INTERVAL_MS,
 	quietHours: QUIET_HOURS
 });
 

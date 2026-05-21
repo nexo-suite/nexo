@@ -10,6 +10,7 @@ import {
 import { and, asc, eq } from 'drizzle-orm';
 import { logger } from '$lib/server/logger';
 import { loadPrefs, savePrefs } from '$lib/server/flaschenpost';
+import { m } from '$lib/paraglide/messages.js';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
@@ -174,7 +175,7 @@ export const actions: Actions = {
 			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
 
-		return { success: true, savedAt: Date.now() };
+		return { success: true, savedAt: Date.now(), toast: m.toast_saved() };
 	},
 
 	saveOverride: async ({ request, locals }) => {
@@ -216,7 +217,7 @@ export const actions: Actions = {
 			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
 
-		return { success: true, savedAt: Date.now() };
+		return { success: true, savedAt: Date.now(), toast: m.toast_saved() };
 	},
 
 	deleteOverride: async ({ request, locals }) => {
@@ -234,6 +235,6 @@ export const actions: Actions = {
 			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
 
-		return { success: true };
+		return { success: true, toast: m.toast_deleted() };
 	}
 };

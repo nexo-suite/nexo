@@ -4,7 +4,7 @@
 	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { PageHeader } from '@nexo/ui';
+	import { PageHeader, BottomSheet } from '@nexo/ui';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { Plug, Sliders, ChevronRight, XCircle, Hand, Info, CalendarPlus } from '@lucide/svelte';
 	import type { PageData } from './$types';
@@ -153,7 +153,23 @@
 		if (toastTimer) clearTimeout(toastTimer);
 		toastTimer = setTimeout(() => (toastMessage = null), 2800);
 	}
-	function onTakeShift() {
+
+	type TakeOffer = {
+		warehouse: { name: string };
+		workgroup: { name: string };
+		start: string;
+		durationInMinutes: number;
+		rewardScore?: number;
+	};
+	let takeOpen = $state(false);
+	let pendingTake = $state<TakeOffer | null>(null);
+	function onTakeShift(offer: TakeOffer) {
+		pendingTake = offer;
+		takeOpen = true;
+	}
+	function confirmTakeShift() {
+		takeOpen = false;
+		pendingTake = null;
 		flashToast(m.dashboard_toast_accept_stub());
 	}
 
@@ -394,7 +410,7 @@
 							<button
 								type="button"
 								class="take-btn"
-								onclick={onTakeShift}
+								onclick={() => onTakeShift(offer)}
 								title={m.dashboard_accept_soon_title()}
 								aria-label={m.dashboard_take_shift()}
 							>
@@ -479,7 +495,7 @@
 							<button
 								type="button"
 								class="take-btn ghost"
-								onclick={onTakeShift}
+								onclick={() => onTakeShift(offer)}
 								title={m.dashboard_accept_soon_title()}
 								aria-label={m.dashboard_take_shift()}
 							>
@@ -535,7 +551,7 @@
 							<button
 								type="button"
 								class="take-btn ghost"
-								onclick={onTakeShift}
+								onclick={() => onTakeShift(offer)}
 								title={m.dashboard_accept_soon_title()}
 								aria-label={m.dashboard_take_shift()}
 							>
@@ -548,6 +564,44 @@
 		{/if}
 	{/if}
 </div>
+
+<!-- ─── Take-shift confirm sheet ─── -->
+<BottomSheet
+	bind:open={takeOpen}
+	title={m.dashboard_take_shift()}
+	subtitle={m.dashboard_accept_soon_title()}
+>
+	{#if pendingTake}
+		<div class="confirm-shift">
+			<div class="confirm-row">
+				<span class="confirm-label">Warehouse</span>
+				<span class="confirm-value"
+					>{pendingTake.warehouse.name} · {pendingTake.workgroup.name}</span
+				>
+			</div>
+			<div class="confirm-row">
+				<span class="confirm-label">When</span>
+				<span class="confirm-value"
+					>{dowLabel(pendingTake.start)}
+					{dayMonth(pendingTake.start)} ·
+					{fmtTimeRange(pendingTake.start, pendingTake.durationInMinutes)}</span
+				>
+			</div>
+			<div class="confirm-row">
+				<span class="confirm-label">Duration</span>
+				<span class="confirm-value">{fmtDuration(pendingTake.durationInMinutes)}</span>
+			</div>
+		</div>
+	{/if}
+	<div class="sheet-actions sheet-actions-row">
+		<button type="button" class="sheet-cancel" onclick={() => (takeOpen = false)}>
+			{m.connect_cancel()}
+		</button>
+		<button type="button" class="sheet-done" onclick={confirmTakeShift}>
+			{m.dashboard_take_shift()}
+		</button>
+	</div>
+</BottomSheet>
 
 {#if toastMessage}
 	<div class="toast" role="status">
@@ -578,6 +632,74 @@
 		display: flex;
 		flex-direction: column;
 		gap: 14px;
+	}
+
+	/* ─── Take-shift confirm sheet ─── */
+	.confirm-shift {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding: 4px 0 8px;
+	}
+	.confirm-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 12px;
+		font-size: 14px;
+	}
+	.confirm-label {
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--text-subtle);
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+	.confirm-value {
+		text-align: right;
+		color: var(--text-primary);
+		font-weight: 500;
+	}
+	.sheet-actions {
+		padding: 14px 0 4px;
+	}
+	.sheet-actions-row {
+		display: flex;
+		gap: 8px;
+	}
+	.sheet-done,
+	.sheet-cancel {
+		flex: 1;
+		min-width: 0;
+		height: 48px;
+		padding: 0 14px;
+		font: inherit;
+		font-size: 15px;
+		font-weight: 600;
+		line-height: 1;
+		border-radius: var(--radius-md, 12px);
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		transition: opacity 150ms ease;
+	}
+	.sheet-done {
+		border: none;
+		background: var(--accent);
+		color: #fff;
+	}
+	.sheet-done:active {
+		opacity: 0.85;
+	}
+	.sheet-cancel {
+		border: 1px solid var(--border-default);
+		background: var(--bg-1);
+		color: var(--text-primary);
+	}
+	.sheet-cancel:active {
+		background: var(--bg-2);
 	}
 
 	.status-strip {
