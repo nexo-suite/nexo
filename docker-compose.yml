@@ -89,6 +89,8 @@ services:
     restart: unless-stopped
     init: true
     networks: [production]
+    group_add:
+      - '${DOCKER_GID:-988}'
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
       interval: 30s
@@ -351,6 +353,8 @@ services:
     restart: unless-stopped
     init: true
     networks: [preview]
+    group_add:
+      - '${DOCKER_GID:-988}'
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/healthz']
       interval: 30s

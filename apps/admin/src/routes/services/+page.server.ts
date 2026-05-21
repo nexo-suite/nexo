@@ -26,7 +26,7 @@ function startOf(unit: 'day' | 'week' | 'month'): Date {
 	return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
 	const today = startOf('day');
 	const weekStart = startOf('week');
 	const monthStart = startOf('month');
@@ -50,7 +50,13 @@ export const load: PageServerLoad = async () => {
 	] = await Promise.all([
 		dockerGet<ContainerInfo[]>(
 			`/containers/json?all=1&filters=${encodeURIComponent(JSON.stringify({ network: ['nexo-production', 'nexo-preview'] }))}`
-		).catch(() => [] as ContainerInfo[]),
+		).catch((e) => {
+			logger.error('docker list containers failed', {
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return [] as ContainerInfo[];
+		}),
 		db.select({ value: count() }).from(users),
 		db.select({ value: count() }).from(accounts),
 		db.select({ value: count() }).from(expenses),
@@ -87,9 +93,14 @@ export const load: PageServerLoad = async () => {
 
 	const containers: EnrichedContainer[] = await Promise.all(
 		rawContainers.map(async (c) => {
-			const inspect = await dockerGet<ContainerInspect>(`/containers/${c.Id}/json`).catch(
-				() => null
-			);
+			const inspect = await dockerGet<ContainerInspect>(`/containers/${c.Id}/json`).catch((e) => {
+				logger.error('docker inspect failed', {
+					containerId: c.Id,
+					error: String(e),
+					correlationId: locals.correlationId
+				});
+				return null;
+			});
 			return {
 				...c,
 				RestartCount: inspect?.RestartCount ?? 0,
