@@ -11,6 +11,7 @@ import {
 	disconnectAccount,
 	OAuthError
 } from '$lib/server/flaschenpost';
+import { m } from '$lib/paraglide/messages.js';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
@@ -28,6 +29,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 			enabled: prefs.quietHoursEnabled,
 			startMinutes: prefs.quietStartMinutes,
 			endMinutes: prefs.quietEndMinutes
+		},
+		diagnostics: {
+			userId,
+			email: locals.user?.email ?? null,
+			correlationId: locals.correlationId
 		}
 	};
 };
@@ -49,7 +55,7 @@ export const actions: Actions = {
 			}
 			await saveTokens(userId, tokens, { markConnected: true });
 			logger.info('flaschen connected', { userId, employeeId: tokens.employeeId });
-			return { success: true };
+			return { success: true, toast: m.toast_connected() };
 		} catch (e) {
 			if (e instanceof OAuthError && e.isInvalidGrant) {
 				return fail(401, { error: 'INVALID_TOKEN' });
@@ -75,7 +81,7 @@ export const actions: Actions = {
 	disconnect: async ({ locals }) => {
 		const userId = locals.user!.id;
 		await disconnectAccount(userId);
-		return { success: true };
+		return { success: true, toast: m.toast_disconnected() };
 	},
 
 	quietHours: async ({ request, locals }) => {
@@ -97,7 +103,7 @@ export const actions: Actions = {
 			logger.error('save quiet hours failed', { userId, error: String(e) });
 			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: m.toast_saved() };
 	}
 };
 

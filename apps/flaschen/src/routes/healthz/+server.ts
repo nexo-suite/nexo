@@ -20,7 +20,14 @@ export const GET = async () => {
 
 	const allOk = Object.values(checks).every((c) => c.ok);
 	return json(
-		{ ok: allOk, version: __APP_VERSION__, checks, latency_ms: Date.now() - start },
+		{
+			ok: allOk,
+			version: __APP_VERSION__,
+			commit: __APP_COMMIT__,
+			buildTime: __APP_BUILD_TIME__,
+			checks,
+			latency_ms: Date.now() - start
+		},
 		{ status: allOk ? 200 : 503 }
 	);
 };

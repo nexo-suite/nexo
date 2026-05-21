@@ -9,7 +9,7 @@
 	],
 	"scripts": {
 		"build": "vite build && pnpm build:worker",
-		"build:worker": "esbuild src/worker/index.ts --bundle --platform=node --target=node22 --format=esm --outfile=build/worker/index.js --packages=external",
+		"build:worker": "esbuild src/worker/index.ts --bundle --platform=node --target=node24 --format=esm --outfile=build/worker/index.js --packages=external",
 		"dev": "vite dev --port 3006",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",

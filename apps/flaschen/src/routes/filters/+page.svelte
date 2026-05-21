@@ -728,9 +728,7 @@
 	</PageHeader>
 
 	{#if form?.success}
-		<div class="banner banner-ok">
-			<span>{m.saved()}</span>
-		</div>
+		<div class="sr-saved" aria-live="polite">{m.toast_saved()}</div>
 	{/if}
 
 	<form
@@ -1422,14 +1420,13 @@
 		padding-bottom: 76px;
 	}
 
-	.banner-ok {
-		padding: 8px 12px;
-		background: var(--ok-soft);
-		border: 1px solid color-mix(in oklab, var(--ok) 30%, transparent);
-		color: var(--ok-ink);
-		border-radius: var(--radius-md);
-		font-size: 12.5px;
-		font-weight: 600;
+	.sr-saved {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
 	}
 
 	form {

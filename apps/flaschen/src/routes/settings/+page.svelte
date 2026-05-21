@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { getLocale } from '$lib/paraglide/runtime.js';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { dev } from '$app/environment';
 	import { page } from '$app/state';
 	import { env } from '$env/dynamic/public';
 	import { untrack } from 'svelte';
 	import {
+		AboutDiagnostics,
 		BottomSheet,
 		PageHeader,
 		ProfileHubCard,
@@ -14,21 +17,19 @@
 		Toggle,
 		UnsavedGuard
 	} from '@nexo/ui';
-	import { AlertTriangle, ChevronRight, ExternalLink, Copy } from '@lucide/svelte';
+	import { AlertTriangle, ChevronRight } from '@lucide/svelte';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 
 	let { data, form } = $props();
 
 	let connectOpen = $state(false);
 	let connecting = $state(false);
+	let disconnectOpen = $state(false);
+	let disconnecting = $state(false);
 	let quietHoursEnabled = $state(untrack(() => data.quietHours.enabled));
 	let quietStart = $state(untrack(() => minutesToTime(data.quietHours.startMinutes)));
 	let quietEnd = $state(untrack(() => minutesToTime(data.quietHours.endMinutes)));
 	let quietSaving = $state(false);
-	let diagnosticsCopied = $state(false);
-
-	const appVersion = __APP_VERSION__;
-	const sourceUrl = 'https://github.com/krieger2501/nexo';
 
 	function minutesToTime(mins: number): string {
 		const h = Math.floor(mins / 60);
@@ -48,26 +49,6 @@
 		quietEnd = minutesToTime(data.quietHours.endMinutes);
 	}
 
-	async function copyDiagnostics() {
-		const correlationId =
-			typeof crypto !== 'undefined' && 'randomUUID' in crypto
-				? crypto.randomUUID().slice(0, 8)
-				: Math.random().toString(36).slice(2, 10);
-		const payload = [
-			`flaschen v${appVersion}`,
-			`correlationId: ${correlationId}`,
-			`ua: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'n/a'}`,
-			`when: ${new Date().toISOString()}`
-		].join('\n');
-		try {
-			await navigator.clipboard.writeText(payload);
-			diagnosticsCopied = true;
-			setTimeout(() => (diagnosticsCopied = false), 1800);
-		} catch {
-			// silently ignore clipboard failures
-		}
-	}
-
 	// Open the connect sheet automatically when arriving from the home CTA
 	// (`/settings?connect=1`). Strip the query so reloads don't re-open it.
 	$effect(() => {
@@ -81,10 +62,13 @@
 
 	const hubUrl = env.PUBLIC_LANDING_URL
 		? `${env.PUBLIC_LANDING_URL}/apps`
-		: 'https://krieger2501.de/apps';
+		: dev
+			? 'http://localhost:3000/apps'
+			: 'https://krieger2501.de/apps';
+
+	const currentLocale = getLocale();
 
 	const languageLabels: Record<string, string> = {
-		auto: 'Auto',
 		en: 'English',
 		de: 'Deutsch',
 		tr: 'Türkçe'
@@ -106,7 +90,9 @@
 		return 'connected' as const;
 	});
 
-	const lastRefreshed = $derived(formatRelative(data.account?.lastLoginAt ?? null));
+	const lastRefreshed = $derived(
+		formatRelative(data.account?.lastRefreshAt ?? data.account?.lastLoginAt ?? null)
+	);
 	const tokenExpiresLabel = $derived(formatExpires(data.account?.refreshTokenExpiresAt ?? null));
 
 	function formatRelative(d: Date | string | null): string | null {
@@ -152,7 +138,7 @@
 		email={data.profile.email}
 		{hubUrl}
 		displayName={data.profile.displayName}
-		language={languageLabels[data.profile.language] ?? data.profile.language}
+		language={languageLabels[currentLocale] ?? currentLocale}
 		weekStarts={weekStartLabels[data.profile.weekStartDay] ?? 'Monday'}
 		theme={themeLabels[data.profile.theme] ?? data.profile.theme}
 	/>
@@ -210,7 +196,7 @@
 				</button>
 			{/if}
 			<form method="POST" action="?/disconnect" use:enhance class="disconnect-form">
-				<button type="submit" class="set-row danger-row">
+				<button type="button" class="set-row danger-row" onclick={() => (disconnectOpen = true)}>
 					<div class="sr-icon sr-icon-danger">⎋</div>
 					<div class="sr-text">
 						<div class="sr-label">{m.settings_disconnect()}</div>
@@ -274,27 +260,17 @@
 	</form>
 
 	<!-- ─── About ─── -->
-	<SectionLabel title={m.settings_about()} right="v{appVersion}" />
-	<div class="set-card">
-		<a class="set-row" href={sourceUrl} target="_blank" rel="noreferrer">
-			<div class="sr-icon">🐙</div>
-			<div class="sr-text">
-				<div class="sr-label">{m.settings_about_source()}</div>
-				<div class="sr-desc">{sourceUrl.replace('https://', '')}</div>
-			</div>
-			<span class="sr-chev"><ExternalLink size={14} strokeWidth={1.8} /></span>
-		</a>
-		<button type="button" class="set-row" onclick={copyDiagnostics}>
-			<div class="sr-icon">📋</div>
-			<div class="sr-text">
-				<div class="sr-label">{m.settings_about_diagnostics()}</div>
-				<div class="sr-desc">
-					{diagnosticsCopied ? m.settings_about_copied() : m.settings_about_diagnostics_desc()}
-				</div>
-			</div>
-			<span class="sr-chev"><Copy size={14} strokeWidth={1.8} /></span>
-		</button>
-	</div>
+	<AboutDiagnostics
+		appName="Nexo Flaschen"
+		appKey="flaschen"
+		version={__APP_VERSION__}
+		commit={__APP_COMMIT__}
+		buildTime={__APP_BUILD_TIME__}
+		email={data.diagnostics.email}
+		userId={data.diagnostics.userId}
+		correlationId={data.diagnostics.correlationId}
+		sectionTitle={m.settings_about()}
+	/>
 </div>
 
 <SaveBar
@@ -358,6 +334,35 @@
 				{m.connect_cancel()}
 			</button>
 			<button type="submit" class="sheet-done" disabled={connecting}>{m.connect_submit()}</button>
+		</div>
+	</form>
+</BottomSheet>
+
+<!-- ─── Disconnect confirm sheet ─── -->
+<BottomSheet
+	bind:open={disconnectOpen}
+	title={m.settings_disconnect()}
+	subtitle="This revokes our refresh token. You'll need to paste a new one to reconnect."
+>
+	<form
+		method="POST"
+		action="?/disconnect"
+		use:enhance={() => {
+			disconnecting = true;
+			return async ({ update }) => {
+				await update({ reset: false });
+				disconnecting = false;
+				disconnectOpen = false;
+			};
+		}}
+	>
+		<div class="sheet-actions sheet-actions-row">
+			<button type="button" class="sheet-cancel" onclick={() => (disconnectOpen = false)}>
+				{m.connect_cancel()}
+			</button>
+			<button type="submit" class="sheet-done sheet-done-danger" disabled={disconnecting}>
+				{m.settings_disconnect()}
+			</button>
 		</div>
 	</form>
 </BottomSheet>
@@ -519,19 +524,28 @@
 		display: flex;
 		gap: 8px;
 	}
-	.sheet-done {
+	.sheet-done,
+	.sheet-cancel {
 		flex: 1;
-		width: 100%;
+		min-width: 0;
 		height: 48px;
+		padding: 0 14px;
 		font: inherit;
 		font-size: 15px;
 		font-weight: 600;
+		line-height: 1;
 		border-radius: var(--radius-md, 12px);
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		transition: opacity 150ms ease;
+	}
+	.sheet-done {
 		border: none;
 		background: var(--color-accent);
 		color: #fff;
-		cursor: pointer;
-		transition: opacity 150ms ease;
 	}
 	.sheet-done:active:not(:disabled) {
 		opacity: 0.85;
@@ -540,20 +554,15 @@
 		opacity: 0.45;
 		cursor: not-allowed;
 	}
+	.sheet-done-danger {
+		background: var(--err);
+	}
 	.sheet-cancel {
-		flex: 1;
-		height: 48px;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		border-radius: var(--radius-md, 12px);
 		border: 1px solid var(--color-border-default);
 		background: var(--color-bg-1);
 		color: var(--color-text);
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
+	}
+	.sheet-cancel:active {
+		background: var(--color-bg-2);
 	}
 </style>

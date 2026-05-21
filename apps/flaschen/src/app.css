@@ -58,9 +58,6 @@
 	--dur-fast: var(--duration-fast);
 	--dur-base: var(--duration-base);
 	--dur-slow: var(--duration-slow);
-
-	--safe-top: env(safe-area-inset-top, 0px);
-	--safe-bot: env(safe-area-inset-bottom, 0px);
 }
 
 body {
@@ -71,37 +68,10 @@ body {
 	color: var(--text-primary);
 }
 
-.mono {
-	font-family: var(--font-mono);
-	font-variant-numeric: tabular-nums;
-}
-
-.t-label {
-	font-family: var(--font-mono);
-	font-size: 10px;
-	line-height: 1;
-	letter-spacing: 0.12em;
-	text-transform: uppercase;
-	color: var(--text-subtle);
-}
-
 .app-container {
 	max-width: var(--app-max-w);
 	margin-inline: auto;
 	padding-bottom: calc(var(--tab-h) + var(--safe-bot) + 24px);
-}
-
-.screen-title {
-	font-size: 28px;
-	font-weight: 600;
-	letter-spacing: -0.025em;
-	margin: 0;
-}
-
-.screen-sub {
-	color: var(--text-muted);
-	font-size: 14px;
-	margin-top: 2px;
 }
 
 @keyframes pulse-dot {

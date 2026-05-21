@@ -3,7 +3,14 @@
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { enhance } from '$app/forms';
-	import { BottomSheet, DeviceListRow, ErrorBanner, PageHeader, SectionLabel } from '@nexo/ui';
+	import {
+		BottomSheet,
+		DeviceListRow,
+		ErrorBanner,
+		PageHeader,
+		SectionLabel,
+		Toast
+	} from '@nexo/ui';
 	import { parseUserAgent, deviceIcon } from '@nexo/ui/utils/ua-parser';
 	import { formatRelative, defaultLabelFromUA } from '@nexo/ui/utils/format-relative';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
@@ -43,8 +50,8 @@
 	let removeSheetOpen = $state(false);
 	let removingId = $state<string | null>(null);
 	let removingLabel = $state<string>('');
-	let toastMessage = $state<string | null>(null);
-	let toastTimer = $state<ReturnType<typeof setTimeout> | null>(null);
+	let toastMessage = $state('');
+	let toastOpen = $state(false);
 
 	onMount(async () => {
 		permState = await getPermissionState();
@@ -107,10 +114,7 @@
 
 	function flashToast(text: string) {
 		toastMessage = text;
-		if (toastTimer) clearTimeout(toastTimer);
-		toastTimer = setTimeout(() => {
-			toastMessage = null;
-		}, 2800);
+		toastOpen = true;
 	}
 
 	function startRename(id: string, current: string | null) {
@@ -378,9 +382,7 @@
 </div>
 
 <!-- Toast -->
-{#if toastMessage}
-	<div class="toast" role="status">{toastMessage}</div>
-{/if}
+<Toast bind:open={toastOpen} type="success" message={toastMessage} duration={3000} />
 
 <!-- Rename sheet -->
 <BottomSheet
@@ -454,25 +456,6 @@
 		gap: 14px;
 	}
 
-	/* Toast */
-	.toast {
-		position: fixed;
-		left: 50%;
-		bottom: calc(env(safe-area-inset-bottom, 0) + 80px);
-		transform: translateX(-50%);
-		max-width: calc(100vw - 32px);
-		padding: 10px 14px;
-		font-size: 13px;
-		font-weight: 500;
-		color: var(--text-primary);
-		background: var(--surface-1);
-		border: 1px solid var(--border-strong);
-		border-radius: 999px;
-		box-shadow: 0 12px 30px -12px rgb(0 0 0 / 0.25);
-		z-index: 50;
-		text-align: center;
-	}
-
 	/* Sheet form */
 	.field {
 		display: block;
@@ -498,32 +481,36 @@
 		gap: 8px;
 		padding: 14px 0 4px;
 	}
-	.sheet-done {
+	.sheet-done,
+	.sheet-cancel {
 		flex: 1;
+		min-width: 0;
 		height: 48px;
+		padding: 0 14px;
 		font: inherit;
 		font-size: 15px;
 		font-weight: 600;
+		line-height: 1;
 		border-radius: var(--radius-md);
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		transition: opacity 150ms ease;
+	}
+	.sheet-done {
 		border: none;
 		background: var(--accent);
 		color: #fff;
-		cursor: pointer;
 	}
 	.sheet-done-danger {
 		background: var(--err);
 	}
 	.sheet-cancel {
-		flex: 1;
-		height: 48px;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		border-radius: var(--radius-md);
 		border: 1px solid var(--border-default);
 		background: var(--bg-1);
 		color: var(--text-primary);
-		cursor: pointer;
 	}
 
 	/* Device row action buttons (inside DeviceListRow's actions snippet) */

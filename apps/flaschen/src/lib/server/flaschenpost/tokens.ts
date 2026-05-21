@@ -26,12 +26,14 @@ export async function saveTokens(
 	tokens: ParsedTokens,
 	options: { username?: string; markConnected?: boolean } = {}
 ): Promise<void> {
+	const now = new Date();
 	const set = {
 		encryptedAccessToken: encrypt(tokens.accessToken),
 		encryptedRefreshToken: encrypt(tokens.refreshToken),
 		accessTokenExpiresAt: tokens.expiresAt,
 		refreshTokenExpiresAt: tokens.refreshExpiresAt,
-		updatedAt: new Date()
+		lastRefreshAt: now,
+		updatedAt: now
 	} satisfies Partial<AccountRow>;
 
 	const existing = await loadAccount(userId);
@@ -42,7 +44,7 @@ export async function saveTokens(
 			userId,
 			employeeId: tokens.employeeId,
 			username: options.username ?? null,
-			lastLoginAt: new Date(),
+			lastLoginAt: now,
 			needsReconnect: false,
 			...set
 		});
@@ -55,7 +57,7 @@ export async function saveTokens(
 			...set,
 			...(tokens.employeeId ? { employeeId: tokens.employeeId } : {}),
 			...(options.username ? { username: options.username } : {}),
-			...(options.markConnected ? { lastLoginAt: new Date(), needsReconnect: false } : {})
+			...(options.markConnected ? { lastLoginAt: now, needsReconnect: false } : {})
 		})
 		.where(eq(flaschenAccount.userId, userId));
 }
@@ -93,4 +95,27 @@ export async function ensureFreshAccessToken(userId: string): Promise<string> {
 
 export async function disconnectAccount(userId: string): Promise<void> {
 	await db.delete(flaschenAccount).where(eq(flaschenAccount.userId, userId));
+}
+
+/** Touch refreshGrant for a user even if their poll is paused, so the
+ * refresh-token doesn't go stale during long inactive stretches. Returns
+ * whether the refresh succeeded; `needsReconnect: true` means the grant was
+ * rejected and the user must re-link. Other errors propagate. */
+export async function keepaliveRefresh(
+	userId: string
+): Promise<{ refreshed: boolean; needsReconnect: boolean }> {
+	const acct = await loadAccount(userId);
+	if (!acct) return { refreshed: false, needsReconnect: false };
+	if (acct.needsReconnect) return { refreshed: false, needsReconnect: true };
+	try {
+		const tokens = await refreshGrant(decrypt(acct.encryptedRefreshToken));
+		await saveTokens(userId, tokens);
+		return { refreshed: true, needsReconnect: false };
+	} catch (err) {
+		if (err instanceof OAuthError && err.isInvalidGrant) {
+			await markNeedsReconnect(userId, 'refresh_token rejected (keepalive)');
+			return { refreshed: false, needsReconnect: true };
+		}
+		throw err;
+	}
 }
