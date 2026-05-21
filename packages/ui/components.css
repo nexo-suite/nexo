@@ -39,10 +39,39 @@
 	color: var(--color-text-subtle);
 }
 
+/* Alias of .label-eyebrow used across finance/flaschen */
+.t-label {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	line-height: 1;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--color-text-subtle);
+}
+
+.mono {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+}
+
 .ellipsis {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+/* ── Screen titles ── */
+.screen-title {
+	font-size: 28px;
+	font-weight: 600;
+	letter-spacing: -0.025em;
+	margin: 0;
+}
+
+.screen-sub {
+	color: var(--color-text-muted);
+	font-size: 14px;
+	margin-top: 2px;
 }
 
 /* ── Reveal-on-scroll ── */
