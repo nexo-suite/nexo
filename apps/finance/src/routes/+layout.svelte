@@ -6,6 +6,7 @@
 	import {
 		installDiagnostics,
 		KonamiCode,
+		PageShell,
 		setCurrentCorrelationId,
 		Toast,
 		UpdatePrompt
@@ -50,9 +51,13 @@
 {#if navigating.to}
 	<div class="nav-progress"></div>
 {/if}
-<main class="mx-auto max-w-md" style="padding-bottom: calc(var(--tab-h) + 6px + 32px)">
+{#if isLoginPage}
 	{@render children()}
-</main>
+{:else}
+	<PageShell>
+		{@render children()}
+	</PageShell>
+{/if}
 
 <Toast bind:open={toastOpen} type="error" message={errorMsg ?? ''} detail={errorId ?? undefined} />
 <Toast bind:open={successOpen} type="success" message={successMessage} duration={3000} />
@@ -60,7 +65,7 @@
 {#if !isLoginPage}
 	<BottomNav />
 {/if}
-<UpdatePrompt bottomOffset="calc(var(--tab-h) + 18px)" />
+<UpdatePrompt bottomOffset="calc(var(--tab-h) + var(--safe-bot) + 12px)" />
 <KonamiCode />
 
 <style>

@@ -9,7 +9,8 @@
 		setCurrentCorrelationId,
 		Toast,
 		UpdatePrompt,
-		BottomNav
+		BottomNav,
+		PageShell
 	} from '@nexo/ui';
 	import type { BottomNavTab } from '@nexo/ui';
 	import { LayoutDashboard, Bell, SlidersHorizontal, Settings } from '@lucide/svelte';
@@ -60,9 +61,9 @@
 	]);
 </script>
 
-<div class="app-container">
+<PageShell>
 	{@render children()}
-</div>
+</PageShell>
 
 <Toast bind:open={errorOpen} type="error" message={errorMsg ?? ''} detail={errorId ?? undefined} />
 <Toast bind:open={successOpen} type="success" message={successMessage} duration={3000} />

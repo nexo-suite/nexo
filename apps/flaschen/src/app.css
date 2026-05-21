@@ -12,9 +12,6 @@
 	--color-ok: #16a34a;
 	--color-warn: #ca8a04;
 	--color-err: #dc2626;
-
-	--tab-h: 76px;
-	--app-max-w: 448px;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -61,17 +58,10 @@
 }
 
 body {
-	padding-top: var(--safe-top);
 	min-height: 100vh;
 	overflow-x: hidden;
 	background: var(--bg-0);
 	color: var(--text-primary);
-}
-
-.app-container {
-	max-width: var(--app-max-w);
-	margin-inline: auto;
-	padding-bottom: calc(var(--tab-h) + var(--safe-bot) + 24px);
 }
 
 @keyframes pulse-dot {

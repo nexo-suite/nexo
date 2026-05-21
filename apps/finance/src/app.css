@@ -12,9 +12,6 @@
 	--color-income: #16a34a;
 	--color-expense: oklch(0.59 0.2 27);
 	--color-debt: oklch(0.65 0.18 47);
-
-	/* ── Layout ── */
-	--tab-h: 66px;
 }
 
 :root {
@@ -35,7 +32,6 @@
 }
 
 body {
-	padding-top: var(--safe-top);
 	min-height: 100vh;
 	overflow-x: hidden;
 }
