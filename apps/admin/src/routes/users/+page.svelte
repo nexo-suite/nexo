@@ -63,7 +63,7 @@
 </script>
 
 {#if view === 'list'}
-	<div class="page" style="padding-bottom: 0;">
+	<div class="page">
 		<PageHeader title="Users" subtitle="{counts.active} active · {counts.invited} invited">
 			{#snippet actions()}
 				<button class="hdr-action" type="button" aria-label="Invite user" onclick={openInvite}>

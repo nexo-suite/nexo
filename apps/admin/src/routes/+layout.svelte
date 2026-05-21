@@ -8,6 +8,7 @@
 		ErrorBanner,
 		installDiagnostics,
 		KonamiCode,
+		PageShell,
 		setCurrentCorrelationId,
 		Toast,
 		UpdatePrompt
@@ -68,45 +69,22 @@
 <svelte:head>
 	<title>Admin — Nexo</title>
 </svelte:head>
-<div class="shell">
-	<!-- Main content -->
-	<main class="app-body">
-		{#if showError && errorMsg}
-			<ErrorBanner
-				message={errorMsg}
-				correlationId={errorId ?? undefined}
-				onDismiss={() => (dismissedFor = errorKey)}
-			/>
-		{/if}
-		{@render children()}
-	</main>
-</div>
+<PageShell>
+	{#if showError && errorMsg}
+		<ErrorBanner
+			message={errorMsg}
+			correlationId={errorId ?? undefined}
+			onDismiss={() => (dismissedFor = errorKey)}
+		/>
+	{/if}
+	{@render children()}
+</PageShell>
 <UpdatePrompt bottomOffset="calc(var(--tab-h) + var(--safe-bot) + 12px)" />
 <Toast bind:open={successOpen} type="success" message={successMessage} duration={3000} />
 <KonamiCode />
 <BottomNav {tabs} currentPath={page.url.pathname} />
 
 <style>
-	.shell {
-		height: 100dvh;
-		display: flex;
-		flex-direction: column;
-		max-width: 480px;
-		margin: 0 auto;
-		position: relative;
-		background: var(--color-bg-1);
-		overflow: hidden;
-	}
-
-	/* ── App body ── */
-	.app-body {
-		flex: 1;
-		padding-top: var(--safe-top);
-		padding-bottom: calc(var(--tab-h) + var(--safe-bot));
-		overflow-y: auto;
-		overscroll-behavior-y: contain;
-	}
-
 	.nav-progress {
 		position: fixed;
 		top: 0;

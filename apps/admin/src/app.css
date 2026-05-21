@@ -29,7 +29,6 @@
 	--info-bg: rgb(59 130 246 / 0.1);
 	--accent: var(--color-accent);
 	--topbar-h: 52px;
-	--tab-h: 64px;
 }
 
 /* ── Admin screen-title spacing override ── */

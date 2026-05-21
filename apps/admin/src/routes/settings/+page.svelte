@@ -205,7 +205,7 @@
 	);
 </script>
 
-<div class="page" style="padding-bottom: 0;">
+<div class="page">
 	<PageHeader title={m.nav_settings()}>
 		{#snippet avatar()}
 			<UserAvatarMenu />

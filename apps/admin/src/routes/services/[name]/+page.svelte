@@ -477,7 +477,7 @@
 		padding: 3px;
 		border-radius: 10px;
 		position: sticky;
-		top: calc(var(--topbar-h) + var(--safe-top));
+		top: var(--safe-top);
 		z-index: 4;
 	}
 
