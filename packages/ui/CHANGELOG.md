@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/nexo-suite/nexo/compare/ui-v0.4.0...ui-v0.5.0) (2026-05-21)
+
+
+### Features
+
+* **ui:** extract UserAvatarMenu, BottomNav, KonamiCode, AboutDiagnostics, ToggleRow ([f41e181](https://github.com/nexo-suite/nexo/commit/f41e1819e5ded4c2d636075d3b2683b18b6f2d34))
+
 ## [0.4.0](https://github.com/nexo-suite/nexo/compare/ui-v0.3.0...ui-v0.4.0) (2026-05-20)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/nexo-suite/nexo/compare/admin-v0.5.1...admin-v0.5.2) (2026-05-21)
+
+
+### Bug Fixes
+
+* **infra:** switch Docker installs from --offline to --prefer-offline ([8dbd86b](https://github.com/nexo-suite/nexo/commit/8dbd86baef9501c117dfa2320ccda4f11f7fa0f9))
+
 ## [0.5.1](https://github.com/nexo-suite/nexo/compare/admin-v0.5.0...admin-v0.5.1) (2026-05-21)
 
 

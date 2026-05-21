@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/nexo-suite/nexo/compare/i18n-v0.3.0...i18n-v0.4.0) (2026-05-21)
+
+
+### Features
+
+* **i18n:** refine locale detection helpers ([58237f1](https://github.com/nexo-suite/nexo/commit/58237f10f04c772685cbd236247f4ba8f045ccb8))
+
 ## [0.3.0](https://github.com/nexo-suite/nexo/compare/i18n-v0.2.0...i18n-v0.3.0) (2026-05-20)
 
 
