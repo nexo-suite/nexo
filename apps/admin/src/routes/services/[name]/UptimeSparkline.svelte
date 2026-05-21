@@ -99,6 +99,9 @@
 		background: var(--color-surface-1);
 		border: 1px solid var(--color-border-default);
 		border-radius: var(--radius-md);
+		box-sizing: border-box;
+		max-width: 100%;
+		overflow: hidden;
 	}
 	.uptime-h {
 		display: flex;
@@ -130,10 +133,12 @@
 		gap: 2px;
 		height: 22px;
 		align-items: stretch;
+		min-width: 0;
+		width: 100%;
 	}
 	.bar {
 		flex: 1 1 0;
-		min-width: 2px;
+		min-width: 0;
 		border-radius: 2px;
 		background: var(--color-bg-2);
 	}

@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { enhance } from '$app/forms';
-	import { PageHeader } from '@nexo/ui';
+	import { BottomSheet, PageHeader } from '@nexo/ui';
 	import InfoTab from './InfoTab.svelte';
 	import HealthTab from './HealthTab.svelte';
 	import LogsViewer from './LogsViewer.svelte';
-	import BottomSheet from '$lib/components/BottomSheet.svelte';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { fmtRelative } from '$lib/utils';
 
@@ -103,6 +102,7 @@
 	let menuOpen = $state(false);
 	let inspectOpen = $state(false);
 	let copied = $state(false);
+	let menuWrap = $state<HTMLDivElement | null>(null);
 
 	async function copyId() {
 		try {
@@ -113,10 +113,21 @@
 			// ignore
 		}
 	}
+
+	function onMenuDocClick(e: MouseEvent) {
+		if (!menuOpen || !menuWrap) return;
+		if (!menuWrap.contains(e.target as Node)) menuOpen = false;
+	}
+
+	function onMenuKey(e: KeyboardEvent) {
+		if (e.key === 'Escape' && menuOpen) menuOpen = false;
+	}
 </script>
 
+<svelte:window onclick={onMenuDocClick} onkeydown={onMenuKey} />
+
 <div class="screen">
-	<PageHeader title={displayTitle} backHref="/services">
+	<PageHeader title={displayTitle} backHref="/">
 		{#snippet avatar()}
 			<UserAvatarMenu />
 		{/snippet}
@@ -195,20 +206,52 @@
 			<button type="button" class="btn btn-ghost btn-small" onclick={() => (activeTab = 'logs')}>
 				Logs →
 			</button>
-			<button
-				type="button"
-				class="btn btn-ghost btn-small btn-icon"
-				onclick={() => (menuOpen = true)}
-				aria-label="More"
-			>
-				<svg viewBox="0 0 16 16" fill="currentColor"
-					><circle cx="3" cy="8" r="1.4" /><circle cx="8" cy="8" r="1.4" /><circle
-						cx="13"
-						cy="8"
-						r="1.4"
-					/></svg
+			<div class="menu-wrap" bind:this={menuWrap}>
+				<button
+					type="button"
+					class="btn btn-ghost btn-small btn-icon"
+					onclick={() => (menuOpen = !menuOpen)}
+					aria-label="More"
+					aria-expanded={menuOpen}
+					aria-haspopup="menu"
 				>
-			</button>
+					<svg viewBox="0 0 16 16" fill="currentColor"
+						><circle cx="3" cy="8" r="1.4" /><circle cx="8" cy="8" r="1.4" /><circle
+							cx="13"
+							cy="8"
+							r="1.4"
+						/></svg
+					>
+				</button>
+				{#if menuOpen}
+					<div class="menu-pop" role="menu">
+						<button
+							class="pop-row"
+							type="button"
+							role="menuitem"
+							onclick={() => {
+								menuOpen = false;
+								inspectOpen = true;
+							}}
+						>
+							<span class="pop-label">Inspect JSON</span>
+							<span class="pop-arrow">→</span>
+						</button>
+						<button
+							class="pop-row"
+							type="button"
+							role="menuitem"
+							onclick={() => {
+								void copyId();
+								menuOpen = false;
+							}}
+						>
+							<span class="pop-label">{copied ? 'Copied!' : 'Copy container ID'}</span>
+							<span class="pop-meta mono">{container.Id.slice(0, 12)}</span>
+						</button>
+					</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 
@@ -289,35 +332,6 @@
 			</button>
 		</div>
 	</form>
-</BottomSheet>
-
-<BottomSheet bind:open={menuOpen} title="Container actions">
-	<div class="menu-stack">
-		<button
-			type="button"
-			class="menu-row"
-			onclick={() => {
-				menuOpen = false;
-				inspectOpen = true;
-			}}
-		>
-			<span class="menu-icon">📄</span>
-			<span class="menu-label">Inspect JSON</span>
-			<span class="menu-arrow">→</span>
-		</button>
-		<button
-			type="button"
-			class="menu-row"
-			onclick={() => {
-				void copyId();
-				menuOpen = false;
-			}}
-		>
-			<span class="menu-icon">📋</span>
-			<span class="menu-label">{copied ? 'Copied!' : 'Copy container ID'}</span>
-			<span class="menu-id mono">{container.Id.slice(0, 12)}</span>
-		</button>
-	</div>
 </BottomSheet>
 
 <BottomSheet bind:open={inspectOpen} title="Inspect" subtitle={container.Name?.replace(/^\//, '')}>
@@ -528,34 +542,66 @@
 		height: 16px;
 	}
 
-	.menu-stack {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
+	.menu-wrap {
+		position: relative;
+		display: inline-flex;
 	}
-	.menu-row {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 14px 12px;
+
+	.menu-pop {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		z-index: 60;
+		min-width: 220px;
+		padding: 6px;
 		background: var(--color-surface-1);
 		border: 1px solid var(--color-border-default);
-		border-radius: var(--radius-md);
-		cursor: pointer;
+		border-radius: var(--radius-md, 12px);
+		box-shadow:
+			0 12px 32px -12px rgba(0, 0, 0, 0.18),
+			0 2px 6px rgba(0, 0, 0, 0.06);
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		animation: pop-in 140ms var(--ease-out, ease-out);
+	}
+
+	@keyframes pop-in {
+		from {
+			opacity: 0;
+			transform: translateY(-4px) scale(0.98);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	.pop-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 10px 12px;
+		font: inherit;
+		font-size: 13.5px;
+		color: var(--color-text-primary);
+		background: transparent;
+		border: none;
 		text-align: left;
+		border-radius: 8px;
+		cursor: pointer;
 	}
-	.menu-icon {
-		font-size: 18px;
-		flex-shrink: 0;
+	.pop-row:hover {
+		background: var(--color-bg-1);
 	}
-	.menu-label {
-		flex: 1;
-		font-size: 14px;
+	.pop-label {
+		font-weight: 500;
 	}
-	.menu-arrow {
+	.pop-arrow {
 		color: var(--color-text-faint);
 	}
-	.menu-id {
+	.pop-meta {
 		font-family: var(--font-mono);
 		font-size: 11px;
 		color: var(--color-text-faint);

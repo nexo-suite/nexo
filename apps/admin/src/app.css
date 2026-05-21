@@ -29,23 +29,12 @@
 	--info-bg: rgb(59 130 246 / 0.1);
 	--accent: var(--color-accent);
 	--topbar-h: 52px;
-	--tabbar-h: 64px;
-	--safe-top: env(safe-area-inset-top, 0px);
-	--safe-bot: env(safe-area-inset-bottom, 0px);
+	--tab-h: 64px;
 }
 
-/* ── Screen titles ── */
+/* ── Admin screen-title spacing override ── */
 .screen-title {
-	font-size: 28px;
-	font-weight: 600;
-	letter-spacing: -0.025em;
 	margin: 4px 0 0;
-}
-
-.screen-sub {
-	color: var(--color-text-muted);
-	font-size: 14px;
-	margin-top: 2px;
 }
 
 .section-title {
@@ -741,7 +730,7 @@
 /* ── Jump pill ── */
 .jump-pill {
 	position: fixed;
-	bottom: calc(var(--tabbar-h) + var(--safe-bot) + 12px);
+	bottom: calc(var(--tab-h) + var(--safe-bot) + 12px);
 	left: 50%;
 	transform: translateX(-50%);
 	background: var(--color-text-primary);

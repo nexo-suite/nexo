@@ -90,6 +90,8 @@ export { SOCKET_PATH };
 interface HealthzResponse {
 	ok: boolean;
 	version?: string;
+	commit?: string;
+	buildTime?: string;
 	checks: Record<string, { ok: boolean; latency_ms?: number; error?: string }>;
 	latency_ms?: number;
 }

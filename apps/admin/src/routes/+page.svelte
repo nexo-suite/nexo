@@ -2,7 +2,7 @@
 	import type { EnrichedContainer } from './+page.server';
 	import { Activity, MoreHorizontal, TrendingDown, TrendingUp, Users } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
-	import { PageHeader } from '@nexo/ui';
+	import { BottomSheet, PageHeader } from '@nexo/ui';
 	import {
 		ctnName,
 		ctnGroup,
@@ -12,7 +12,6 @@
 	} from '$lib/utils/containers';
 	import SearchInput from '$lib/components/SearchInput.svelte';
 	import FilterChips from '$lib/components/FilterChips.svelte';
-	import BottomSheet from '$lib/components/BottomSheet.svelte';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import ContainerCard from './ContainerCard.svelte';
 
@@ -98,20 +97,11 @@
 
 	const runningCount = $derived(data.containers.filter(ctnIsHealthy).length);
 	const issueCount = $derived(data.containers.filter(ctnHasIssue).length);
+	const attention = $derived(data.containers.filter(ctnHasIssue));
 
 	function profileTargetCount(p: 'production' | 'preview'): number {
 		return data.containers.filter((c) => c.Profile === p).length;
 	}
-
-	// ── DB stats ──────────────────────────────────────────────────────────────
-	const totals = $derived(data.dbStats.totals);
-	const activity = $derived(data.dbStats.activity);
-
-	const activityRows = $derived([
-		{ label: 'New users', icon: Users, ...activity.users },
-		{ label: 'Expenses added', icon: TrendingDown, ...activity.expenses },
-		{ label: 'Income added', icon: TrendingUp, ...activity.income }
-	]);
 </script>
 
 <svelte:window onclick={onMenuDocClick} onkeydown={onMenuKey} />
@@ -189,9 +179,7 @@
 		{/if}
 	</div>
 
-	{#if form?.success}
-		<div class="banner ok">Restarted {form.restarted} containers.</div>
-	{:else if form?.error === 'RESTART_PARTIAL'}
+	{#if form?.error === 'RESTART_PARTIAL'}
 		<div class="banner err">
 			Some containers failed to restart: {form.failed?.join(', ')}
 		</div>
@@ -213,6 +201,27 @@
 			<div class="summary-sub">{issueCount > 0 ? 'Tap to filter' : 'All checks passing'}</div>
 		</div>
 	</div>
+
+	{#if attention.length > 0}
+		<div class="attention">
+			<div class="attention-h">
+				<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+					<path d="M8 1.5l7 12.5H1L8 1.5z" stroke-linejoin="round" />
+					<path d="M8 6.5v3.5M8 12v.01" stroke-linecap="round" />
+				</svg>
+				<span>Needs attention</span>
+				<span class="attention-count">{attention.length}</span>
+			</div>
+			<div class="row-stack">
+				{#each attention as c (c.Id)}
+					<a class="att-row" href="/services/{(c.Names[0] ?? c.Id).replace(/^\//, '')}">
+						<span class="att-name">{ctnName(c)}</span>
+						<span class="att-state">{c.Status || c.State}</span>
+					</a>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<!-- Search -->
 	<SearchInput bind:value={query} placeholder="Filter containers…" />
@@ -279,35 +288,46 @@
 		</svg>
 		<span class="section-title">Database</span>
 	</div>
-	<div class="row-stack">
-		{#each [['Users', totals.users], ['Accounts', totals.accounts], ['Expenses', totals.expenses], ['Income', totals.income], ['Debts', totals.debts]] as [lbl, val] (lbl)}
-			<div class="kv">
-				<span class="k">{lbl}</span>
-				<span class="v mono">{val}</span>
-			</div>
-		{/each}
-	</div>
-
-	<!-- Activity -->
-	<div class="section-header">
-		<Activity size={14} class="section-icon" />
-		<span class="section-title">Activity</span>
-	</div>
-	<div class="row-stack">
-		{#each activityRows as row (row.label)}
-			<div class="act-row">
-				<div class="act-icon"><row.icon size={14} /></div>
-				<span class="act-label">{row.label}</span>
-				<div class="act-counts">
-					<span class="act-val accent">{row.today}</span>
-					<span class="act-sep">·</span>
-					<span class="act-val">{row.week}</span>
-					<span class="act-sep">·</span>
-					<span class="act-val muted">{row.month}</span>
+	{#await data.dbStats}
+		<div class="row-stack">
+			{#each ['Users', 'Accounts', 'Expenses', 'Income', 'Debts'] as lbl (lbl)}
+				<div class="kv">
+					<span class="k">{lbl}</span>
+					<span class="v mono shimmer">—</span>
 				</div>
-			</div>
-		{/each}
-	</div>
+			{/each}
+		</div>
+	{:then stats}
+		<div class="row-stack">
+			{#each [['Users', stats.totals.users], ['Accounts', stats.totals.accounts], ['Expenses', stats.totals.expenses], ['Income', stats.totals.income], ['Debts', stats.totals.debts]] as [lbl, val] (lbl)}
+				<div class="kv">
+					<span class="k">{lbl}</span>
+					<span class="v mono">{val}</span>
+				</div>
+			{/each}
+		</div>
+
+		<!-- Activity -->
+		<div class="section-header">
+			<Activity size={14} class="section-icon" />
+			<span class="section-title">Activity</span>
+		</div>
+		<div class="row-stack">
+			{#each [{ label: 'New users', icon: Users, ...stats.activity.users }, { label: 'Expenses added', icon: TrendingDown, ...stats.activity.expenses }, { label: 'Income added', icon: TrendingUp, ...stats.activity.income }] as row (row.label)}
+				<div class="act-row">
+					<div class="act-icon"><row.icon size={14} /></div>
+					<span class="act-label">{row.label}</span>
+					<div class="act-counts">
+						<span class="act-val accent">{row.today}</span>
+						<span class="act-sep">·</span>
+						<span class="act-val">{row.week}</span>
+						<span class="act-sep">·</span>
+						<span class="act-val muted">{row.month}</span>
+					</div>
+				</div>
+			{/each}
+		</div>
+	{/await}
 </div>
 
 <BottomSheet bind:open={confirmOpen} title="Restart {confirmProfile} containers?">
@@ -450,11 +470,6 @@
 		font-size: 13px;
 		border: 1px solid;
 	}
-	.banner.ok {
-		background: color-mix(in oklab, var(--accent-ink) 8%, transparent);
-		border-color: color-mix(in oklab, var(--accent-ink) 30%, transparent);
-		color: var(--accent-ink);
-	}
 	.banner.err {
 		background: color-mix(in oklab, var(--err-ink) 8%, transparent);
 		border-color: color-mix(in oklab, var(--err-ink) 30%, transparent);
@@ -505,6 +520,70 @@
 		color: var(--color-text-faint);
 		font-size: 11px;
 		margin-top: 2px;
+	}
+
+	/* ── Attention ── */
+	.attention {
+		background: color-mix(in oklab, var(--err-ink) 6%, var(--color-surface-1));
+		border: 1px solid color-mix(in oklab, var(--err-ink) 25%, transparent);
+		border-radius: var(--radius-md);
+		padding: 10px 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.attention-h {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		color: var(--err-ink);
+		font-family: var(--font-mono);
+		font-size: 10px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+	.attention-h svg {
+		width: 12px;
+		height: 12px;
+	}
+	.attention-count {
+		margin-left: auto;
+		color: var(--err-ink);
+		opacity: 0.7;
+	}
+	.att-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 8px 10px;
+		border-radius: 8px;
+		text-decoration: none;
+		color: inherit;
+		background: var(--color-surface-1);
+		border: 1px solid var(--color-border-subtle);
+	}
+	.att-row:active {
+		background: var(--color-bg-1);
+	}
+	.att-name {
+		flex: 1;
+		min-width: 0;
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--color-text-primary);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.att-state {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--err-ink);
+		flex-shrink: 0;
+		max-width: 55%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	/* ── Groups ── */
@@ -617,6 +696,17 @@
 
 	.act-sep {
 		color: var(--color-text-faint);
+	}
+
+	.shimmer {
+		color: var(--color-text-faint);
+		opacity: 0.5;
+		animation: shimmer 1.2s ease-in-out infinite;
+	}
+	@keyframes shimmer {
+		50% {
+			opacity: 0.85;
+		}
 	}
 
 	/* ── Bottom-sheet menu ── */

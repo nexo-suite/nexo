@@ -47,8 +47,14 @@
 				<div class="health-count {summaryTone}">{passing} / {total} passing</div>
 				<div class="health-meta">
 					checked {fmtRelative(lastChecked)} · {healthz.latency_ms}ms · v{healthz.body.version ??
-						'?'}
+						'?'}{#if healthz.body.commit}
+						· <span class="mono">{healthz.body.commit}</span>{/if}
 				</div>
+				{#if healthz.body.buildTime}
+					<div class="health-meta mono">
+						built {healthz.body.buildTime.slice(0, 16).replace('T', ' ')}
+					</div>
+				{/if}
 			{:else if healthz?.error}
 				<div class="health-count err">unreachable</div>
 				<div class="health-meta">{healthz.error}</div>
@@ -266,5 +272,8 @@
 	}
 	.pip.err {
 		background: var(--err-ink);
+	}
+	.mono {
+		font-family: var(--font-mono);
 	}
 </style>

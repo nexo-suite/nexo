@@ -40,12 +40,20 @@
 			<span class="v mono">{memLabel}</span>
 		</div>
 	{/if}
-	{#each [['Image', container.Config.Image, true], ['Container ID', container.Id.slice(0, 12), true], ['Started', formatDate(container.State.StartedAt), false], ['Restarts', String(container.RestartCount), true], ['Restart policy', restartPolicy, true], ['Networks', networks.join(', '), true]] as [k, v, mono] (k)}
+	<div class="kv stacked">
+		<span class="k">Image</span>
+		<span class="v mono break">{container.Config.Image}</span>
+	</div>
+	{#each [['Container ID', container.Id.slice(0, 12), true], ['Started', formatDate(container.State.StartedAt), false], ['Restarts', String(container.RestartCount), true], ['Restart policy', restartPolicy, true]] as [k, v, mono] (k)}
 		<div class="kv">
 			<span class="k">{k}</span>
-			<span class="v {mono ? 'mono' : ''} ellipsis">{v}</span>
+			<span class="v {mono ? 'mono' : ''}">{v}</span>
 		</div>
 	{/each}
+	<div class="kv stacked">
+		<span class="k">Networks</span>
+		<span class="v mono break">{networks.join(', ')}</span>
+	</div>
 	{#if !container.State.Running}
 		<div class="kv">
 			<span class="k">Stopped</span>
@@ -59,3 +67,21 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	.kv.stacked {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 4px;
+	}
+	.kv.stacked .v {
+		text-align: left;
+		max-width: 100%;
+		white-space: normal;
+		overflow: visible;
+	}
+	.kv .v.break {
+		word-break: break-all;
+		line-height: 1.4;
+	}
+</style>

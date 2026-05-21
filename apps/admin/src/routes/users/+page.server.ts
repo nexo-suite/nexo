@@ -80,7 +80,7 @@ export const actions: Actions = {
 				correlationId: locals.correlationId
 			})
 		);
-		return { addSuccess: true };
+		return { addSuccess: true, toast: 'Invite sent' };
 	},
 
 	removeEmail: async ({ request, locals }) => {
@@ -97,7 +97,7 @@ export const actions: Actions = {
 			});
 			return fail(500, { error: 'DELETE_FAILED', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: 'Invite removed' };
 	},
 
 	updateAccess: async ({ request, locals }) => {
@@ -171,6 +171,6 @@ export const actions: Actions = {
 			}
 		}
 
-		return { success: true };
+		return { success: true, toast: 'Access updated' };
 	}
 };

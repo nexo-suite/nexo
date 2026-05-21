@@ -3,7 +3,11 @@
 	import { invalidateAll } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import { env } from '$env/dynamic/public';
+	import { dev } from '$app/environment';
+	import { m } from '$lib/paraglide/messages.js';
+	import { getLocale } from '$lib/paraglide/runtime.js';
 	import {
+		AboutDiagnostics,
 		BottomSheet,
 		DeviceListRow,
 		ErrorBanner,
@@ -50,10 +54,13 @@
 
 	const hubUrl = env.PUBLIC_LANDING_URL
 		? `${env.PUBLIC_LANDING_URL}/apps`
-		: 'https://krieger2501.de/apps';
+		: dev
+			? 'http://localhost:3000/apps'
+			: 'https://krieger2501.de/apps';
+
+	const currentLocale = getLocale();
 
 	const languageLabels: Record<string, string> = {
-		auto: 'Auto',
 		en: 'English',
 		de: 'Deutsch',
 		tr: 'Türkçe'
@@ -199,7 +206,7 @@
 </script>
 
 <div class="page" style="padding-bottom: 0;">
-	<PageHeader title="Settings">
+	<PageHeader title={m.nav_settings()}>
 		{#snippet avatar()}
 			<UserAvatarMenu />
 		{/snippet}
@@ -213,7 +220,7 @@
 			email={data.profile.email}
 			{hubUrl}
 			displayName={data.profile.displayName}
-			language={languageLabels[data.profile.language] ?? data.profile.language}
+			language={languageLabels[currentLocale] ?? currentLocale}
 			weekStarts={weekStartLabels[data.profile.weekStartDay] ?? 'Monday'}
 			theme={themeLabels[data.profile.theme] ?? data.profile.theme}
 		/>
@@ -405,23 +412,16 @@
 	</section>
 
 	<!-- About section -->
-	<section class="section">
-		<h2 class="section-title">About</h2>
-
-		<div class="card">
-			<div class="row">
-				<span class="row-label">App</span>
-				<span class="row-value">Nexo Admin</span>
-			</div>
-
-			<div class="divider"></div>
-
-			<div class="row">
-				<span class="row-label">Signed in as</span>
-				<span class="row-value">{data.user?.email ?? '—'}</span>
-			</div>
-		</div>
-	</section>
+	<AboutDiagnostics
+		appName="Nexo Admin"
+		appKey="admin"
+		version={__APP_VERSION__}
+		commit={__APP_COMMIT__}
+		buildTime={__APP_BUILD_TIME__}
+		email={data.diagnostics.email}
+		userId={data.diagnostics.userId}
+		correlationId={data.diagnostics.correlationId}
+	/>
 </div>
 
 <BottomSheet
@@ -518,16 +518,6 @@
 	.row-sub {
 		font-size: 12px;
 		color: var(--color-text-subtle);
-	}
-
-	.row-value {
-		font-size: 13px;
-		color: var(--color-text-subtle);
-		text-align: right;
-		max-width: 60%;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 
 	.toggle-row {

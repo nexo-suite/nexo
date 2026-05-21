@@ -15,7 +15,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		devices,
-		vapidPublicKey: publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? ''
+		vapidPublicKey: publicEnv.PUBLIC_VAPID_PUBLIC_KEY ?? '',
+		diagnostics: {
+			userId,
+			email: locals.user?.email ?? null,
+			correlationId: locals.correlationId
+		}
 	};
 };
 
@@ -38,7 +43,7 @@ export const actions: Actions = {
 			logger.error('rename device failed', { userId, error: String(e) });
 			return fail(500, { error: 'DB_ERROR' as const, correlationId: locals.correlationId });
 		}
-		return { success: true as const };
+		return { success: true as const, toast: 'Device renamed' };
 	},
 
 	remove: async ({ request, locals }) => {
@@ -55,6 +60,6 @@ export const actions: Actions = {
 			logger.error('remove device failed', { userId, error: String(e) });
 			return fail(500, { error: 'DB_ERROR' as const, correlationId: locals.correlationId });
 		}
-		return { success: true as const };
+		return { success: true as const, toast: 'Device removed' };
 	}
 };
