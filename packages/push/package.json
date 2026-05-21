@@ -43,6 +43,7 @@
 	},
 	"dependencies": {
 		"@nexo/db": "workspace:*",
+		"@nexo/logger": "workspace:*",
 		"drizzle-orm": "catalog:",
 		"web-push": "catalog:"
 	},

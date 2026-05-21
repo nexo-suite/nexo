@@ -48,12 +48,12 @@
 		"@testing-library/jest-dom": "^6.9.1",
 		"@types/node": "catalog:",
 		"@vite-pwa/sveltekit": "catalog:",
-		"@vitest/coverage-v8": "^4.1.6",
+		"@vitest/coverage-v8": "^4.1.7",
 		"happy-dom": "^20.9.0",
 		"svelte": "catalog:",
 		"svelte-check": "catalog:",
 		"tailwindcss": "catalog:",
 		"vite": "catalog:",
-		"vitest": "^4.1.6"
+		"vitest": "^4.1.7"
 	}
 }
