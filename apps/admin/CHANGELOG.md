@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/nexo-suite/nexo/compare/admin-v0.5.0...admin-v0.5.1) (2026-05-21)
+
+
+### Bug Fixes
+
+* **admin:** grant docker socket group + log socket failures ([c2b3911](https://github.com/nexo-suite/nexo/commit/c2b3911c87395621dbc87501d312e89968e1a5fb))
+
 ## [0.5.0](https://github.com/nexo-suite/nexo/compare/admin-v0.4.0...admin-v0.5.0) (2026-05-20)
 
 
