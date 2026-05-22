@@ -5,7 +5,7 @@
 - **VPS:** IONOS L+ (6 vCore, 8 GB RAM, 240 GB NVMe SSD)
 - **OS:** Ubuntu 24.04 LTS
 - **Domain:** `krieger2501.de` (and `*.krieger2501.de` subdomains)
-- **Stack:** Docker Compose, Caddy (auto TLS), PostgreSQL 17, Loki + Grafana
+- **Stack:** Docker Compose, Caddy (auto TLS), PostgreSQL 18, Loki + Grafana
 
 ---
 
@@ -218,7 +218,45 @@ docker compose --profile production --env-file .env up -d --build finance
 
 ---
 
-## Backups
+## Postgres major-version migration (17 → 18)
+
+The `postgres:18` image moved `PGDATA` from `/var/lib/postgresql/data` to a version-specific path (`/var/lib/postgresql/18/docker`), and the v18 server refuses to start against a v17 data directory. The compose file now mounts the parent dir (`pgdata:/var/lib/postgresql`) so future major bumps can use `pg_upgrade --link`; the first hop from 17 still requires a dump/restore because the old data lives at a sibling path.
+
+Run this on the VPS during a maintenance window. Same procedure for production (`pgdata`) and preview (`pgdata_preview`) — substitute the volume name.
+
+```bash
+cd ~/nexo
+
+# 1. Dump while still on v17 (image not yet pulled).
+docker compose --profile production exec -T postgres \
+  pg_dump -U nexo -Fc nexo > /tmp/nexo-pre18.dump
+
+# 2. Stop the stack.
+docker compose --profile production --profile server down
+
+# 3. Pull the compose changes (postgres:18 + new mount path).
+git pull origin main
+
+# 4. Wipe the old volume — v18 will not read v17 files at the new mount layout.
+docker volume rm nexo_pgdata
+
+# 5. Bring postgres back up; it initdb's into /var/lib/postgresql/18/docker.
+docker compose --profile production --env-file .env up -d postgres
+docker compose --profile production exec postgres pg_isready -U nexo  # wait for ready
+
+# 6. Restore. The empty `nexo` DB is created by POSTGRES_DB on init.
+docker compose --profile production exec -T postgres \
+  pg_restore -U nexo -d nexo --clean --if-exists < /tmp/nexo-pre18.dump
+
+# 7. Bring the rest of the stack back up.
+docker compose --profile production --profile server --env-file .env up -d --build
+```
+
+If anything goes sideways, the encrypted nightly dump under `/backups/nexo-*.sql.gz.age` is the rollback path — see [Restoring from a backup](#restoring-from-a-backup). Recreate the volume on `postgres:17` first if you need to read the old dump format.
+
+For preview, the same dance with `--profile preview --env-file .env.preview` and `nexo_pgdata_preview`. If preview data is disposable, skip steps 1 and 6.
+
+---
 
 Backups must be encrypted at rest. The DB contains financial data and Better
 Auth access/refresh tokens — a leaked plaintext dump is game-over for the

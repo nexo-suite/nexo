@@ -11,7 +11,7 @@ services:
 
   postgres:
     profiles: [production]
-    image: postgres:17
+    image: postgres:18
     restart: unless-stopped
     networks: [production]
     mem_limit: 2g
@@ -44,7 +44,9 @@ services:
       - -c
       - log_min_duration_statement=500
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Mount the parent dir so future major bumps can use pg_upgrade --link.
+      # PGDATA is /var/lib/postgresql/18/docker on this image.
+      - pgdata:/var/lib/postgresql
     environment:
       POSTGRES_DB: nexo
       POSTGRES_USER: nexo
@@ -453,11 +455,11 @@ services:
 
   postgres_preview:
     profiles: [preview]
-    image: postgres:17
+    image: postgres:18
     restart: unless-stopped
     networks: [preview]
     volumes:
-      - pgdata_preview:/var/lib/postgresql/data
+      - pgdata_preview:/var/lib/postgresql
     environment:
       POSTGRES_DB: nexo
       POSTGRES_USER: nexo
