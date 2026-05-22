@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/nexo-suite/nexo/compare/db-v0.5.0...db-v0.6.0) (2026-05-22)
+
+
+### Features
+
+* **db:** make postgres pool size tunable via initDb ([41ef3c6](https://github.com/nexo-suite/nexo/commit/41ef3c6d346e6e1c0a20a6d19f1412beea0df197))
+
 ## [0.5.0](https://github.com/nexo-suite/nexo/compare/db-v0.4.0...db-v0.5.0) (2026-05-21)
 
 

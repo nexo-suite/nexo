@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/nexo-suite/nexo/compare/push-v0.2.0...push-v0.3.0) (2026-05-22)
+
+
+### Features
+
+* **push:** structured logging across subscribe and dispatch ([e0cd8dc](https://github.com/nexo-suite/nexo/commit/e0cd8dc9ad5ed0574c9c7c392ace5691e9cd19ab))
+
 ## [0.2.0](https://github.com/nexo-suite/nexo/compare/push-v0.1.0...push-v0.2.0) (2026-05-21)
 
 

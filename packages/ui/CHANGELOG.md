@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/nexo-suite/nexo/compare/ui-v0.5.0...ui-v0.6.0) (2026-05-22)
+
+
+### Features
+
+* **ui:** add shared PageShell and layout tokens ([a6a6b67](https://github.com/nexo-suite/nexo/commit/a6a6b6794e82af0babf5c7ca86eb06f89280d5c9))
+
 ## [0.5.0](https://github.com/nexo-suite/nexo/compare/ui-v0.4.0...ui-v0.5.0) (2026-05-21)
 
 

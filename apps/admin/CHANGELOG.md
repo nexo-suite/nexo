@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/nexo-suite/nexo/compare/admin-v0.5.2...admin-v0.6.0) (2026-05-22)
+
+
+### Features
+
+* **admin:** label-scoped healthz poller and surfacing ([67b58f1](https://github.com/nexo-suite/nexo/commit/67b58f1927c3085e2d7f677ae5a3831e86466a2b))
+
 ## [0.5.2](https://github.com/nexo-suite/nexo/compare/admin-v0.5.1...admin-v0.5.2) (2026-05-21)
 
 
