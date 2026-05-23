@@ -8,7 +8,7 @@ import type { Env } from './github.js';
 const logger = createLogger('bot');
 
 const {
-	GH_APP_ID,
+	GH_CLIENT_ID,
 	GH_APP_PRIVATE_KEY,
 	GH_WEBHOOK_SECRET,
 	GH_REPO_OWNER,
@@ -16,13 +16,13 @@ const {
 	PORT = '3003'
 } = process.env;
 
-if (!GH_APP_ID || !GH_APP_PRIVATE_KEY || !GH_WEBHOOK_SECRET || !GH_REPO_OWNER || !GH_REPO_NAME) {
+if (!GH_CLIENT_ID || !GH_APP_PRIVATE_KEY || !GH_WEBHOOK_SECRET || !GH_REPO_OWNER || !GH_REPO_NAME) {
 	logger.error('missing required env vars');
 	process.exit(1);
 }
 
 const env: Env = {
-	appId: GH_APP_ID!,
+	clientId: GH_CLIENT_ID!,
 	privateKey: GH_APP_PRIVATE_KEY!,
 	owner: GH_REPO_OWNER!,
 	repo: GH_REPO_NAME!

@@ -13,7 +13,12 @@ const GH_API_VERSION = '2022-11-28';
 const UNSTABLE_WORKFLOW = 'unstable.yml';
 
 export type Env = {
-	appId: string;
+	// GitHub App's Client ID string (e.g. `Iv23li…`). Per the @octokit/auth-app
+	// README, the `appId` field on createAppAuth accepts either the legacy
+	// numeric App ID OR a Client ID string — the Client ID is the recommended
+	// value. The separate `clientId` field on createAppAuth is for OAuth
+	// user-token features and is unrelated to App JWT authentication.
+	clientId: string;
 	privateKey: string;
 	owner: string;
 	repo: string;
@@ -22,7 +27,7 @@ export type Env = {
 export async function getInstallationOctokit(env: Env): Promise<Octokit> {
 	const appOctokit = new Octokit({
 		authStrategy: createAppAuth,
-		auth: { appId: Number(env.appId), privateKey: normalizeKey(env.privateKey) },
+		auth: { appId: env.clientId, privateKey: normalizeKey(env.privateKey) },
 		headers: { 'X-GitHub-Api-Version': GH_API_VERSION }
 	});
 
@@ -32,7 +37,7 @@ export async function getInstallationOctokit(env: Env): Promise<Octokit> {
 	});
 
 	const auth = createAppAuth({
-		appId: Number(env.appId),
+		appId: env.clientId,
 		privateKey: normalizeKey(env.privateKey),
 		installationId: installation.id
 	});

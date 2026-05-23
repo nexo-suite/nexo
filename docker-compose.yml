@@ -704,7 +704,7 @@ services:
         mode: non-blocking
         max-buffer-size: 4m
     environment:
-      GH_APP_ID: ${GH_APP_ID}
+      GH_CLIENT_ID: ${GH_CLIENT_ID}
       GH_APP_PRIVATE_KEY: ${GH_APP_PRIVATE_KEY}
       GH_WEBHOOK_SECRET: ${GH_WEBHOOK_SECRET}
       GH_REPO_OWNER: ${GH_REPO_OWNER}
