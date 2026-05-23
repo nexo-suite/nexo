@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/nexo-suite/nexo/compare/landing-v0.5.1...landing-v0.6.0) (2026-05-23)
+
+
+### Features
+
+* deploy/observability platform + landing apps polish ([5c12105](https://github.com/nexo-suite/nexo/commit/5c12105cce5f297fa28690ea07c307ead8354114))
+
 ## [0.5.1](https://github.com/nexo-suite/nexo/compare/landing-v0.5.0...landing-v0.5.1) (2026-05-21)
 
 

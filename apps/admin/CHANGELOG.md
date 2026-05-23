@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/nexo-suite/nexo/compare/admin-v0.6.0...admin-v0.7.0) (2026-05-23)
+
+
+### Features
+
+* deploy/observability platform + landing apps polish ([5c12105](https://github.com/nexo-suite/nexo/commit/5c12105cce5f297fa28690ea07c307ead8354114))
+
 ## [0.6.0](https://github.com/nexo-suite/nexo/compare/admin-v0.5.2...admin-v0.6.0) (2026-05-22)
 
 

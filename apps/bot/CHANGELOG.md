@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/nexo-suite/nexo/compare/bot-v0.3.0...bot-v0.4.0) (2026-05-23)
+
+
+### Features
+
+* **bot:** persistent state machine + single-comment UX ([5279901](https://github.com/nexo-suite/nexo/commit/52799010664efe3a81bed905d5dd78fbdba6926d))
+* deploy/observability platform + landing apps polish ([5c12105](https://github.com/nexo-suite/nexo/commit/5c12105cce5f297fa28690ea07c307ead8354114))
+
 ## [0.3.0](https://github.com/nexo-suite/nexo/compare/bot-v0.2.1...bot-v0.3.0) (2026-05-21)
 
 
