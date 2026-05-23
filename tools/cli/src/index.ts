@@ -5,7 +5,7 @@ import { prepareContexts } from './commands/prepare-contexts.ts';
 import { buildImages } from './commands/build-images.ts';
 import { retag } from './commands/retag.ts';
 import { promote } from './commands/promote.ts';
-import { ci } from './commands/ci.ts';
+import { ciDecide } from './commands/ci-decide.ts';
 import { collectVersions } from './commands/collect-versions.ts';
 import { fail } from './lib/log.ts';
 
@@ -80,11 +80,12 @@ program
 	});
 
 program
-	.command('ci')
-	.description('One-shot orchestrator used by the build-and-push composite action')
-	.option('--push', 'push images to GHCR (set in the workflow)', false)
-	.action((opts: { push: boolean }) => {
-		ci({ push: opts.push });
+	.command('ci-decide')
+	.description(
+		'Decide retag vs full-build strategy for the current event; emit strategy/tags/from-tag to $GITHUB_OUTPUT'
+	)
+	.action(() => {
+		ciDecide();
 	});
 
 program
