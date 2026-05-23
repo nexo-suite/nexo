@@ -261,11 +261,8 @@ nexo/
 ├── scripts/
 │   └── deploy.mjs              ← VPS-side deploy: snapshot, compose pull/up, healthcheck, rollback
 └── .github/
-    ├── actions/
-    │   ├── setup/              ← composite: pnpm + node + frozen install
-    │   └── build-and-push/     ← composite: GHCR login, buildx, `nexo ci`
     └── workflows/
-        ├── ci.yml              ← quality + build/retag + release-please + promote + deploy
+        ├── ci.yml              ← checks (parallel) + build/retag + release-please + promote + deploy
         ├── unstable.yml        ← bot-dispatched up/down for `_unstable` peer services
         ├── ghcr-cleanup.yml    ← prune old image tags
         └── pr-cleanup.yml      ← drop `:pr-<n>` tags when PRs close

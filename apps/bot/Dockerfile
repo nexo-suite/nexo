@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 #
 # Thin runtime image. Build context is produced by `nexo prepare-contexts`,
-# which runs `pnpm --prod --legacy deploy` for this app. The deployed
+# which runs `pnpm --prod deploy` for this app. The deployed
 # context contains the compiled dist/, the bot's package.json, and a
 # node_modules with @nexo/logger resolved via its exports map.
 

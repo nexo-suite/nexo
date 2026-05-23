@@ -2,7 +2,8 @@ import { copyFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { APPS, findApp, type App } from '../apps.ts';
 import { pnpmDeploy } from '../lib/pnpm.ts';
-import { section, step, success } from '../lib/log.ts';
+import { CONTEXT_FILE, readContext } from '../lib/context.ts';
+import { info, section, step, success } from '../lib/log.ts';
 
 export type PrepareOpts = {
 	app?: string;
@@ -13,8 +14,18 @@ export type PrepareOpts = {
 // For each requested app, run `pnpm deploy` into `<outDir>/<app>` and copy
 // the app's Dockerfile into the resulting context so a subsequent
 // `docker build <outDir>/<app>` can find it without -f.
+//
+// No-op on the retag fast-path so the CI workflow can call this command
+// unconditionally.
 export function prepareContexts(opts: PrepareOpts = {}): void {
 	const repoRoot = resolve(opts.repoRoot ?? process.cwd());
+	const ctx = existsSync(join(repoRoot, CONTEXT_FILE)) ? readContext({ cwd: repoRoot }) : null;
+	if (ctx?.strategy === 'retag') {
+		section('Prepare deploy contexts');
+		info(`skipped — strategy=retag (will reuse :${ctx.fromTag})`);
+		return;
+	}
+
 	const outDir = resolve(repoRoot, opts.outDir ?? 'out');
 	const targets = opts.app ? [findApp(opts.app)] : APPS;
 
