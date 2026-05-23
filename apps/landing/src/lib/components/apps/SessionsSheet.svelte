@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { DeviceListRow } from '@nexo/ui';
+	import { m } from '$lib/paraglide/messages.js';
+	import { getLocale } from '$lib/paraglide/runtime.js';
 
 	type Session = {
 		id: string;
@@ -35,20 +37,19 @@
 		const lines: string[] = [];
 		lines.push(`${s.browser} · ${s.os}${s.ip ? ` · ${s.ip}` : ''}`);
 		if (s.isCurrent) {
-			lines.push('Active now');
+			lines.push(m.sessions_active_now());
 		} else if (s.lastActive) {
-			lines.push(
-				`Last active ${new Date(s.lastActive).toLocaleDateString('en', {
-					month: 'short',
-					day: 'numeric'
-				})}`
-			);
+			const date = new Date(s.lastActive).toLocaleDateString(getLocale(), {
+				month: 'short',
+				day: 'numeric'
+			});
+			lines.push(m.sessions_last_active({ date }));
 		}
 		return lines;
 	}
 </script>
 
-<p class="sheet-sub">Where you're signed in right now.</p>
+<p class="sheet-sub">{m.sessions_sub()}</p>
 <div class="session-list">
 	{#each sorted as session (session.id)}
 		<DeviceListRow
@@ -75,10 +76,10 @@
 							type="text"
 							name="name"
 							bind:value={renameValue}
-							placeholder="Name this session"
+							placeholder={m.sessions_rename_placeholder()}
 							maxlength="32"
 						/>
-						<button type="submit" class="session-rename-save">Done</button>
+						<button type="submit" class="session-rename-save">{m.sessions_rename_save()}</button>
 					</form>
 				{:else}
 					<button
@@ -88,7 +89,7 @@
 							renamingSessionId = session.id;
 							renameValue = session.name ?? '';
 						}}
-						aria-label="Rename">✏️</button
+						aria-label={m.sessions_rename_aria()}>✏️</button
 					>
 					{#if !session.isCurrent}
 						<form
@@ -101,7 +102,11 @@
 							}}
 						>
 							<input type="hidden" name="sessionId" value={session.id} />
-							<button type="submit" class="session-action-btn danger" aria-label="Revoke">✕</button>
+							<button
+								type="submit"
+								class="session-action-btn danger"
+								aria-label={m.sessions_revoke_aria()}>✕</button
+							>
 						</form>
 					{/if}
 				{/if}
@@ -120,10 +125,12 @@
 			};
 		}}
 	>
-		<button type="submit" class="sheet-btn-danger full-width">Revoke all other sessions</button>
+		<button type="submit" class="sheet-btn-danger full-width">{m.sessions_revoke_all()}</button>
 	</form>
 {/if}
-<button type="button" class="sheet-done secondary" onclick={onclose}>Close</button>
+<button type="button" class="sheet-done secondary" onclick={onclose}
+	>{m.sheet_action_close()}</button
+>
 
 <style>
 	.sheet-sub {
@@ -195,21 +202,6 @@
 		color: var(--color-expense, #dc2626);
 		cursor: pointer;
 		text-decoration: none;
-	}
-	.sheet-done {
-		display: block;
-		width: 100%;
-		margin-top: 12px;
-		padding: 14px;
-		font: inherit;
-		font-size: 14px;
-		font-weight: 600;
-		text-align: center;
-		border: none;
-		border-radius: var(--radius-md, 12px);
-		background: var(--color-accent, #16a34a);
-		color: #fff;
-		cursor: pointer;
 	}
 	.sheet-done.secondary {
 		background: var(--color-bg-1, #fafafa);

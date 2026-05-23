@@ -71,6 +71,8 @@ async function markNeedsReconnect(userId: string, reason: string): Promise<void>
 
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
+const inflightRefresh = new Map<string, Promise<string>>();
+
 export async function ensureFreshAccessToken(userId: string): Promise<string> {
 	const acct = await loadAccount(userId);
 	if (!acct) throw new Error(`no flaschen account for user ${userId}`);
@@ -80,16 +82,28 @@ export async function ensureFreshAccessToken(userId: string): Promise<string> {
 		return decrypt(acct.encryptedAccessToken);
 	}
 
-	try {
-		const tokens = await refreshGrant(decrypt(acct.encryptedRefreshToken));
-		await saveTokens(userId, tokens);
-		return tokens.accessToken;
-	} catch (err) {
-		if (err instanceof OAuthError && err.isInvalidGrant) {
-			await markNeedsReconnect(userId, 'refresh_token rejected');
-			throw new ReconnectRequiredError(userId);
+	const existing = inflightRefresh.get(userId);
+	if (existing) return existing;
+
+	const refreshing = (async () => {
+		try {
+			const tokens = await refreshGrant(decrypt(acct.encryptedRefreshToken));
+			await saveTokens(userId, tokens);
+			return tokens.accessToken;
+		} catch (err) {
+			if (err instanceof OAuthError && err.isInvalidGrant) {
+				await markNeedsReconnect(userId, 'refresh_token rejected');
+				throw new ReconnectRequiredError(userId);
+			}
+			throw err;
 		}
-		throw err;
+	})();
+
+	inflightRefresh.set(userId, refreshing);
+	try {
+		return await refreshing;
+	} finally {
+		inflightRefresh.delete(userId);
 	}
 }
 

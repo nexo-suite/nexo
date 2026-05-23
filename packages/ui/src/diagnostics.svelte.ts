@@ -113,6 +113,7 @@ export function buildDiagnosticsBundle(opts: {
 	correlationId?: string | null;
 	userAgent?: string;
 	url?: string;
+	useUnstable?: boolean;
 	errors?: DiagError[];
 }): string {
 	const lines: string[] = [];
@@ -123,6 +124,7 @@ export function buildDiagnosticsBundle(opts: {
 	if (opts.buildTime) lines.push(`- **built**: \`${opts.buildTime}\``);
 	lines.push(`- **captured**: \`${new Date().toISOString()}\``);
 	if (opts.url) lines.push(`- **url**: \`${opts.url}\``);
+	if (opts.useUnstable) lines.push(`- **unstable**: \`on\``);
 	lines.push('');
 	lines.push('**Session**');
 	if (opts.email) lines.push(`- email: \`${opts.email}\``);
@@ -158,12 +160,14 @@ export function buildDiagnosticsSummary(opts: {
 	commit?: string;
 	url?: string;
 	correlationId?: string | null;
+	useUnstable?: boolean;
 	errors?: DiagError[];
 }): string {
 	const lines: string[] = [];
 	lines.push(`version: ${opts.version}${opts.commit ? ` (${opts.commit})` : ''}`);
 	if (opts.url) lines.push(`url: ${opts.url}`);
 	if (opts.correlationId) lines.push(`correlation: ${opts.correlationId}`);
+	if (opts.useUnstable) lines.push('unstable: on');
 	const errs = opts.errors ?? [];
 	if (errs.length > 0) {
 		lines.push('');

@@ -1,0 +1,59 @@
+pg_stat_statements:
+  query: |
+    SELECT
+      pg_get_userbyid(userid) AS user,
+      datname,
+      LEFT(query, 100) AS short_query,
+      calls,
+      total_exec_time,
+      mean_exec_time,
+      rows,
+      shared_blks_hit,
+      shared_blks_read
+    FROM pg_stat_statements
+    JOIN pg_database ON pg_database.oid = dbid
+    WHERE calls > 5
+    ORDER BY total_exec_time DESC
+    LIMIT 20
+  master: true
+  metrics:
+    - user:
+        usage: LABEL
+        description: User who executed the statement
+    - datname:
+        usage: LABEL
+        description: Database
+    - short_query:
+        usage: LABEL
+        description: First 100 chars of the query
+    - calls:
+        usage: COUNTER
+        description: Number of times executed
+    - total_exec_time:
+        usage: COUNTER
+        description: Total time spent in the statement, in ms
+    - mean_exec_time:
+        usage: GAUGE
+        description: Mean time per execution, in ms
+    - rows:
+        usage: COUNTER
+        description: Total rows retrieved or affected
+    - shared_blks_hit:
+        usage: COUNTER
+        description: Total shared block cache hits
+    - shared_blks_read:
+        usage: COUNTER
+        description: Total shared blocks read
+
+pg_database_size:
+  query: |
+    SELECT datname, pg_database_size(datname) AS bytes
+    FROM pg_database WHERE datistemplate = false
+  master: true
+  metrics:
+    - datname:
+        usage: LABEL
+        description: Database name
+    - bytes:
+        usage: GAUGE
+        description: Database size in bytes

@@ -72,7 +72,7 @@
 
 		<div class="reveal mt-8 flex flex-col items-center gap-2.5" style="transition-delay: 120ms">
 			<a href={firstName ? '/apps' : `${authUrl}/login`} class="cta-btn">
-				{firstName ? `Go to your apps` : 'Sign in'}
+				{firstName ? m.cta_open_apps() : m.cta_sign_in()}
 				<svg
 					viewBox="0 0 16 16"
 					fill="none"
@@ -84,7 +84,7 @@
 				</svg>
 			</a>
 			<p class="text-text-faint font-mono text-[11px] tracking-wider">
-				{firstName ? m.cta_invite_hint() : 'invite-only · ask Kevin'}
+				{firstName ? m.cta_invite_hint() : m.cta_invite_hint_unauth()}
 			</p>
 		</div>
 	</div>

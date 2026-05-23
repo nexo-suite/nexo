@@ -5,7 +5,9 @@ const SVELTE_PROJECT = ['src/**/*.{ts,js,svelte}'];
 
 const config: KnipConfig = {
 	workspaces: {
-		'.': {},
+		'.': {
+			entry: ['scripts/*.mjs']
+		},
 		'apps/landing': {
 			entry: SVELTE_ENTRY,
 			project: SVELTE_PROJECT,

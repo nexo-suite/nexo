@@ -58,7 +58,7 @@ export const actions: Actions = {
 		try {
 			await dockerAction(actionPath('start', params.name));
 			logger.info('container start', { name: params.name, correlationId: locals.correlationId });
-			return { success: true as const, verb: 'start' as const };
+			return { success: true as const, verb: 'start' as const, toast: 'Container started' };
 		} catch (e) {
 			logger.error('container start failed', {
 				name: params.name,
@@ -77,7 +77,7 @@ export const actions: Actions = {
 		try {
 			await dockerAction(actionPath('stop', params.name));
 			logger.info('container stop', { name: params.name, correlationId: locals.correlationId });
-			return { success: true as const, verb: 'stop' as const };
+			return { success: true as const, verb: 'stop' as const, toast: 'Container stopped' };
 		} catch (e) {
 			logger.error('container stop failed', {
 				name: params.name,
@@ -96,7 +96,7 @@ export const actions: Actions = {
 		try {
 			await dockerAction(actionPath('restart', params.name));
 			logger.info('container restart', { name: params.name, correlationId: locals.correlationId });
-			return { success: true as const, verb: 'restart' as const };
+			return { success: true as const, verb: 'restart' as const, toast: 'Container restarted' };
 		} catch (e) {
 			logger.error('container restart failed', {
 				name: params.name,
@@ -136,6 +136,11 @@ export const actions: Actions = {
 			latency_ms: healthz.latency_ms,
 			correlationId: locals.correlationId
 		});
-		return { success: true as const, verb: 'recheck' as const, healthz };
+		return {
+			success: true as const,
+			verb: 'recheck' as const,
+			healthz,
+			toast: healthz.ok ? 'Healthcheck passed' : 'Healthcheck failed'
+		};
 	}
 };

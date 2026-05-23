@@ -140,25 +140,111 @@ FLASCHEN_OAUTH_CLIENT_ID=86fe707f-ea47-4bf3-aa81-42579bf180cd
 
 ## Deploy
 
-### Via CI/CD (normal path)
+### CI/CD pipeline
 
-Production deployments are fully automated via GitHub Actions. No manual SSH required.
+The pipeline lives in `.github/workflows/ci.yml`. Heavy lifting is done by the `@nexo/cli` workspace package (`tools/cli/`, invoked as `pnpm exec nexo …`) and `scripts/deploy.mjs`. The workflow file itself is declarative — no matrix loops, no inline retag bash.
 
-1. Merge your changes into `main`
-2. release-please opens (or updates) a release PR with the version bump and changelog
-3. Merge the release PR — this pushes a `nexo-v*` tag
-4. CI builds all Docker images and pushes them to GHCR (`ghcr.io/nexo-suite/nexo-*`)
-5. The `Deploy Production` workflow triggers, SSHes into the VPS, and runs:
-   ```bash
-   git pull origin main
-   docker compose -f docker-compose.yml --profile production --profile server --env-file .env pull
-   docker compose -f docker-compose.yml --profile production --profile server --env-file .env up -d
-   docker compose -f docker-compose.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
-   docker compose -f docker-compose.yml --profile preview --env-file .env.preview up -d --build
-   ```
-6. Production services start from pre-built GHCR images. Preview rebuilds from source.
+**Core principle:** every code change is built **exactly once**, on its first PR. Every later transition (PR → main → release PR → release) is a registry-side `imagetools` retag (~5s), not a rebuild.
 
-Monitor the run in the [Actions tab](https://github.com/nexo-suite/nexo/actions).
+```mermaid
+flowchart TD
+  A[Feature branch PR opens] -->|pull_request| B[quality: pnpm qc]
+  A -->|pull_request, parallel| C[build-and-push]
+  C --> C1["nexo ci<br/>full build, tag :pr-N"]
+  C1 --> D[GHCR: 7 × :pr-N images]
+
+  D -->|merge to main| E[push event]
+  E --> F[quality]
+  E --> G[build-and-push]
+  G --> G1["nexo ci<br/>retag :pr-N → :main-SHA + :main"]
+  G1 --> H[release-please]
+  H -->|releasable changes| I[Release PR opened/updated]
+  H -->|no releasable changes| Z((idle))
+
+  I -->|pull_request, head=release-please--*| J[build-and-push]
+  J --> J1["nexo ci<br/>retag :main → :pr-N"]
+
+  I -->|merge release PR| K[push event]
+  K --> L[build-and-push: retag again]
+  L --> M[release-please: creates GitHub release]
+  M --> N[promote]
+  N --> N1["nexo promote<br/>retag :main-SHA → :latest + :version"]
+  N1 --> O[deploy-production]
+  O --> O1["SSH → node scripts/deploy.mjs"]
+  O1 --> P{healthcheck}
+  P -->|all 5 hosts OK| Q[unstable down-all<br/>tear down every _unstable]
+  P -->|any host fails| R[rollback: retag :previous → :latest]
+  R --> S[recompose, exit 1]
+```
+
+### What happens at each stage
+
+#### 1. Feature branch PR opens — `pull_request` event
+
+| Job                         | Action                                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `quality`                   | `pnpm qc` (sort, format, sync, knip, lint, type-check, build, test)                                                                                    |
+| `build-and-push` (parallel) | `nexo ci --push` → `pnpm sync && translate && build`, prepare 7 build contexts via `pnpm deploy`, `docker buildx build --push` for each, tag `:pr-<n>` |
+
+**Result:** 7 fresh `:pr-<n>` images in `ghcr.io/nexo-suite/nexo-*`.
+
+#### 2. PR merges to `main` — `push` event
+
+| Job              | Action                                                                                                                                                                                                                                             |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `quality`        | Re-runs against the merge commit                                                                                                                                                                                                                   |
+| `build-and-push` | `nexo ci --push` looks up the source PR via `gh api /commits/<sha>/pulls`. If found → **retag fast-path**: `imagetools create pr-<n> → main-<sha>, main` (~5s, no rebuild). If not found (direct push) → full build with tags `[main-<sha>, main]` |
+| `release-please` | If conventional-commit changes accumulated since last release → opens or updates a release PR titled `chore(main): release …`. **No release happens yet.**                                                                                         |
+
+**Result:** `:main-<sha>` + `:main` exist; release PR may be pending.
+
+#### 3. release-please PR opens — `pull_request` event
+
+The release PR is a normal PR, so it triggers the same `pull_request` workflow:
+
+| Job              | Action                                                                                                                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `quality`        | Runs against the version-bumped state                                                                                                                                                  |
+| `build-and-push` | `nexo ci --push` detects head ref `release-please--*` → **retag fast-path**: `imagetools create main → pr-<n>`. No rebuild — the release PR's `:pr-<n>` images mirror current `:main`. |
+
+#### 4. Release PR merges — `push` event again, but with releases
+
+| Job                 | Action                                                                                                                                                                                                                                                                      |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `build-and-push`    | Retag `:pr-<n>` → `:main-<sha>` + `:main` (same fast-path as step 2)                                                                                                                                                                                                        |
+| `release-please`    | Now creates GitHub releases (`releases_created=true`), pushes per-app tags. The `collect-versions` step runs `pnpm exec nexo collect-versions` which reads `$RP_OUTPUTS_JSON` and emits `{"auth":"0.6.0","admin":"…","finance":"…","flaschen":"…","landing":"…","bot":"…"}` |
+| `promote`           | `pnpm exec nexo promote` reads `RELEASE_VERSIONS_JSON` + `GITHUB_SHA`, retags `:main-<sha>` → `:latest` + `:<version>` per app via `imagetools create`                                                                                                                      |
+| `deploy-production` | SSH to VPS → `git fetch && reset --hard origin/main` → `node scripts/deploy.mjs`                                                                                                                                                                                            |
+
+### Deploy script (`scripts/deploy.mjs`)
+
+Runs on the VPS, invoked over SSH. Zero deps (uses `node:child_process` only). Versions arrive as env vars passed via `appleboy/ssh-action`'s `envs:` field.
+
+```mermaid
+flowchart TD
+  A[Snapshot :latest → :previous<br/>for each prod service] --> B["docker compose pull<br/>(production + server profiles)"]
+  B --> C["docker compose up -d"]
+  C --> D[caddy reload]
+  D --> E[Wait 30s]
+  E --> F["curl /healthz on 5 hosts<br/>auth, admin, finance, flaschen, landing"]
+  F -->|all OK| G["unstable down-all<br/>(every _unstable container)"]
+  G --> H[✓ done]
+  F -->|any fails| I[Retag :previous → :latest<br/>for each prod service]
+  I --> J["docker compose up -d (rollback)"]
+  J --> K[caddy reload]
+  K --> L[✗ exit 1 — fails the workflow]
+```
+
+### Mental model
+
+| Event             | Build action                                                       | Cost                    |
+| ----------------- | ------------------------------------------------------------------ | ----------------------- |
+| Feature PR        | Full build, tag `:pr-<n>`                                          | 1× build (the only one) |
+| Merge to main     | Retag `:pr-<n>` → `:main-<sha>` + `:main`                          | ~5s                     |
+| release-please PR | Retag `:main` → `:pr-<n>`                                          | ~5s                     |
+| Release merge     | Retag again, then `:main-<sha>` → `:latest` + `:<version>`, deploy | ~5s + SSH deploy        |
+
+Monitor pipeline runs in the [Actions tab](https://github.com/nexo-suite/nexo/actions).
 
 ### Manual deployment (emergency / first-time)
 
@@ -171,16 +257,6 @@ docker compose -f docker-compose.yml --profile production --profile server --env
 docker compose -f docker-compose.yml --profile production --profile server --env-file .env up -d
 docker compose -f docker-compose.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
-
-This will:
-
-1. Build all Docker images
-2. Start PostgreSQL
-3. Run migrations (waits for Postgres to be healthy)
-4. Start auth, admin, finance, landing
-5. Start Caddy, bot, Loki, and Grafana (server profile)
-6. Caddy issues Let's Encrypt certificates automatically
-7. All app logs ship to Loki via the Docker Loki log driver
 
 Monitor startup:
 
@@ -204,17 +280,25 @@ Open `https://auth.krieger2501.de/login` and sign in. That's your admin account.
 
 ---
 
-## Updating after a push
+## Hotfix without a full release
 
 The normal path is CI/CD — merge to main and let release-please handle it (see Deploy above).
 
-To rebuild a single service without a full release (emergency hotfix):
+If you need to ship a fix to production **without** waiting for a release PR:
 
-```bash
-cd ~/nexo
-git pull origin main
-docker compose --profile production --env-file .env up -d --build finance
-```
+1. Merge the fix to `main`. CI retags `:pr-<n>` → `:main-<sha>` + `:main`.
+2. SSH to the VPS and pin a single service to `:main`:
+   ```bash
+   cd ~/nexo
+   git pull origin main
+   # Pull the :main tag for the service you need to update
+   docker compose --profile production --env-file .env pull finance
+   docker compose --profile production --env-file .env up -d finance
+   ```
+
+The `:latest` images for other services stay untouched. Next release will fold the fix in normally.
+
+> Don't `--build` on the VPS. The Dockerfiles are thin (single-stage `COPY . . + CMD`); the actual build happens in CI inside `pnpm deploy` output. Building locally would fail because the VPS doesn't have the source tree's `node_modules/` or `build/` artifacts.
 
 ---
 
@@ -323,6 +407,97 @@ scaling is ever needed, extract the poller to a worker container (mirror
 
 ---
 
+## Unstable instances
+
+Each PR carries a sticky bot comment with a checkbox per pinnable app. Tick a
+box and the bot dispatches `unstable.yml`, which brings up an `<app>_unstable`
+peer container running the PR's `:pr-<n>` image alongside the production
+`<app>` container. Production users keep getting the stable container; anyone
+who sets the `nexo_unstable=1` cookie on `.krieger2501.de` (via the toggle in
+each app's About card, or manually via devtools) is routed to the unstable
+peer.
+
+Pinnable apps: `auth`, `admin`, `finance`, `flaschen`, `landing`. The
+flaschen worker is excluded — there's no per-user opt-in for a background
+worker, so pinning it would affect everyone.
+
+```mermaid
+flowchart LR
+  click[Maintainer ticks checkbox<br/>on PR sticky comment]
+  click --> bot
+  bot[nexo-bot<br/>perms gate + reconciler] -->|workflow_dispatch| wf
+  wf[unstable.yml] -->|SSH| vps
+
+  subgraph vps[VPS]
+    script[scripts/unstable.mjs<br/>up &lt;svc&gt; &lt;pr&gt;]
+    envfile[.env.unstable<br/>FINANCE_UNSTABLE_TAG=pr-N]
+    script --> envfile
+    script --> compose[docker compose --profile unstable up -d]
+    compose --> peer[finance_unstable<br/>:pr-N]
+  end
+
+  user([Browser w/ cookie<br/>nexo_unstable=1]) --> caddy[Caddy]
+  caddy --> peer
+  user2([Everyone else]) --> caddy
+  caddy --> stable[finance<br/>:latest]
+```
+
+State sources:
+
+- **Intent** lives in the PR's sticky comment markdown (checkboxes). The bot
+  re-renders this on every webhook; what's checked is the truth of "what the
+  maintainer wants up."
+- **Reality** lives in `/home/deploy/nexo/.env.unstable` on the VPS plus the
+  set of running `_unstable` containers. The bot writes the env file via
+  `scripts/unstable.mjs`; compose reads it through `--env-file .env.unstable`.
+
+Pins clear automatically:
+
+- on `pull_request.closed` → bot dispatches `down-all-for-pr` for that PR's services
+- on successful production deploy → `scripts/deploy.mjs` runs `unstable.mjs down-all`,
+  which truncates `.env.unstable` and tears down every `_unstable` container.
+  The bot picks up the post-deploy `workflow_run.completed` webhook and
+  rewrites every open PR's sticky to reflect the cleared state.
+
+Each Caddy response carries `X-Nexo-Routed-To: stable | unstable | stable-fallback`,
+visible in Loki as `resp_headers_X_Nexo_Routed_To`. `stable-fallback` is a
+canary signal (an unstable container exists in intent but isn't dialing).
+
+### Bot access control
+
+All bot mutations (slash commands, checkbox toggles) call
+`octokit.repos.getCollaboratorPermissionLevel` and accept only `admin`,
+`maintain`, or `write`. Anything else gets a polite reply on the PR and no
+workflow dispatch. Permission lookups are cached in-memory for 5 minutes.
+
+### Slash commands
+
+In a PR comment:
+
+| Command       | Effect                                                   |
+| ------------- | -------------------------------------------------------- |
+| `/up <app>`   | Tick `<app>` for this PR (equivalent to ticking the box) |
+| `/down <app>` | Untick `<app>`                                           |
+| `/down all`   | Untick every app for this PR                             |
+| `/status`     | Re-render the sticky comment                             |
+
+### Manual VPS-side commands
+
+```bash
+cd ~/nexo
+
+# Inspect what's pinned right now
+cat .env.unstable
+
+# Force-clear unstable state (matches what the post-deploy hook does)
+node scripts/unstable.mjs down-all
+
+# Bring down a single peer (rare — usually drive this via the PR checkbox)
+node scripts/unstable.mjs down finance 0
+```
+
+---
+
 ## Useful commands on the server
 
 ```bash
@@ -346,10 +521,13 @@ docker compose --profile production --profile server down -v
 
 ## When adding a new app
 
-1. Add the service to `docker-compose.yml` with `profiles: [production]` (and a `_preview` variant with `profiles: [preview]`)
-2. Add the subdomain to `Caddyfile`
-3. Add the DNS A records in IONOS (production + `*.preview` subdomain)
+1. Add the service to `docker-compose.yml` with `profiles: [production]` and a sibling `_unstable` variant on `profiles: [unstable]` reusing the same env-block YAML anchor
+2. Add the subdomain to `Caddyfile` (use the `unstable_routing` snippet for cookie-based routing to the `_unstable` peer)
+3. Add the DNS A record in IONOS (production only — unstable peers reuse the production hostnames via cookie routing)
 4. Add the OAuth redirect URI in each provider's console
-5. Let CI/CD deploy on next release, or run manually: `docker compose --profile production --profile server --env-file .env up -d --build`
+5. Add an entry to `APPS` in `tools/cli/src/apps.ts` so `nexo prepare-contexts` / `build-images` / `promote` pick it up
+6. Add the app to `HEALTH_HOSTS` and `PROD_SERVICES` in `scripts/deploy.mjs` if it should gate deploys on `/healthz`
+7. Register the app in `apps/bot/src/state.ts` `UNSTABLE_APPS` so the bot exposes a checkbox for it on every PR's sticky comment
+8. Let CI/CD deploy on next release, or pull `:main` manually: `docker compose --profile production --env-file .env pull <svc> && docker compose --profile production --env-file .env up -d <svc>`
 
 See [Adding a New App](adding-an-app.md) for the full checklist.

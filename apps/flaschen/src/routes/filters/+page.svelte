@@ -149,6 +149,7 @@
 	let overrideSheetOpen = $state(false);
 	let overrideDraft = $state<OverrideDraft | null>(null);
 	let overrideSubmitting = $state(false);
+	let confirmDeleteOverride = $state(false);
 
 	// ─── Derived ───
 	const weeklyWindows = $derived(buildWeeklyWindows(dayOn, sharedWindows, dayOverrides));
@@ -212,7 +213,7 @@
 		)
 	);
 
-	const today = $derived(berlinTodayISO());
+	const today = $derived(data.todayBerlin);
 
 	// ─── Density heatmap (synthetic, bimodal: lunch + dinner) ───
 	const DENSITY: number[] = (() => {
@@ -380,12 +381,6 @@
 			.map((p) => p[0]?.toUpperCase() ?? '')
 			.join('');
 		return `${initials || 'WG'}-${String(id).padStart(3, '0')}`;
-	}
-
-	function berlinTodayISO(): string {
-		return new Date(new Date().toLocaleString('en-CA', { timeZone: 'Europe/Berlin' }).split(',')[0])
-			.toISOString()
-			.slice(0, 10);
 	}
 
 	// ─── Toggle/edit handlers ───
@@ -657,6 +652,7 @@
 			slots: [{ ...DEFAULT_SLOT }],
 			note: ''
 		};
+		confirmDeleteOverride = false;
 		overrideSheetOpen = true;
 	}
 	function openEditOverride(o: (typeof data.dateOverrides)[number]) {
@@ -670,6 +666,7 @@
 					: [{ ...DEFAULT_SLOT }],
 			note: o.note ?? ''
 		};
+		confirmDeleteOverride = false;
 		overrideSheetOpen = true;
 	}
 	function addOverrideSlot() {
@@ -1263,118 +1260,151 @@
 <!-- Per-date override editor sheet -->
 <BottomSheet
 	bind:open={overrideSheetOpen}
-	title={overrideDraft?.id ? m.settings_special_days() : m.settings_special_add()}
-	subtitle={m.settings_special_days_hint()}
+	title={confirmDeleteOverride
+		? m.override_delete_confirm_title()
+		: overrideDraft?.id
+			? m.settings_special_days()
+			: m.settings_special_add()}
+	subtitle={confirmDeleteOverride
+		? m.override_delete_confirm_desc()
+		: m.settings_special_days_hint()}
 >
 	{#if overrideDraft}
-		<form
-			method="POST"
-			action="?/saveOverride"
-			use:enhance={() => {
-				overrideSubmitting = true;
-				return async ({ update, result }) => {
-					await update({ reset: false });
-					overrideSubmitting = false;
-					if (result.type === 'success') {
-						overrideSheetOpen = false;
-						overrideDraft = null;
-					}
-				};
-			}}
-		>
-			{#if overrideDraft.id}<input type="hidden" name="id" value={overrideDraft.id} />{/if}
-			<input type="hidden" name="kind" value={overrideDraft.kind} />
-			<input type="hidden" name="slots" value={JSON.stringify(overrideDraft.slots)} />
-
-			<label class="field">
-				<span class="field-label">{m.override_date()}</span>
-				<input type="date" name="date" min={today} required bind:value={overrideDraft.date} />
-			</label>
-
-			<div class="seg">
-				<button
-					type="button"
-					class="seg-btn"
-					class:active={overrideDraft.kind === 'available'}
-					onclick={() => (overrideDraft = { ...overrideDraft!, kind: 'available' })}
-				>
-					{m.override_kind_available()}
-				</button>
-				<button
-					type="button"
-					class="seg-btn"
-					class:active={overrideDraft.kind === 'unavailable'}
-					onclick={() => (overrideDraft = { ...overrideDraft!, kind: 'unavailable' })}
-				>
-					{m.override_kind_unavailable()}
-				</button>
-			</div>
-
-			{#if overrideDraft.kind === 'available'}
-				<div class="ds-body">
-					{#each overrideDraft.slots as slot, i (i)}
-						<div class="slot-row">
-							<input
-								type="time"
-								min="07:00"
-								max="23:00"
-								step="900"
-								value={minutesToHHMM(slot.start)}
-								onchange={(e) =>
-									updateOverrideSlot(i, 'start', (e.currentTarget as HTMLInputElement).value)}
-							/>
-							<span class="slot-sep">–</span>
-							<input
-								type="time"
-								min="07:00"
-								max="23:00"
-								step="900"
-								value={minutesToHHMM(slot.end)}
-								onchange={(e) =>
-									updateOverrideSlot(i, 'end', (e.currentTarget as HTMLInputElement).value)}
-							/>
-							<button
-								type="button"
-								class="slot-remove"
-								aria-label={m.settings_remove_slot()}
-								onclick={() => removeOverrideSlot(i)}
-							>
-								<X size={16} strokeWidth={1.8} />
-							</button>
-						</div>
-					{/each}
-					{#if slotsHaveError(overrideDraft.slots)}
-						<div class="sheet-error">
-							{overrideDraft.slots.some((s) => s.end <= s.start)
-								? m.settings_slot_invalid()
-								: m.settings_slot_overlap()}
-						</div>
-					{/if}
-					<button type="button" class="slot-add" onclick={addOverrideSlot}>
-						<Plus size={14} strokeWidth={2} />
-						{m.settings_add_slot()}
+		{#if confirmDeleteOverride}
+			<form
+				method="POST"
+				action="?/deleteOverride"
+				use:enhance={() => {
+					overrideSubmitting = true;
+					return async ({ update, result }) => {
+						await update({ reset: false });
+						overrideSubmitting = false;
+						if (result.type === 'success') {
+							overrideSheetOpen = false;
+							overrideDraft = null;
+							confirmDeleteOverride = false;
+						}
+					};
+				}}
+			>
+				<input type="hidden" name="id" value={overrideDraft.id} />
+				<div class="sheet-actions sheet-actions-row">
+					<button
+						type="button"
+						class="sheet-cancel"
+						onclick={() => (confirmDeleteOverride = false)}
+					>
+						{m.override_cancel()}
+					</button>
+					<button type="submit" class="sheet-done sheet-danger" disabled={overrideSubmitting}>
+						<Trash2 size={14} strokeWidth={1.8} />
+						{m.override_delete_yes()}
 					</button>
 				</div>
-			{/if}
+			</form>
+		{:else}
+			<form
+				method="POST"
+				action="?/saveOverride"
+				use:enhance={() => {
+					overrideSubmitting = true;
+					return async ({ update, result }) => {
+						await update({ reset: false });
+						overrideSubmitting = false;
+						if (result.type === 'success') {
+							overrideSheetOpen = false;
+							overrideDraft = null;
+						}
+					};
+				}}
+			>
+				{#if overrideDraft.id}<input type="hidden" name="id" value={overrideDraft.id} />{/if}
+				<input type="hidden" name="kind" value={overrideDraft.kind} />
+				<input type="hidden" name="slots" value={JSON.stringify(overrideDraft.slots)} />
 
-			<label class="field">
-				<span class="field-label">{m.override_note()}</span>
-				<input
-					type="text"
-					name="note"
-					maxlength="120"
-					placeholder={m.override_note_placeholder()}
-					bind:value={overrideDraft.note}
-				/>
-			</label>
+				<label class="field">
+					<span class="field-label">{m.override_date()}</span>
+					<input type="date" name="date" min={today} required bind:value={overrideDraft.date} />
+				</label>
 
-			<div class="sheet-actions sheet-actions-row">
-				{#if overrideDraft.id}
-					<button type="submit" formaction="?/deleteOverride" class="sheet-cancel sheet-danger">
-						<Trash2 size={14} strokeWidth={1.8} />
-						{m.override_delete()}
+				<div class="seg">
+					<button
+						type="button"
+						class="seg-btn"
+						class:active={overrideDraft.kind === 'available'}
+						onclick={() => (overrideDraft = { ...overrideDraft!, kind: 'available' })}
+					>
+						{m.override_kind_available()}
 					</button>
-				{:else}
+					<button
+						type="button"
+						class="seg-btn"
+						class:active={overrideDraft.kind === 'unavailable'}
+						onclick={() => (overrideDraft = { ...overrideDraft!, kind: 'unavailable' })}
+					>
+						{m.override_kind_unavailable()}
+					</button>
+				</div>
+
+				{#if overrideDraft.kind === 'available'}
+					<div class="ds-body">
+						{#each overrideDraft.slots as slot, i (i)}
+							<div class="slot-row">
+								<input
+									type="time"
+									min="07:00"
+									max="23:00"
+									step="900"
+									value={minutesToHHMM(slot.start)}
+									onchange={(e) =>
+										updateOverrideSlot(i, 'start', (e.currentTarget as HTMLInputElement).value)}
+								/>
+								<span class="slot-sep">–</span>
+								<input
+									type="time"
+									min="07:00"
+									max="23:00"
+									step="900"
+									value={minutesToHHMM(slot.end)}
+									onchange={(e) =>
+										updateOverrideSlot(i, 'end', (e.currentTarget as HTMLInputElement).value)}
+								/>
+								<button
+									type="button"
+									class="slot-remove"
+									aria-label={m.settings_remove_slot()}
+									onclick={() => removeOverrideSlot(i)}
+								>
+									<X size={16} strokeWidth={1.8} />
+								</button>
+							</div>
+						{/each}
+						{#if slotsHaveError(overrideDraft.slots)}
+							<div class="sheet-error">
+								{overrideDraft.slots.some((s) => s.end <= s.start)
+									? m.settings_slot_invalid()
+									: m.settings_slot_overlap()}
+							</div>
+						{/if}
+						<button type="button" class="slot-add" onclick={addOverrideSlot}>
+							<Plus size={14} strokeWidth={2} />
+							{m.settings_add_slot()}
+						</button>
+					</div>
+				{/if}
+
+				<label class="field">
+					<span class="field-label">{m.override_note()}</span>
+					<input
+						type="text"
+						name="note"
+						maxlength="120"
+						placeholder={m.override_note_placeholder()}
+						bind:value={overrideDraft.note}
+					/>
+				</label>
+
+				<div class="sheet-actions sheet-actions-row">
 					<button
 						type="button"
 						class="sheet-cancel"
@@ -1385,17 +1415,27 @@
 					>
 						{m.override_cancel()}
 					</button>
-				{/if}
-				<button
-					type="submit"
-					class="sheet-done"
-					disabled={overrideSubmitting || !overrideSlotsValid || !overrideDraft.date}
-				>
-					<Check size={14} strokeWidth={1.8} />
-					{m.override_save()}
-				</button>
-			</div>
-		</form>
+					{#if overrideDraft.id}
+						<button
+							type="button"
+							class="sheet-cancel sheet-danger"
+							onclick={() => (confirmDeleteOverride = true)}
+						>
+							<Trash2 size={14} strokeWidth={1.8} />
+							{m.override_delete()}
+						</button>
+					{/if}
+					<button
+						type="submit"
+						class="sheet-done"
+						disabled={overrideSubmitting || !overrideSlotsValid || !overrideDraft.date}
+					>
+						<Check size={14} strokeWidth={1.8} />
+						{m.override_save()}
+					</button>
+				</div>
+			</form>
+		{/if}
 	{/if}
 </BottomSheet>
 
@@ -1505,59 +1545,6 @@
 		color: var(--err-ink);
 	}
 
-	.sheet-actions {
-		padding: 14px 0 4px;
-	}
-	.sheet-actions-row {
-		display: flex;
-		gap: 8px;
-		align-items: stretch;
-	}
-	.sheet-actions-row > button {
-		box-sizing: border-box;
-	}
-	.sheet-actions-row > button :global(svg) {
-		flex-shrink: 0;
-	}
-	.sheet-done {
-		flex: 1;
-		height: 48px;
-		padding: 0;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		border-radius: var(--radius-md);
-		border: none;
-		background: var(--accent);
-		color: #fff;
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-		transition: opacity 150ms ease;
-	}
-	.sheet-done:disabled {
-		opacity: 0.45;
-		cursor: not-allowed;
-	}
-	.sheet-cancel {
-		flex: 1;
-		height: 48px;
-		padding: 0;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		border-radius: var(--radius-md);
-		border: 1px solid var(--border-default);
-		background: var(--bg-1);
-		color: var(--text-primary);
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-	}
 	.sheet-cancel.sheet-danger {
 		color: var(--err-ink);
 		border-color: color-mix(in oklab, var(--err) 30%, var(--border-default));

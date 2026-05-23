@@ -1,0 +1,8 @@
+{
+	"extends": "../../packages/logger/tsconfig.json",
+	"compilerOptions": {
+		"allowImportingTsExtensions": true,
+		"noEmit": true
+	},
+	"include": ["src"]
+}

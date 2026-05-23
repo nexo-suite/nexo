@@ -85,6 +85,9 @@
 	let renamingId = $state<string | null>(null);
 	let renameLabel = $state('');
 	let renameSheetOpen = $state(false);
+	let removingId = $state<string | null>(null);
+	let removingLabel = $state('');
+	let removeSheetOpen = $state(false);
 
 	onMount(async () => {
 		permState = await getPermissionState();
@@ -143,6 +146,12 @@
 		renamingId = id;
 		renameLabel = current ?? '';
 		renameSheetOpen = true;
+	}
+
+	function startRemove(id: string, label: string) {
+		removingId = id;
+		removingLabel = label;
+		removeSheetOpen = true;
 	}
 
 	function defaultDeviceLabel(): string {
@@ -315,12 +324,14 @@
 							>
 								<Pencil size={14} strokeWidth={1.8} />
 							</button>
-							<form method="POST" action="?/remove" use:enhance>
-								<input type="hidden" name="id" value={dev.id} />
-								<button type="submit" class="icon-btn icon-btn-danger" aria-label="Remove">
-									<Trash2 size={14} strokeWidth={1.8} />
-								</button>
-							</form>
+							<button
+								type="button"
+								class="icon-btn icon-btn-danger"
+								onclick={() => startRemove(dev.id, dev.label ?? defaultLabelFromUA(dev.userAgent))}
+								aria-label="Remove"
+							>
+								<Trash2 size={14} strokeWidth={1.8} />
+							</button>
 						{/snippet}
 					</DeviceListRow>
 				{/each}
@@ -456,6 +467,31 @@
 				Cancel
 			</button>
 			<button type="submit" class="sheet-done">Save</button>
+		</div>
+	</form>
+</BottomSheet>
+
+<BottomSheet
+	bind:open={removeSheetOpen}
+	title="Remove device?"
+	subtitle="{removingLabel} will stop receiving notifications until it re-subscribes."
+>
+	<form
+		method="POST"
+		action="?/remove"
+		use:enhance={() =>
+			async ({ update }) => {
+				await update({ reset: false });
+				removeSheetOpen = false;
+				removingId = null;
+			}}
+	>
+		<input type="hidden" name="id" value={removingId ?? ''} />
+		<div class="sheet-actions sheet-actions-row">
+			<button type="button" class="sheet-cancel" onclick={() => (removeSheetOpen = false)}>
+				Cancel
+			</button>
+			<button type="submit" class="sheet-done sheet-done-danger">Remove</button>
 		</div>
 	</form>
 </BottomSheet>
@@ -742,34 +778,7 @@
 		border-radius: var(--radius-md);
 		background: var(--color-surface-1);
 	}
-	.sheet-actions {
-		padding: 14px 0 4px;
-	}
-	.sheet-actions-row {
-		display: flex;
-		gap: 8px;
-	}
 	.sheet-done {
-		flex: 1;
-		height: 48px;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		border-radius: var(--radius-md);
-		border: none;
 		background: var(--accent-ink);
-		color: #fff;
-		cursor: pointer;
-	}
-	.sheet-cancel {
-		flex: 1;
-		height: 48px;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		border-radius: var(--radius-md);
-		border: 1px solid var(--color-border-default);
-		background: var(--color-bg-1);
-		cursor: pointer;
 	}
 </style>

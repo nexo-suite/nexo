@@ -604,27 +604,6 @@
 		font-weight: 600;
 	}
 
-	/* ─── Sheet Done button ─── */
-	.sheet-actions {
-		padding: 14px 0 4px;
-	}
-	.sheet-done {
-		width: 100%;
-		height: 48px;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		border-radius: var(--radius-md);
-		border: none;
-		background: var(--color-accent);
-		color: #fff;
-		cursor: pointer;
-		transition: opacity var(--dur-fast, 150ms) var(--ease-out);
-	}
-	.sheet-done:active {
-		opacity: 0.85;
-	}
-
 	/* ─── Stub rows ─── */
 	.stub-row {
 		opacity: 0.55;

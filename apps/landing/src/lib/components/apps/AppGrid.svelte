@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
+
 	type LiveApp = {
 		id: string;
 		name: string;
@@ -48,18 +50,28 @@
 				lastPollOk: boolean | null;
 		  };
 
+	type AdminGlance = {
+		users: number;
+		services: number;
+		failing: number;
+		healthPct: number | null;
+		lastCheck: Date | null;
+	};
+
 	let {
 		liveApps,
 		workshopApps,
 		ideaApps,
 		financeGlance,
-		flaschenGlance
+		flaschenGlance,
+		adminGlance
 	}: {
 		liveApps: LiveApp[];
 		workshopApps: WorkshopApp[];
 		ideaApps: IdeaApp[];
 		financeGlance: FinanceGlance | null;
 		flaschenGlance: FlaschenGlance | null;
+		adminGlance: AdminGlance | null;
 	} = $props();
 
 	const fmt = (n: number) =>
@@ -69,8 +81,8 @@
 <!-- Your Apps -->
 {#if liveApps.length > 0}
 	<div class="sec">
-		<span class="sec-title"><b>Your apps</b> · {liveApps.length}</span>
-		<span class="sec-right">live</span>
+		<span class="sec-title"><b>{m.appgrid_your_apps()}</b> · {liveApps.length}</span>
+		<span class="sec-right">{m.appgrid_live()}</span>
 	</div>
 
 	<div class="app-stack">
@@ -82,7 +94,9 @@
 					{:else}
 						<div class="app-tile">{app.monogram}</div>
 					{/if}
-					<span class="pill pill-live"><span class="pill-dot"></span>Live</span>
+					<span class="pill pill-live"
+						><span class="pill-dot"></span>{m.appgrid_flaschen_live()}</span
+					>
 				</div>
 				<div class="ac-name">{app.name}</div>
 				<div class="ac-desc">{app.desc}</div>
@@ -92,18 +106,18 @@
 					{@const net = g.monthIncome - g.monthExpenses}
 					<div class="ac-glance">
 						<div class="stat">
-							<div class="stat-k">Liquid · today</div>
+							<div class="stat-k">{m.appgrid_finance_liquid()}</div>
 							<div class="stat-v mono">{fmt(g.liquid)}</div>
 						</div>
 						<div class="stat">
-							<div class="stat-k">This month</div>
+							<div class="stat-k">{m.appgrid_finance_month()}</div>
 							<div class="stat-v mono {net >= 0 ? 'up' : 'down'}">
+								<span class="stat-arrow" aria-hidden="true">{net >= 0 ? '↑' : '↓'}</span>
 								{net >= 0 ? '+' : ''}{fmt(net)}
-								{net >= 0 ? '↑' : '↓'}
 							</div>
 						</div>
 						<div class="stat">
-							<div class="stat-k">Tight day</div>
+							<div class="stat-k">{m.appgrid_finance_tight_day()}</div>
 							<div class="stat-v mono">{g.tightDay ?? '—'}</div>
 						</div>
 					</div>
@@ -112,13 +126,13 @@
 				{#if app.id === 'flaschen' && flaschenGlance}
 					<div class="ac-glance">
 						<div class="stat">
-							<div class="stat-k">Available now</div>
+							<div class="stat-k">{m.appgrid_flaschen_available()}</div>
 							<div class="stat-v mono">
 								{flaschenGlance.connected ? flaschenGlance.available : '—'}
 							</div>
 						</div>
 						<div class="stat">
-							<div class="stat-k">Match rules</div>
+							<div class="stat-k">{m.appgrid_flaschen_match_rules()}</div>
 							<div
 								class="stat-v mono {flaschenGlance.connected && flaschenGlance.matches > 0
 									? 'up'
@@ -128,19 +142,46 @@
 							</div>
 						</div>
 						<div class="stat">
-							<div class="stat-k">Status</div>
+							<div class="stat-k">{m.appgrid_flaschen_status()}</div>
 							<div
-								class="stat-v mono {!flaschenGlance.connected
+								class="stat-v stat-status {!flaschenGlance.connected
 									? 'muted'
 									: flaschenGlance.needsReconnect
 										? 'down'
 										: 'up'}"
 							>
+								<span class="status-dot" aria-hidden="true"></span>
 								{!flaschenGlance.connected
-									? 'Not connected'
+									? m.appgrid_flaschen_not_connected()
 									: flaschenGlance.needsReconnect
-										? 'Reauth'
-										: 'Live'}
+										? m.appgrid_flaschen_reauth()
+										: m.appgrid_flaschen_live()}
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				{#if app.id === 'admin' && adminGlance}
+					{@const a = adminGlance}
+					{@const tone = a.healthPct === null ? 'muted' : a.failing > 0 ? 'down' : 'up'}
+					<div class="ac-glance">
+						<div class="stat">
+							<div class="stat-k">{m.appgrid_admin_users()}</div>
+							<div class="stat-v mono">{a.users}</div>
+						</div>
+						<div class="stat">
+							<div class="stat-k">{m.appgrid_admin_services()}</div>
+							<div class="stat-v mono">{a.services > 0 ? a.services : '—'}</div>
+						</div>
+						<div class="stat">
+							<div class="stat-k">{m.appgrid_admin_health()}</div>
+							<div class="stat-v stat-status {tone}">
+								<span class="status-dot" aria-hidden="true"></span>
+								{a.healthPct === null
+									? m.appgrid_admin_health_none()
+									: a.failing > 0
+										? m.appgrid_admin_failing({ count: a.failing })
+										: m.appgrid_admin_all_ok()}
 							</div>
 						</div>
 					</div>
@@ -149,7 +190,7 @@
 				<div class="ac-foot">
 					<span class="ac-meta">{app.meta}</span>
 					<span class="btn-open">
-						Open
+						{m.appgrid_open()}
 						<svg
 							viewBox="0 0 24 24"
 							fill="none"
@@ -164,17 +205,17 @@
 	</div>
 {:else}
 	<div class="sec">
-		<span class="sec-title"><b>Your apps</b></span>
+		<span class="sec-title"><b>{m.appgrid_your_apps()}</b></span>
 	</div>
 	<div class="empty">
-		<p>No apps unlocked yet. Ask Kevin to hook you up.</p>
+		<p>{m.appgrid_empty()}</p>
 	</div>
 {/if}
 
 <!-- Workshop -->
 <div class="sec">
-	<span class="sec-title"><b>In the workshop</b> · {workshopApps.length}</span>
-	<span class="sec-right">soon-ish</span>
+	<span class="sec-title"><b>{m.appgrid_workshop()}</b> · {workshopApps.length}</span>
+	<span class="sec-right">{m.appgrid_soonish()}</span>
 </div>
 
 <div class="app-stack">
@@ -186,7 +227,7 @@
 				{:else}
 					<div class="app-tile">{app.monogram}</div>
 				{/if}
-				<span class="pill pill-soon">Coming soon</span>
+				<span class="pill pill-soon">{m.appgrid_coming_soon()}</span>
 			</div>
 			<div class="ac-name">{app.name}</div>
 			<div class="ac-desc">{app.desc}</div>
@@ -204,7 +245,7 @@
 							d="M8 11V7a4 4 0 0 1 8 0v4"
 						/></svg
 					>
-					locked
+					{m.appgrid_locked()}
 				</span>
 			</div>
 		</div>
@@ -213,8 +254,8 @@
 
 <!-- Idea strip -->
 <div class="sec">
-	<span class="sec-title"><b>Maybe later</b></span>
-	<span class="sec-right">ideas</span>
+	<span class="sec-title"><b>{m.appgrid_maybe_later()}</b></span>
+	<span class="sec-right">{m.appgrid_ideas()}</span>
 </div>
 <div class="idea-strip">
 	{#each ideaApps as app (app.id)}
@@ -399,20 +440,43 @@
 	}
 
 	.ac-glance {
-		display: flex;
-		gap: 18px;
-		justify-content: space-between;
-		align-items: baseline;
-		flex-wrap: wrap;
-		row-gap: 8px;
-		margin-top: 14px;
-		padding-top: 12px;
-		border-top: 1px dashed var(--color-border-subtle);
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 14px;
+		align-items: start;
+		margin-top: 16px;
+		padding-top: 14px;
+		position: relative;
+	}
+	.ac-glance::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		height: 1px;
+		background: linear-gradient(
+			90deg,
+			transparent,
+			color-mix(in oklab, var(--app-accent) 28%, var(--color-border-default)) 18%,
+			color-mix(in oklab, var(--app-accent) 28%, var(--color-border-default)) 82%,
+			transparent
+		);
+		opacity: 0.7;
 	}
 	.stat {
 		display: flex;
 		flex-direction: column;
-		gap: 3px;
+		gap: 4px;
+		min-width: 0;
+	}
+	.stat:nth-child(2) {
+		text-align: center;
+		align-items: center;
+	}
+	.stat:nth-child(3) {
+		text-align: right;
+		align-items: flex-end;
 	}
 	.stat-k {
 		font-family: var(--font-mono);
@@ -420,14 +484,21 @@
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		color: var(--color-text-faint);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
 	}
 	.stat-v {
-		margin-top: 3px;
 		font-size: 15px;
 		font-weight: 600;
 		letter-spacing: -0.015em;
 		font-variant-numeric: tabular-nums;
 		color: var(--color-text-primary);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
 	}
 	.stat-v.up {
 		color: var(--app-ink);
@@ -441,6 +512,40 @@
 	.stat-v.mono {
 		font-family: var(--font-mono);
 		font-variant-numeric: tabular-nums;
+	}
+	.stat-arrow {
+		display: inline-block;
+		margin-right: 2px;
+		opacity: 0.85;
+	}
+	.stat-status {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 12.5px;
+		font-weight: 600;
+		letter-spacing: 0;
+		text-transform: lowercase;
+	}
+	.status-dot {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		background: currentColor;
+		flex-shrink: 0;
+		box-shadow: 0 0 0 3px color-mix(in oklab, currentColor 18%, transparent);
+	}
+	.stat-v.up .status-dot {
+		animation: glance-pulse 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+	}
+	@keyframes glance-pulse {
+		0%,
+		100% {
+			box-shadow: 0 0 0 3px color-mix(in oklab, currentColor 18%, transparent);
+		}
+		50% {
+			box-shadow: 0 0 0 5px color-mix(in oklab, currentColor 8%, transparent);
+		}
 	}
 
 	.ac-foot {

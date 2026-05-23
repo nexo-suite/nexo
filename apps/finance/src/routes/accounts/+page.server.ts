@@ -60,7 +60,7 @@ export const actions: Actions = {
 			});
 			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: 'Account saved' };
 	},
 	remove: async ({ request, locals }) => {
 		const userId = locals.user!.id;
@@ -78,6 +78,6 @@ export const actions: Actions = {
 			});
 			return fail(500, { error: 'Database error', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: 'Account deleted' };
 	}
 };

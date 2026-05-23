@@ -67,6 +67,28 @@
 
 	const device = $derived(detectDevice(userAgent));
 
+	const UNSTABLE_COOKIE = 'nexo_unstable';
+	let useUnstable = $state(false);
+	$effect(() => {
+		if (typeof document === 'undefined') return;
+		useUnstable = document.cookie
+			.split(';')
+			.map((c) => c.trim())
+			.includes(`${UNSTABLE_COOKIE}=1`);
+	});
+
+	function toggleUnstable(next: boolean) {
+		if (typeof document === 'undefined') return;
+		useUnstable = next;
+		const onKriegerHost = location.hostname.endsWith('krieger2501.de');
+		const domain = onKriegerHost ? '; domain=.krieger2501.de' : '';
+		const secure = location.protocol === 'https:' ? '; secure' : '';
+		const value = next ? '1' : '0';
+		const maxAge = next ? 'max-age=2592000' : 'max-age=0';
+		document.cookie = `${UNSTABLE_COOKIE}=${value}; path=/${domain}; ${maxAge}${secure}; samesite=lax`;
+		location.reload();
+	}
+
 	const summary = $derived.by(() => {
 		const bits = [`v${version}`];
 		if (errors.length > 0) bits.push(`${errors.length} error${errors.length === 1 ? '' : 's'}`);
@@ -85,6 +107,7 @@
 			correlationId,
 			userAgent,
 			url,
+			useUnstable,
 			errors
 		});
 	}
@@ -110,6 +133,7 @@
 			commit,
 			url,
 			correlationId: reportCid,
+			useUnstable,
 			errors
 		});
 		return buildBugReportUrl(repoUrl, {
@@ -174,6 +198,21 @@
 				{/each}
 			</ul>
 		{/if}
+
+		<label class="ad-toggle">
+			<input
+				type="checkbox"
+				checked={useUnstable}
+				onchange={(e) => toggleUnstable((e.currentTarget as HTMLInputElement).checked)}
+			/>
+			<span class="ad-toggle-text">
+				<span class="ad-toggle-label">Use unstable build when available</span>
+				<span class="ad-toggle-desc">
+					Routes you to the per-PR <code>:pr-&lt;n&gt;</code> container if a maintainer has it pinned.
+					Falls back to stable when no unstable instance is running.
+				</span>
+			</span>
+		</label>
 
 		<div class="ad-actions">
 			<button type="button" class="ad-btn" onclick={onCopy} disabled={copied}>
@@ -360,6 +399,49 @@
 		display: flex;
 		gap: 6px;
 		margin-top: 12px;
+	}
+
+	.ad-toggle {
+		display: flex;
+		gap: 10px;
+		align-items: flex-start;
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px dashed var(--color-border-subtle, var(--border-subtle));
+		cursor: pointer;
+	}
+
+	.ad-toggle input[type='checkbox'] {
+		margin: 2px 0 0;
+		flex-shrink: 0;
+		accent-color: var(--accent-ink, var(--color-accent));
+	}
+
+	.ad-toggle-text {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 0;
+	}
+
+	.ad-toggle-label {
+		font-size: 12.5px;
+		font-weight: 500;
+		color: var(--color-text-primary);
+	}
+
+	.ad-toggle-desc {
+		font-size: 11px;
+		color: var(--color-text-subtle);
+		line-height: 1.4;
+	}
+
+	.ad-toggle-desc code {
+		font-family: var(--font-mono);
+		font-size: 10.5px;
+		background: var(--color-bg-1, var(--color-bg-2));
+		padding: 0 4px;
+		border-radius: 3px;
 	}
 
 	.ad-btn {

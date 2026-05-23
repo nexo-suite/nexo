@@ -2,15 +2,16 @@
 	import { m } from '$lib/paraglide/messages.js';
 	import { getLocale } from '$lib/paraglide/runtime.js';
 	import { onMount, untrack } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { applyAction, enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { PageHeader, BottomSheet } from '@nexo/ui';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { Plug, Sliders, ChevronRight, XCircle, Hand, Info, CalendarPlus } from '@lucide/svelte';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 	import type { PlannedShiftPayload } from '$lib/server/flaschenpost';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const displayName = $derived(data.profile?.displayName || data.user?.name || 'there');
 
@@ -160,18 +161,36 @@
 		start: string;
 		durationInMinutes: number;
 		rewardScore?: number;
+		dedupeKey: string;
 	};
 	let takeOpen = $state(false);
+	let takeSubmitting = $state(false);
 	let pendingTake = $state<TakeOffer | null>(null);
 	function onTakeShift(offer: TakeOffer) {
 		pendingTake = offer;
 		takeOpen = true;
 	}
-	function confirmTakeShift() {
-		takeOpen = false;
-		pendingTake = null;
-		flashToast(m.dashboard_toast_accept_stub());
+
+	function takeErrorMessage(code: string): string {
+		switch (code) {
+			case 'OFFER_GONE':
+				return m.dashboard_take_error_gone();
+			case 'RECONNECT_REQUIRED':
+				return m.dashboard_take_error_reconnect();
+			case 'UPSTREAM_ERROR':
+				return m.dashboard_take_error_upstream();
+			default:
+				return m.dashboard_take_error_unknown();
+		}
 	}
+
+	$effect(() => {
+		if (form?.takeSuccess) {
+			flashToast(m.dashboard_take_success());
+		} else if (form?.takeError) {
+			flashToast(takeErrorMessage(String(form.takeError)));
+		}
+	});
 
 	let takenDismissed = $state(false);
 	const showTaken = $derived(!takenDismissed && data.takenShift !== null);
@@ -411,7 +430,7 @@
 								type="button"
 								class="take-btn"
 								onclick={() => onTakeShift(offer)}
-								title={m.dashboard_accept_soon_title()}
+								title={m.dashboard_take_shift()}
 								aria-label={m.dashboard_take_shift()}
 							>
 								<Hand size={14} strokeWidth={1.9} />
@@ -496,7 +515,7 @@
 								type="button"
 								class="take-btn ghost"
 								onclick={() => onTakeShift(offer)}
-								title={m.dashboard_accept_soon_title()}
+								title={m.dashboard_take_shift()}
 								aria-label={m.dashboard_take_shift()}
 							>
 								<Hand size={14} strokeWidth={1.9} />
@@ -552,7 +571,7 @@
 								type="button"
 								class="take-btn ghost"
 								onclick={() => onTakeShift(offer)}
-								title={m.dashboard_accept_soon_title()}
+								title={m.dashboard_take_shift()}
 								aria-label={m.dashboard_take_shift()}
 							>
 								<Hand size={14} strokeWidth={1.9} />
@@ -569,45 +588,72 @@
 <BottomSheet
 	bind:open={takeOpen}
 	title={m.dashboard_take_shift()}
-	subtitle={m.dashboard_accept_soon_title()}
+	subtitle={m.dashboard_take_confirm_subtitle()}
 >
 	{#if pendingTake}
-		<div class="confirm-shift">
-			<div class="confirm-row">
-				<span class="confirm-label">Warehouse</span>
-				<span class="confirm-value"
-					>{pendingTake.warehouse.name} · {pendingTake.workgroup.name}</span
+		<form
+			method="POST"
+			action="?/takeShift"
+			use:enhance={() => {
+				takeSubmitting = true;
+				return async ({ result }) => {
+					takeSubmitting = false;
+					await applyAction(result);
+					if (result.type === 'success') {
+						takeOpen = false;
+						pendingTake = null;
+						await invalidateAll();
+					} else if (result.type === 'failure' && result.data?.takeError === 'OFFER_GONE') {
+						takeOpen = false;
+						pendingTake = null;
+						await invalidateAll();
+					}
+				};
+			}}
+		>
+			<input type="hidden" name="dedupeKey" value={pendingTake.dedupeKey} />
+			<div class="confirm-shift">
+				<div class="confirm-row">
+					<span class="confirm-label">Warehouse</span>
+					<span class="confirm-value"
+						>{pendingTake.warehouse.name} · {pendingTake.workgroup.name}</span
+					>
+				</div>
+				<div class="confirm-row">
+					<span class="confirm-label">When</span>
+					<span class="confirm-value"
+						>{dowLabel(pendingTake.start)}
+						{dayMonth(pendingTake.start)} ·
+						{fmtTimeRange(pendingTake.start, pendingTake.durationInMinutes)}</span
+					>
+				</div>
+				<div class="confirm-row">
+					<span class="confirm-label">Duration</span>
+					<span class="confirm-value">{fmtDuration(pendingTake.durationInMinutes)}</span>
+				</div>
+			</div>
+			<div class="sheet-actions sheet-actions-row">
+				<button
+					type="button"
+					class="sheet-cancel"
+					disabled={takeSubmitting}
+					onclick={() => (takeOpen = false)}
 				>
+					{m.connect_cancel()}
+				</button>
+				<button type="submit" class="sheet-done" disabled={takeSubmitting}>
+					{takeSubmitting ? m.dashboard_take_submitting() : m.dashboard_take_shift()}
+				</button>
 			</div>
-			<div class="confirm-row">
-				<span class="confirm-label">When</span>
-				<span class="confirm-value"
-					>{dowLabel(pendingTake.start)}
-					{dayMonth(pendingTake.start)} ·
-					{fmtTimeRange(pendingTake.start, pendingTake.durationInMinutes)}</span
-				>
-			</div>
-			<div class="confirm-row">
-				<span class="confirm-label">Duration</span>
-				<span class="confirm-value">{fmtDuration(pendingTake.durationInMinutes)}</span>
-			</div>
-		</div>
+		</form>
 	{/if}
-	<div class="sheet-actions sheet-actions-row">
-		<button type="button" class="sheet-cancel" onclick={() => (takeOpen = false)}>
-			{m.connect_cancel()}
-		</button>
-		<button type="button" class="sheet-done" onclick={confirmTakeShift}>
-			{m.dashboard_take_shift()}
-		</button>
-	</div>
 </BottomSheet>
 
 {#if toastMessage}
 	<div class="toast" role="status">
 		<span class="toast-ico"><Info size={16} strokeWidth={1.8} /></span>
 		<div class="toast-body">
-			<div class="toast-title">{m.dashboard_accept_soon_title()}</div>
+			<div class="toast-title">{m.dashboard_take_toast_title()}</div>
 			<p class="toast-desc">{toastMessage}</p>
 		</div>
 		<button
@@ -659,47 +705,6 @@
 		text-align: right;
 		color: var(--text-primary);
 		font-weight: 500;
-	}
-	.sheet-actions {
-		padding: 14px 0 4px;
-	}
-	.sheet-actions-row {
-		display: flex;
-		gap: 8px;
-	}
-	.sheet-done,
-	.sheet-cancel {
-		flex: 1;
-		min-width: 0;
-		height: 48px;
-		padding: 0 14px;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		line-height: 1;
-		border-radius: var(--radius-md, 12px);
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-		transition: opacity 150ms ease;
-	}
-	.sheet-done {
-		border: none;
-		background: var(--accent);
-		color: #fff;
-	}
-	.sheet-done:active {
-		opacity: 0.85;
-	}
-	.sheet-cancel {
-		border: 1px solid var(--border-default);
-		background: var(--bg-1);
-		color: var(--text-primary);
-	}
-	.sheet-cancel:active {
-		background: var(--bg-2);
 	}
 
 	.status-strip {

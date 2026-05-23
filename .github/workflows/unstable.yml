@@ -1,0 +1,62 @@
+name: Unstable Instance
+
+# Bot dispatches this with (action, service, pr_number). It runs `unstable.mjs`
+# on the VPS to bring up / tear down a single `_unstable` peer container
+# alongside production. Bot watches workflow_run.completed for this workflow
+# and updates the PR's sticky comment.
+
+run-name: 'Unstable · PR #${{ inputs.pr_number }} · ${{ inputs.service }} · ${{ inputs.action }}'
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: up | down | down-all-for-pr | down-all
+        required: true
+        type: choice
+        options: [up, down, down-all-for-pr, down-all]
+      service:
+        description: 'auth | admin | finance | flaschen | landing (ignored for down-all*)'
+        required: false
+        default: ''
+      pr_number:
+        description: 'PR number (ignored for down-all)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply unstable action
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        env:
+          ACTION: ${{ inputs.action }}
+          SERVICE: ${{ inputs.service }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ACTION,SERVICE,PR_NUMBER
+          script: |
+            set -e
+            cd /home/deploy/nexo
+            case "$ACTION" in
+              up|down)
+                node scripts/unstable.mjs "$ACTION" "$SERVICE" "$PR_NUMBER"
+                ;;
+              down-all-for-pr)
+                node scripts/unstable.mjs "$ACTION" "$PR_NUMBER"
+                ;;
+              down-all)
+                node scripts/unstable.mjs "$ACTION"
+                ;;
+              *)
+                echo "Unknown action: $ACTION" >&2
+                exit 1
+                ;;
+            esac

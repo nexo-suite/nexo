@@ -338,57 +338,67 @@ PUBLIC_AUTH_URL=http://localhost:3001
 
 ## 9. Add to Docker Compose
 
-In `docker-compose.yml`, add two service blocks — production and preview:
+In `docker-compose.yml`, add an env-block YAML anchor at the top (next to the
+existing `x-finance-env`, `x-auth-env`, etc.) and reuse it for both the
+production service and its `_unstable` peer:
 
 ```yaml
-gym:
-  profiles: [production]
-  build:
-    context: .
-    dockerfile: apps/gym/Dockerfile
-  restart: unless-stopped
-  networks: [production]
-  environment:
-    DATABASE_URL: ${DATABASE_URL}
-    BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-    PUBLIC_AUTH_URL: https://auth.krieger2501.de
-    PUBLIC_GYM_URL: https://gym.krieger2501.de
-    PROTOCOL_HEADER: x-forwarded-proto
-    HOST_HEADER: x-forwarded-host
-  depends_on:
-    migrate:
-      condition: service_completed_successfully
+x-gym-env: &gym-env
+  DATABASE_URL: ${DATABASE_URL}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  PUBLIC_AUTH_URL: https://auth.krieger2501.de
+  PUBLIC_GYM_URL: https://gym.krieger2501.de
+  PROTOCOL_HEADER: x-forwarded-proto
+  HOST_HEADER: x-forwarded-host
 
-gym_preview:
-  profiles: [preview]
-  build:
-    context: .
-    dockerfile: apps/gym/Dockerfile
-  restart: unless-stopped
-  networks: [preview]
-  environment:
-    DATABASE_URL: ${DATABASE_URL}
-    BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-    PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
-    PUBLIC_GYM_URL: https://gym.preview.krieger2501.de
-    PROTOCOL_HEADER: x-forwarded-proto
-    HOST_HEADER: x-forwarded-host
-  depends_on:
-    migrate_preview:
-      condition: service_completed_successfully
+services:
+  gym:
+    profiles: [production]
+    image: ghcr.io/nexo-suite/nexo-gym:latest
+    container_name: nexo-gym
+    restart: unless-stopped
+    networks: [production]
+    environment: *gym-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  gym_unstable:
+    profiles: [unstable]
+    image: ghcr.io/nexo-suite/nexo-gym:${GYM_UNSTABLE_TAG:-latest}
+    container_name: nexo-gym-unstable
+    restart: unless-stopped
+    networks: [production]
+    labels:
+      nexo.unstable: 'true'
+    environment: *gym-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+        required: false
 ```
 
-Add to the Caddyfile:
+The `_unstable` peer joins the same `production` network so it shares the DB,
+auth, and intra-stack DNS. `required: false` on `depends_on.migrate` is needed
+because `migrate` is a `production`-profile service and the `_unstable` peer
+runs without it.
+
+> Compose pulls images from GHCR (`ghcr.io/nexo-suite/nexo-<app>`) — no `build:` block. CI publishes `:latest`, `:<version>`, `:main`, and `:pr-<n>` tags via `@nexo/cli`. The `${GYM_UNSTABLE_TAG:-latest}` interpolation reads from `.env.unstable` on the VPS, written by the bot when a maintainer pins `gym` to a PR. To wire the new app into that pipeline you'll edit `tools/cli/src/apps.ts` (see step 6 below) and `apps/bot/src/state.ts` `UNSTABLE_APPS` so the bot exposes a checkbox for it.
+
+Add to the Caddyfile, using the `unstable_routing` snippet that handles
+cookie-based routing + handle_errors fallback:
 
 ```
 gym.krieger2501.de {
-  reverse_proxy gym:3000
-}
-
-gym.preview.krieger2501.de {
-  reverse_proxy gym_preview:3000
+  import common
+  import unstable_routing gym gym_unstable
 }
 ```
+
+That single line imports the same matcher logic used by `auth`, `finance`,
+`flaschen`, and `landing`. If you need site-specific tweaks (e.g. `flush_interval -1`
+for SSE), inline the matcher instead — see the `admin.krieger2501.de` block as
+the reference.
 
 ---
 
@@ -441,12 +451,15 @@ Add the app icon SVG to `apps/landing/static/icon-gym.svg`.
 
 ## 13. Add DNS
 
-In your IONOS domain control panel, add A records for both production and preview:
+In your IONOS domain control panel, add a single A record for the production
+hostname:
 
 ```
-gym.krieger2501.de          A  <VPS IP>
-gym.preview.krieger2501.de  A  <VPS IP>
+gym.krieger2501.de  A  <VPS IP>
 ```
+
+There's no separate `*.unstable` subdomain — unstable peers reuse the
+production hostname via Caddy cookie routing.
 
 ---
 
@@ -462,11 +475,15 @@ gym.preview.krieger2501.de  A  <VPS IP>
 - [ ] `routes/auth/callback/+server.ts`
 - [ ] `routes/offline/+page.svelte` (PWA offline fallback)
 - [ ] `apps/gym/.env.local`
-- [ ] `apps/gym/Dockerfile`
-- [ ] `docker-compose.yml` production + preview service blocks added (with `logging: loki`)
-- [ ] `Caddyfile` production + preview entries added
+- [ ] `apps/gym/Dockerfile` (single-stage `COPY . . + CMD`, see existing apps for the template)
+- [ ] `docker-compose.yml` env-block anchor + production service + `_unstable` peer added (with `logging: loki`)
+- [ ] `Caddyfile` production entry added (use `import unstable_routing` snippet)
+- [ ] `tools/cli/src/apps.ts` — add `{ name: 'gym', dir: 'apps/gym', pkg: '@nexo/gym', image: 'nexo-gym' }`
+- [ ] `apps/bot/src/state.ts` — add `'gym'` to `UNSTABLE_APPS` (and the `UnstableApp` union type) so the bot exposes a checkbox for it
+- [ ] `scripts/deploy.mjs` — add `nexo-gym` to `PROD_SERVICES` and `gym.krieger2501.de` to `HEALTH_HOSTS`
+- [ ] `release-please-config.json` — add the new package so it gets versioned
 - [ ] `knip.config.ts` workspace entry added
 - [ ] Root `package.json` `dev:gym` / `build:gym` scripts added
 - [ ] Landing page messages + `apps` array updated
-- [ ] DNS A records added (production + preview)
+- [ ] DNS A record added (production only — unstable peers share the production hostname via cookie routing)
 - [ ] Auth server `trustedOrigins` updated to include new app URL

@@ -412,7 +412,7 @@
 				use:focusOnMount
 			/>
 		</label>
-		<div class="sheet-actions">
+		<div class="sheet-actions sheet-actions-row">
 			<button type="button" class="sheet-cancel" onclick={() => (renameSheetOpen = false)}>
 				{m.connect_cancel()}
 			</button>
@@ -438,7 +438,7 @@
 			}}
 	>
 		<input type="hidden" name="id" value={removingId ?? ''} />
-		<div class="sheet-actions">
+		<div class="sheet-actions sheet-actions-row">
 			<button type="button" class="sheet-cancel" onclick={() => (removeSheetOpen = false)}>
 				{m.connect_cancel()}
 			</button>
@@ -475,42 +475,6 @@
 		border: 1px solid var(--border-default);
 		border-radius: var(--radius-md);
 		background: var(--surface-1);
-	}
-	.sheet-actions {
-		display: flex;
-		gap: 8px;
-		padding: 14px 0 4px;
-	}
-	.sheet-done,
-	.sheet-cancel {
-		flex: 1;
-		min-width: 0;
-		height: 48px;
-		padding: 0 14px;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		line-height: 1;
-		border-radius: var(--radius-md);
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-		transition: opacity 150ms ease;
-	}
-	.sheet-done {
-		border: none;
-		background: var(--accent);
-		color: #fff;
-	}
-	.sheet-done-danger {
-		background: var(--err);
-	}
-	.sheet-cancel {
-		border: 1px solid var(--border-default);
-		background: var(--bg-1);
-		color: var(--text-primary);
 	}
 
 	/* Device row action buttons (inside DeviceListRow's actions snippet) */

@@ -7,19 +7,40 @@ import {
 	type WeeklySlot,
 	type WeeklyWindows
 } from '@nexo/db';
-import { and, asc, eq } from 'drizzle-orm';
+import { Temporal } from '@js-temporal/polyfill';
+import { and, asc, eq, gte } from 'drizzle-orm';
 import { logger } from '$lib/server/logger';
-import { loadPrefs, savePrefs } from '$lib/server/flaschenpost';
+import { loadPrefs, savePrefs, recomputeMatchedFlags } from '$lib/server/flaschenpost';
 import { m } from '$lib/paraglide/messages.js';
+
+const TZ = 'Europe/Berlin';
+
+function todayBerlinISO(): string {
+	return Temporal.Now.zonedDateTimeISO(TZ).toPlainDate().toString();
+}
+
+async function loadOverrides(userId: string, todayBerlin: string) {
+	return db
+		.select()
+		.from(flaschenDateOverride)
+		.where(
+			and(eq(flaschenDateOverride.userId, userId), gte(flaschenDateOverride.date, todayBerlin))
+		);
+}
+
+async function refreshMatchedFlagsForUser(userId: string): Promise<void> {
+	const todayBerlin = todayBerlinISO();
+	const [prefs, overrides] = await Promise.all([
+		loadPrefs(userId),
+		loadOverrides(userId, todayBerlin)
+	]);
+	await recomputeMatchedFlags(userId, prefs, overrides);
+}
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
 
-	const todayBerlin = new Date(
-		new Date().toLocaleString('en-CA', { timeZone: 'Europe/Berlin' }).split(',')[0]
-	)
-		.toISOString()
-		.slice(0, 10);
+	const todayBerlin = todayBerlinISO();
 
 	const [prefs, locations, dateOverrides] = await Promise.all([
 		loadPrefs(userId),
@@ -38,7 +59,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		prefs,
 		knownLocations: locations,
-		dateOverrides: dateOverrides.filter((o) => o.date >= todayBerlin)
+		dateOverrides: dateOverrides.filter((o) => o.date >= todayBerlin),
+		todayBerlin
 	};
 };
 
@@ -175,6 +197,10 @@ export const actions: Actions = {
 			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
 
+		await refreshMatchedFlagsForUser(userId).catch((e) => {
+			logger.error('recomputeMatchedFlags failed (savePrefs)', { userId, error: String(e) });
+		});
+
 		return { success: true, savedAt: Date.now(), toast: m.toast_saved() };
 	},
 
@@ -187,6 +213,7 @@ export const actions: Actions = {
 		const note = String(fd.get('note') ?? '').trim() || null;
 
 		if (!isValidDate(date)) return fail(400, { error: 'INVALID_DATE' });
+		if (date < todayBerlinISO()) return fail(400, { error: 'DATE_IN_PAST' });
 		if (kindRaw !== 'available' && kindRaw !== 'unavailable') {
 			return fail(400, { error: 'INVALID_KIND' });
 		}
@@ -199,10 +226,21 @@ export const actions: Actions = {
 
 		try {
 			if (id) {
-				await db
-					.update(flaschenDateOverride)
-					.set({ date, kind, slots, note })
-					.where(and(eq(flaschenDateOverride.id, id), eq(flaschenDateOverride.userId, userId)));
+				// Edit path: delete the old row first so changing the date can't trip
+				// the (userId, date) unique constraint, then upsert. Wrapped in a
+				// transaction so a failed insert doesn't lose the original.
+				await db.transaction(async (tx) => {
+					await tx
+						.delete(flaschenDateOverride)
+						.where(and(eq(flaschenDateOverride.id, id), eq(flaschenDateOverride.userId, userId)));
+					await tx
+						.insert(flaschenDateOverride)
+						.values({ userId, date, kind, slots, note })
+						.onConflictDoUpdate({
+							target: [flaschenDateOverride.userId, flaschenDateOverride.date],
+							set: { kind, slots, note }
+						});
+				});
 			} else {
 				await db
 					.insert(flaschenDateOverride)
@@ -216,6 +254,10 @@ export const actions: Actions = {
 			logger.error('saveOverride failed', { userId, error: String(e) });
 			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
+
+		await refreshMatchedFlagsForUser(userId).catch((e) => {
+			logger.error('recomputeMatchedFlags failed (saveOverride)', { userId, error: String(e) });
+		});
 
 		return { success: true, savedAt: Date.now(), toast: m.toast_saved() };
 	},
@@ -234,6 +276,10 @@ export const actions: Actions = {
 			logger.error('deleteOverride failed', { userId, error: String(e) });
 			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
+
+		await refreshMatchedFlagsForUser(userId).catch((e) => {
+			logger.error('recomputeMatchedFlags failed (deleteOverride)', { userId, error: String(e) });
+		});
 
 		return { success: true, toast: m.toast_deleted() };
 	}

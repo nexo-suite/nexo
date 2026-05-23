@@ -20,56 +20,90 @@
 	}
 }
 
+# Cookie-based unstable routing.
+# Sites that have an `_unstable` peer service import this snippet. When the
+# `nexo_unstable=1` cookie is present, the request is proxied to the unstable
+# container. If that container is not running (DNS lookup or dial fails),
+# `handle_errors` falls back to the stable upstream — a maintainer with the
+# cookie set never gets a 502 just because no PR is currently up.
+#
+# Each branch sets `X-Nexo-Routed-To` so Caddy's JSON access log captures the
+# routing decision (`stable` | `unstable` | `stable-fallback`) for Loki.
+#
+# Args: {args[0]}=stable upstream host, {args[1]}=unstable upstream host
+(unstable_routing) {
+	@unstable header_regexp Cookie "(^|;\s*)nexo_unstable=1(;|$)"
+	handle @unstable {
+		header +X-Nexo-Routed-To unstable
+		reverse_proxy {args[1]}:3000 {
+			transport http {
+				dial_timeout 1s
+			}
+		}
+	}
+	handle {
+		header +X-Nexo-Routed-To stable
+		reverse_proxy {args[0]}:3000
+	}
+	handle_errors {
+		@unstable_err header_regexp Cookie "(^|;\s*)nexo_unstable=1(;|$)"
+		handle @unstable_err {
+			header X-Nexo-Routed-To stable-fallback
+			reverse_proxy {args[0]}:3000
+		}
+	}
+}
+
 # Production
 krieger2501.de {
 	import common
-	reverse_proxy landing:3000
+	import unstable_routing landing landing_unstable
 }
 
 auth.krieger2501.de {
 	import common
-	reverse_proxy auth:3000
+	import unstable_routing auth auth_unstable
 }
 
 admin.krieger2501.de {
 	import common
-	reverse_proxy admin:3000 {
-		# /services/[name]/logs returns text/event-stream; disable proxy buffering.
-		flush_interval -1
+	# /services/[name]/logs returns text/event-stream; disable proxy buffering
+	# on whichever upstream wins.
+	@unstable header_regexp Cookie "(^|;\s*)nexo_unstable=1(;|$)"
+	handle @unstable {
+		header +X-Nexo-Routed-To unstable
+		reverse_proxy admin_unstable:3000 {
+			flush_interval -1
+			transport http {
+				dial_timeout 1s
+			}
+		}
+	}
+	handle {
+		header +X-Nexo-Routed-To stable
+		reverse_proxy admin:3000 {
+			flush_interval -1
+		}
+	}
+	handle_errors {
+		@unstable_err header_regexp Cookie "(^|;\s*)nexo_unstable=1(;|$)"
+		handle @unstable_err {
+			header X-Nexo-Routed-To stable-fallback
+			reverse_proxy admin:3000 {
+				flush_interval -1
+			}
+		}
 	}
 }
 
 finance.krieger2501.de {
 	import common
-	reverse_proxy finance:3000
+	import unstable_routing finance finance_unstable
 }
 
 flaschen.krieger2501.de {
 	import common
-	reverse_proxy flaschen:3000
-}
-
-# Preview
-preview.krieger2501.de {
-	import common
-	reverse_proxy landing_preview:3000
-}
-
-auth.preview.krieger2501.de {
-	import common
-	reverse_proxy auth_preview:3000
-}
-
-finance.preview.krieger2501.de {
-	import common
-	reverse_proxy finance_preview:3000
-}
-
-admin.preview.krieger2501.de {
-	import common
-	reverse_proxy admin_preview:3000 {
-		flush_interval -1
-	}
+	import unstable_routing flaschen flaschen_unstable
 }
 
 # Bot

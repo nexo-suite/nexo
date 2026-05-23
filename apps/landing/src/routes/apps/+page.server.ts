@@ -11,11 +11,13 @@ import {
 	income,
 	sessions,
 	flaschenAccount,
-	flaschenSeenOffer
+	flaschenSeenOffer,
+	users,
+	healthCheckRun
 } from '@nexo/db';
 import { firesOnDate } from '@nexo/ui/utils/recurrence';
 import { parseUserAgent, deviceIcon } from '@nexo/ui/utils/ua-parser';
-import { and, eq, gte, sql } from 'drizzle-orm';
+import { and, count, eq, gte, sql } from 'drizzle-orm';
 import { env as publicEnv } from '$env/dynamic/public';
 import { getAuth } from '$lib/server/auth';
 import type { PageServerLoad, Actions } from './$types';
@@ -144,6 +146,38 @@ async function getFlaschenGlance(userId: string) {
 	};
 }
 
+async function getAdminGlance() {
+	const since = new Date(Date.now() - 24 * 60 * 60_000);
+
+	const [usersRow] = await db.select({ value: count() }).from(users);
+
+	const latestPerTarget = await db
+		.selectDistinctOn([healthCheckRun.target], {
+			target: healthCheckRun.target,
+			ok: healthCheckRun.ok,
+			checkedAt: healthCheckRun.checkedAt
+		})
+		.from(healthCheckRun)
+		.where(gte(healthCheckRun.checkedAt, since))
+		.orderBy(healthCheckRun.target, sql`${healthCheckRun.checkedAt} desc`);
+
+	const services = latestPerTarget.length;
+	const okCount = latestPerTarget.filter((r) => r.ok).length;
+	const failing = services - okCount;
+	const lastCheck = latestPerTarget.reduce<Date | null>((acc, r) => {
+		if (!acc || r.checkedAt > acc) return r.checkedAt;
+		return acc;
+	}, null);
+
+	return {
+		users: usersRow?.value ?? 0,
+		services,
+		failing,
+		healthPct: services > 0 ? Math.round((okCount / services) * 100) : null,
+		lastCheck
+	};
+}
+
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
 		const authURL = publicEnv.PUBLIC_AUTH_URL;
@@ -169,6 +203,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const financeGlance = allowedApps.includes('finance') ? await getFinanceGlance(userId) : null;
 	const flaschenGlance = allowedApps.includes('flaschen') ? await getFlaschenGlance(userId) : null;
+	const adminGlance = allowedApps.includes('admin') ? await getAdminGlance() : null;
 
 	const currentSessionId = locals.session?.id ?? null;
 	const sessionList = rawSessions.map((s) => {
@@ -197,6 +232,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		theme: profile.theme,
 		financeGlance,
 		flaschenGlance,
+		adminGlance,
 		sessions: sessionList,
 		diagnostics: {
 			userId,

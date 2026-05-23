@@ -12,5 +12,6 @@
 	"apps/admin": "0.6.0",
 	"apps/landing": "0.5.1",
 	"apps/bot": "0.3.0",
-	"apps/flaschen": "0.3.0"
+	"apps/flaschen": "0.3.0",
+	"tools/cli": "0.1.0"
 }

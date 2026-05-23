@@ -1,0 +1,23 @@
+{
+	"name": "@nexo/cli",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"bin": {
+		"nexo": "./src/index.ts"
+	},
+	"scripts": {
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
+		"type:check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"commander": "^12.1.0"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:"
+	},
+	"engines": {
+		"node": ">=24.0.0"
+	}
+}

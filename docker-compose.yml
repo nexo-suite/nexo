@@ -3,8 +3,116 @@ name: nexo
 networks:
   production:
     name: nexo-production
-  preview:
-    name: nexo-preview
+
+# YAML anchors — environment blocks shared between each app's production
+# and `_unstable` peer service. Keeps the two siblings byte-identical apart
+# from `image`, `profiles`, `container_name`, and labels.
+x-auth-env: &auth-env
+  DATABASE_URL: ${DATABASE_URL}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  PUBLIC_AUTH_URL: https://auth.krieger2501.de
+  PROTOCOL_HEADER: x-forwarded-proto
+  HOST_HEADER: x-forwarded-host
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+  GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+  GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+  DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+  DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+  FINANCE_URL: https://finance.krieger2501.de
+  ADMIN_URL: https://admin.krieger2501.de
+  FLASCHEN_URL: https://flaschen.krieger2501.de
+  PUBLIC_LANDING_URL: https://krieger2501.de
+  APP_VERSION: ${APP_VERSION_AUTH:-}
+  APP_COMMIT: ${APP_COMMIT:-}
+  APP_BUILD_TIME: ${APP_BUILD_TIME:-}
+
+x-admin-env: &admin-env
+  DATABASE_URL: ${DATABASE_URL}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  PUBLIC_AUTH_URL: https://auth.krieger2501.de
+  PUBLIC_ADMIN_URL: https://admin.krieger2501.de
+  PUBLIC_LANDING_URL: https://krieger2501.de
+  RESEND_API_KEY: ${RESEND_API_KEY}
+  ADMIN_EMAIL: ${ADMIN_EMAIL}
+  PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+  VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+  VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+  VAPID_SUBJECT: ${VAPID_SUBJECT}
+  PROTOCOL_HEADER: x-forwarded-proto
+  HOST_HEADER: x-forwarded-host
+  APP_VERSION: ${APP_VERSION_ADMIN:-}
+  APP_COMMIT: ${APP_COMMIT:-}
+  APP_BUILD_TIME: ${APP_BUILD_TIME:-}
+
+x-finance-env: &finance-env
+  DATABASE_URL: ${DATABASE_URL}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  PUBLIC_AUTH_URL: https://auth.krieger2501.de
+  PUBLIC_FINANCE_URL: https://finance.krieger2501.de
+  PUBLIC_LANDING_URL: https://krieger2501.de
+  PROTOCOL_HEADER: x-forwarded-proto
+  HOST_HEADER: x-forwarded-host
+  APP_VERSION: ${APP_VERSION_FINANCE:-}
+  APP_COMMIT: ${APP_COMMIT:-}
+  APP_BUILD_TIME: ${APP_BUILD_TIME:-}
+
+x-flaschen-env: &flaschen-env
+  DATABASE_URL: ${DATABASE_URL}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  PUBLIC_AUTH_URL: https://auth.krieger2501.de
+  PUBLIC_FLASCHEN_URL: https://flaschen.krieger2501.de
+  PUBLIC_LANDING_URL: https://krieger2501.de
+  PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+  VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+  VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+  VAPID_SUBJECT: ${VAPID_SUBJECT}
+  FLASCHEN_TOKEN_ENC_KEY: ${FLASCHEN_TOKEN_ENC_KEY}
+  FLASCHEN_OAUTH_CLIENT_ID: ${FLASCHEN_OAUTH_CLIENT_ID}
+  FLASCHEN_API_TZ_MODE: ${FLASCHEN_API_TZ_MODE:-local-naive}
+  PROTOCOL_HEADER: x-forwarded-proto
+  HOST_HEADER: x-forwarded-host
+  APP_VERSION: ${APP_VERSION_FLASCHEN:-}
+  APP_COMMIT: ${APP_COMMIT:-}
+  APP_BUILD_TIME: ${APP_BUILD_TIME:-}
+
+x-landing-env: &landing-env
+  PUBLIC_FINANCE_URL: https://finance.krieger2501.de
+  PUBLIC_FLASCHEN_URL: https://flaschen.krieger2501.de
+  PUBLIC_ADMIN_URL: https://admin.krieger2501.de
+  PUBLIC_AUTH_URL: https://auth.krieger2501.de
+  PUBLIC_LANDING_URL: https://krieger2501.de
+  DATABASE_URL: ${DATABASE_URL}
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  APP_VERSION: ${APP_VERSION_LANDING:-}
+  APP_VERSIONS_JSON: ${APP_VERSIONS_JSON:-}
+  APP_COMMIT: ${APP_COMMIT:-}
+  APP_BUILD_TIME: ${APP_BUILD_TIME:-}
+
+# Loki logging block — same on both production and unstable.
+x-app-logging: &app-logging
+  driver: loki
+  options:
+    loki-url: 'http://localhost:3100/loki/api/v1/push'
+    mode: non-blocking
+    max-buffer-size: 4m
+    loki-pipeline-stages: |
+      - json:
+          expressions:
+            level: level
+            service: service
+      - labels:
+          level:
+          service:
+
+# Standard healthcheck for SvelteKit Node apps.
+x-app-healthcheck: &app-healthcheck
+  test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 30s
+  start_interval: 2s
 
 services:
   # ── Production ────────────────────────────────────────────────────────────────
@@ -14,17 +122,17 @@ services:
     image: postgres:17
     restart: unless-stopped
     networks: [production]
-    mem_limit: 2g
-    mem_reservation: 768m
+    mem_limit: 3g
+    mem_reservation: 1g
     cpu_shares: 2048
     oom_score_adj: -800
     shm_size: 256mb
     command:
       - postgres
       - -c
-      - shared_buffers=512MB
+      - shared_buffers=1GB
       - -c
-      - effective_cache_size=1536MB
+      - effective_cache_size=3GB
       - -c
       - work_mem=16MB
       - -c
@@ -55,14 +163,16 @@ services:
       timeout: 5s
       retries: 5
     logging:
-      driver: json-file
+      driver: loki
       options:
-        max-size: '10m'
-        max-file: '3'
+        loki-url: 'http://localhost:3100/loki/api/v1/push'
+        mode: non-blocking
+        max-buffer-size: 4m
+        loki-external-labels: 'service=postgres,container_name={{.Name}}'
 
   pgbouncer:
     profiles: [production]
-    image: edoburu/pgbouncer:1.23.1
+    image: edoburu/pgbouncer:v1.23.1-p3
     restart: unless-stopped
     networks: [production]
     mem_limit: 64m
@@ -89,10 +199,12 @@ services:
       retries: 5
       start_period: 10s
     logging:
-      driver: json-file
+      driver: loki
       options:
-        max-size: '10m'
-        max-file: '3'
+        loki-url: 'http://localhost:3100/loki/api/v1/push'
+        mode: non-blocking
+        max-buffer-size: 4m
+        loki-external-labels: 'service=pgbouncer,container_name={{.Name}}'
     depends_on:
       postgres:
         condition: service_healthy
@@ -109,10 +221,12 @@ services:
         condition: service_healthy
     restart: on-failure
     logging:
-      driver: json-file
+      driver: loki
       options:
-        max-size: '10m'
-        max-file: '3'
+        loki-url: 'http://localhost:3100/loki/api/v1/push'
+        mode: non-blocking
+        max-buffer-size: 4m
+        loki-external-labels: 'service=migrate,container_name={{.Name}}'
 
   auth:
     profiles: [production]
@@ -124,55 +238,42 @@ services:
     tmpfs:
       - /tmp:size=64M
     networks: [production]
-    mem_limit: 256m
-    mem_reservation: 96m
+    mem_limit: 384m
+    mem_reservation: 128m
     cpu_shares: 512
     oom_score_adj: -100
     labels:
       nexo.healthz: 'true'
-    healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-      start_interval: 2s
-    logging:
-      driver: loki
-      options:
-        loki-url: 'http://localhost:3100/loki/api/v1/push'
-        mode: non-blocking
-        max-buffer-size: 4m
-        loki-pipeline-stages: |
-          - json:
-              expressions:
-                level: level
-                service: service
-          - labels:
-              level:
-              service:
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      PUBLIC_AUTH_URL: https://auth.krieger2501.de
-      PROTOCOL_HEADER: x-forwarded-proto
-      HOST_HEADER: x-forwarded-host
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
-      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
-      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
-      FINANCE_URL: https://finance.krieger2501.de
-      ADMIN_URL: https://admin.krieger2501.de
-      FLASCHEN_URL: https://flaschen.krieger2501.de
-      PUBLIC_LANDING_URL: https://krieger2501.de
-      APP_VERSION: ${APP_VERSION_AUTH:-}
-      APP_COMMIT: ${APP_COMMIT:-}
-      APP_BUILD_TIME: ${APP_BUILD_TIME:-}
+    healthcheck: *app-healthcheck
+    logging: *app-logging
+    environment: *auth-env
     depends_on:
       migrate:
         condition: service_completed_successfully
+
+  auth_unstable:
+    profiles: [unstable]
+    image: ghcr.io/nexo-suite/nexo-auth:${AUTH_UNSTABLE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64M
+    networks: [production]
+    mem_limit: 384m
+    mem_reservation: 128m
+    cpu_shares: 512
+    oom_score_adj: -100
+    labels:
+      nexo.unstable: 'true'
+    healthcheck: *app-healthcheck
+    logging: *app-logging
+    environment: *auth-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+        required: false
 
   admin:
     profiles: [production]
@@ -180,7 +281,7 @@ services:
     pull_policy: always
     restart: unless-stopped
     init: true
-    networks: [production, preview]
+    networks: [production]
     mem_limit: 512m
     mem_reservation: 128m
     cpu_shares: 1024
@@ -189,49 +290,39 @@ services:
       nexo.healthz: 'true'
     group_add:
       - '${DOCKER_GID:-988}'
-    healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-      start_interval: 2s
+    healthcheck: *app-healthcheck
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    logging:
-      driver: loki
-      options:
-        loki-url: 'http://localhost:3100/loki/api/v1/push'
-        mode: non-blocking
-        max-buffer-size: 4m
-        loki-pipeline-stages: |
-          - json:
-              expressions:
-                level: level
-                service: service
-          - labels:
-              level:
-              service:
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      PUBLIC_AUTH_URL: https://auth.krieger2501.de
-      PUBLIC_ADMIN_URL: https://admin.krieger2501.de
-      PUBLIC_LANDING_URL: https://krieger2501.de
-      RESEND_API_KEY: ${RESEND_API_KEY}
-      ADMIN_EMAIL: ${ADMIN_EMAIL}
-      PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
-      VAPID_SUBJECT: ${VAPID_SUBJECT}
-      PROTOCOL_HEADER: x-forwarded-proto
-      HOST_HEADER: x-forwarded-host
-      APP_VERSION: ${APP_VERSION_ADMIN:-}
-      APP_COMMIT: ${APP_COMMIT:-}
-      APP_BUILD_TIME: ${APP_BUILD_TIME:-}
+    logging: *app-logging
+    environment: *admin-env
     depends_on:
       migrate:
         condition: service_completed_successfully
+
+  admin_unstable:
+    profiles: [unstable]
+    image: ghcr.io/nexo-suite/nexo-admin:${ADMIN_UNSTABLE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    networks: [production]
+    mem_limit: 512m
+    mem_reservation: 128m
+    cpu_shares: 1024
+    oom_score_adj: -200
+    labels:
+      nexo.unstable: 'true'
+    group_add:
+      - '${DOCKER_GID:-988}'
+    healthcheck: *app-healthcheck
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    logging: *app-logging
+    environment: *admin-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+        required: false
 
   finance:
     profiles: [production]
@@ -249,41 +340,36 @@ services:
     oom_score_adj: -500
     labels:
       nexo.healthz: 'true'
-    healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-      start_interval: 2s
-    logging:
-      driver: loki
-      options:
-        loki-url: 'http://localhost:3100/loki/api/v1/push'
-        mode: non-blocking
-        max-buffer-size: 4m
-        loki-pipeline-stages: |
-          - json:
-              expressions:
-                level: level
-                service: service
-          - labels:
-              level:
-              service:
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      PUBLIC_AUTH_URL: https://auth.krieger2501.de
-      PUBLIC_FINANCE_URL: https://finance.krieger2501.de
-      PUBLIC_LANDING_URL: https://krieger2501.de
-      PROTOCOL_HEADER: x-forwarded-proto
-      HOST_HEADER: x-forwarded-host
-      APP_VERSION: ${APP_VERSION_FINANCE:-}
-      APP_COMMIT: ${APP_COMMIT:-}
-      APP_BUILD_TIME: ${APP_BUILD_TIME:-}
+    healthcheck: *app-healthcheck
+    logging: *app-logging
+    environment: *finance-env
     depends_on:
       migrate:
         condition: service_completed_successfully
+
+  finance_unstable:
+    profiles: [unstable]
+    image: ghcr.io/nexo-suite/nexo-finance:${FINANCE_UNSTABLE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64M
+    networks: [production]
+    mem_limit: 768m
+    mem_reservation: 192m
+    cpu_shares: 2048
+    oom_score_adj: -500
+    labels:
+      nexo.unstable: 'true'
+    healthcheck: *app-healthcheck
+    logging: *app-logging
+    environment: *finance-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+        required: false
 
   flaschen:
     profiles: [production]
@@ -301,48 +387,36 @@ services:
     oom_score_adj: -200
     labels:
       nexo.healthz: 'true'
-    healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-      start_interval: 2s
-    logging:
-      driver: loki
-      options:
-        loki-url: 'http://localhost:3100/loki/api/v1/push'
-        mode: non-blocking
-        max-buffer-size: 4m
-        loki-pipeline-stages: |
-          - json:
-              expressions:
-                level: level
-                service: service
-          - labels:
-              level:
-              service:
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      PUBLIC_AUTH_URL: https://auth.krieger2501.de
-      PUBLIC_FLASCHEN_URL: https://flaschen.krieger2501.de
-      PUBLIC_LANDING_URL: https://krieger2501.de
-      PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
-      VAPID_SUBJECT: ${VAPID_SUBJECT}
-      FLASCHEN_TOKEN_ENC_KEY: ${FLASCHEN_TOKEN_ENC_KEY}
-      FLASCHEN_OAUTH_CLIENT_ID: ${FLASCHEN_OAUTH_CLIENT_ID}
-      FLASCHEN_API_TZ_MODE: ${FLASCHEN_API_TZ_MODE:-local-naive}
-      PROTOCOL_HEADER: x-forwarded-proto
-      HOST_HEADER: x-forwarded-host
-      APP_VERSION: ${APP_VERSION_FLASCHEN:-}
-      APP_COMMIT: ${APP_COMMIT:-}
-      APP_BUILD_TIME: ${APP_BUILD_TIME:-}
+    healthcheck: *app-healthcheck
+    logging: *app-logging
+    environment: *flaschen-env
     depends_on:
       migrate:
         condition: service_completed_successfully
+
+  flaschen_unstable:
+    profiles: [unstable]
+    image: ghcr.io/nexo-suite/nexo-flaschen:${FLASCHEN_UNSTABLE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64M
+    networks: [production]
+    mem_limit: 512m
+    mem_reservation: 128m
+    cpu_shares: 1024
+    oom_score_adj: -200
+    labels:
+      nexo.unstable: 'true'
+    healthcheck: *app-healthcheck
+    logging: *app-logging
+    environment: *flaschen-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+        required: false
 
   flaschen-worker:
     profiles: [production]
@@ -420,182 +494,46 @@ services:
     oom_score_adj: 0
     labels:
       nexo.healthz: 'true'
-    healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-      start_interval: 2s
+    healthcheck: *app-healthcheck
     logging:
       driver: loki
       options:
         loki-url: 'http://localhost:3100/loki/api/v1/push'
         mode: non-blocking
         max-buffer-size: 4m
-    environment:
-      PUBLIC_FINANCE_URL: https://finance.krieger2501.de
-      PUBLIC_FLASCHEN_URL: https://flaschen.krieger2501.de
-      PUBLIC_ADMIN_URL: https://admin.krieger2501.de
-      PUBLIC_AUTH_URL: https://auth.krieger2501.de
-      PUBLIC_LANDING_URL: https://krieger2501.de
-      DATABASE_URL: ${DATABASE_URL}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      APP_VERSION: ${APP_VERSION_LANDING:-}
-      APP_VERSIONS_JSON: ${APP_VERSIONS_JSON:-}
-      APP_COMMIT: ${APP_COMMIT:-}
-      APP_BUILD_TIME: ${APP_BUILD_TIME:-}
+    environment: *landing-env
     depends_on:
       migrate:
         condition: service_completed_successfully
 
-  # ── Preview ───────────────────────────────────────────────────────────────────
-
-  postgres_preview:
-    profiles: [preview]
-    image: postgres:17
-    restart: unless-stopped
-    networks: [preview]
-    volumes:
-      - pgdata_preview:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: nexo
-      POSTGRES_USER: nexo
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U nexo']
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  migrate_preview:
-    profiles: [preview]
-    image: ghcr.io/nexo-suite/nexo-db:${PREVIEW_TAG:-main}
-    networks: [preview]
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-    depends_on:
-      postgres_preview:
-        condition: service_healthy
-    restart: on-failure
-
-  auth_preview:
-    profiles: [preview]
-    image: ghcr.io/nexo-suite/nexo-auth:${PREVIEW_TAG:-main}
+  landing_unstable:
+    profiles: [unstable]
+    image: ghcr.io/nexo-suite/nexo-landing:${LANDING_UNSTABLE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     init: true
-    networks: [preview]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64M
+    networks: [production]
+    mem_limit: 192m
+    mem_reservation: 64m
+    cpu_shares: 256
+    oom_score_adj: 0
     labels:
-      nexo.healthz: 'true'
-    healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
-      FINANCE_URL: https://finance.preview.krieger2501.de
-      ADMIN_URL: https://admin.preview.krieger2501.de
-      PROTOCOL_HEADER: x-forwarded-proto
-      HOST_HEADER: x-forwarded-host
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
-      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
-      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      nexo.unstable: 'true'
+    healthcheck: *app-healthcheck
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3100/loki/api/v1/push'
+        mode: non-blocking
+        max-buffer-size: 4m
+    environment: *landing-env
     depends_on:
-      migrate_preview:
+      migrate:
         condition: service_completed_successfully
-
-  admin_preview:
-    profiles: [preview]
-    image: ghcr.io/nexo-suite/nexo-admin:${PREVIEW_TAG:-main}
-    restart: unless-stopped
-    init: true
-    networks: [preview]
-    labels:
-      nexo.healthz: 'true'
-    group_add:
-      - '${DOCKER_GID:-988}'
-    healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
-      PUBLIC_ADMIN_URL: https://admin.preview.krieger2501.de
-      PUBLIC_LANDING_URL: https://preview.krieger2501.de
-      RESEND_API_KEY: ${RESEND_API_KEY}
-      ADMIN_EMAIL: ${ADMIN_EMAIL}
-      PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
-      VAPID_SUBJECT: ${VAPID_SUBJECT}
-      PROTOCOL_HEADER: x-forwarded-proto
-      HOST_HEADER: x-forwarded-host
-    depends_on:
-      migrate_preview:
-        condition: service_completed_successfully
-
-  finance_preview:
-    profiles: [preview]
-    image: ghcr.io/nexo-suite/nexo-finance:${PREVIEW_TAG:-main}
-    restart: unless-stopped
-    init: true
-    networks: [preview]
-    labels:
-      nexo.healthz: 'true'
-    healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
-      PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
-      PUBLIC_LANDING_URL: https://preview.krieger2501.de
-      PROTOCOL_HEADER: x-forwarded-proto
-      HOST_HEADER: x-forwarded-host
-    depends_on:
-      migrate_preview:
-        condition: service_completed_successfully
-
-  landing_preview:
-    profiles: [preview]
-    image: ghcr.io/nexo-suite/nexo-landing:${PREVIEW_TAG:-main}
-    restart: unless-stopped
-    init: true
-    networks: [preview]
-    labels:
-      nexo.healthz: 'true'
-    healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/healthz']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    environment:
-      PUBLIC_FINANCE_URL: https://finance.preview.krieger2501.de
-      PUBLIC_FLASCHEN_URL: https://flaschen.preview.krieger2501.de
-      PUBLIC_ADMIN_URL: https://admin.preview.krieger2501.de
-      PUBLIC_AUTH_URL: https://auth.preview.krieger2501.de
-      PUBLIC_LANDING_URL: https://preview.krieger2501.de
-    depends_on:
-      migrate_preview:
-        condition: service_completed_successfully
+        required: false
 
   # ── Server-only (Caddy + bot) ─────────────────────────────────────────────────
 
@@ -642,6 +580,105 @@ services:
         max-size: '10m'
         max-file: '3'
     depends_on: [loki]
+
+  prometheus:
+    profiles: [server]
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    networks: [production]
+    mem_limit: 384m
+    mem_reservation: 128m
+    cpu_shares: 512
+    oom_score_adj: 100
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=14d
+      - --storage.tsdb.retention.size=2GB
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  cadvisor:
+    profiles: [server]
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    restart: unless-stopped
+    networks: [production]
+    mem_limit: 192m
+    mem_reservation: 64m
+    cpu_shares: 256
+    oom_score_adj: 200
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - --housekeeping_interval=30s
+      - --docker_only=true
+      - --store_container_labels=false
+      - --disable_metrics=disk,diskIO,tcp,udp,percpu,sched,process,hugetlb,referenced_memory,resctrl,cpu_topology
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  node-exporter:
+    profiles: [server]
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    networks: [production]
+    mem_limit: 64m
+    mem_reservation: 16m
+    cpu_shares: 128
+    oom_score_adj: 200
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|rootfs/var/lib/docker)($$|/)
+      - --no-collector.wifi
+      - --no-collector.hwmon
+    volumes:
+      - /:/host:ro,rslave
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  postgres-exporter:
+    profiles: [server]
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
+    restart: unless-stopped
+    networks: [production]
+    mem_limit: 64m
+    mem_reservation: 16m
+    cpu_shares: 128
+    oom_score_adj: 100
+    environment:
+      DATA_SOURCE_NAME: postgres://nexo:${POSTGRES_PASSWORD}@postgres:5432/nexo?sslmode=disable
+      PG_EXPORTER_EXTEND_QUERY_PATH: /etc/postgres-exporter/queries.yaml
+    volumes:
+      - ./prometheus/postgres-queries.yaml:/etc/postgres-exporter/queries.yaml:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   bot:
     profiles: [server]
@@ -693,7 +730,7 @@ services:
     profiles: [server]
     image: caddy:2
     restart: unless-stopped
-    networks: [production, preview]
+    networks: [production]
     mem_limit: 192m
     mem_reservation: 64m
     cpu_shares: 1024
@@ -704,6 +741,7 @@ services:
         loki-url: 'http://localhost:3100/loki/api/v1/push'
         mode: non-blocking
         max-buffer-size: 4m
+        loki-external-labels: 'service=caddy,container_name={{.Name}}'
         loki-pipeline-stages: |
           - json:
               expressions:
@@ -720,8 +758,8 @@ services:
 
 volumes:
   pgdata:
-  pgdata_preview:
   loki_data:
   grafana_data:
+  prometheus_data:
   caddy_data:
   caddy_config:

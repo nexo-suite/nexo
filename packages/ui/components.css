@@ -339,17 +339,64 @@
 	border-radius: 50%;
 	background: var(--color-accent);
 }
+.sheet-actions {
+	padding: 14px 0 4px;
+}
+.sheet-actions-row {
+	display: grid;
+	grid-auto-flow: column;
+	grid-auto-columns: 1fr;
+	gap: 8px;
+}
+.sheet-done,
+.sheet-cancel {
+	height: 48px;
+	padding: 0 14px;
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1;
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	box-sizing: border-box;
+	transition: opacity 150ms ease;
+}
 .sheet-done {
+	/* Solo defaults: full-width button below content. Overridden inside .sheet-actions-row. */
 	margin-top: 16px;
 	width: 100%;
-	padding: 14px;
-	border-radius: var(--radius-md);
 	border: none;
 	background: var(--color-accent);
 	color: #fff;
-	font-size: 15px;
-	font-weight: 600;
-	cursor: pointer;
+}
+.sheet-cancel {
+	border: 1px solid var(--color-border-default);
+	background: var(--color-bg-1);
+	color: var(--color-text-primary);
+}
+.sheet-actions-row > .sheet-done,
+.sheet-actions-row > .sheet-cancel {
+	margin: 0;
+	width: auto;
+	min-width: 0;
+}
+.sheet-done:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+.sheet-done:active:not(:disabled),
+.sheet-cancel:active {
+	opacity: 0.85;
+}
+.sheet-done-danger {
+	background: var(--color-err);
+}
+.sheet-cancel.sheet-danger {
+	color: var(--color-err);
+	border-color: color-mix(in oklab, var(--color-err) 30%, var(--color-border-default));
 }
 
 /* ── Status pills ── */

@@ -1,0 +1,230 @@
+{
+	"uid": "nexo-postgres",
+	"title": "Nexo · Postgres Internals",
+	"tags": ["nexo", "postgres"],
+	"timezone": "browser",
+	"editable": false,
+	"schemaVersion": 39,
+	"version": 1,
+	"refresh": "30s",
+	"time": { "from": "now-3h", "to": "now" },
+	"templating": { "list": [] },
+	"panels": [
+		{
+			"id": 1,
+			"type": "gauge",
+			"title": "Cache hit ratio",
+			"gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [
+				{
+					"expr": "sum(rate(pg_stat_database_blks_hit{datname=\"nexo\"}[5m])) / (sum(rate(pg_stat_database_blks_hit{datname=\"nexo\"}[5m])) + sum(rate(pg_stat_database_blks_read{datname=\"nexo\"}[5m]))) * 100",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "percent",
+					"min": 90,
+					"max": 100,
+					"decimals": 2,
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{ "color": "red", "value": null },
+							{ "color": "yellow", "value": 95 },
+							{ "color": "green", "value": 99 }
+						]
+					}
+				}
+			}
+		},
+		{
+			"id": 2,
+			"type": "stat",
+			"title": "Active connections",
+			"gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [{ "expr": "sum(pg_stat_database_numbackends{datname=\"nexo\"})", "refId": "A" }],
+			"options": { "colorMode": "background", "graphMode": "area", "textMode": "value" },
+			"fieldConfig": {
+				"defaults": {
+					"color": { "mode": "thresholds" },
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{ "color": "green", "value": null },
+							{ "color": "yellow", "value": 50 },
+							{ "color": "red", "value": 70 }
+						]
+					}
+				}
+			}
+		},
+		{
+			"id": 3,
+			"type": "stat",
+			"title": "Database size",
+			"gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [{ "expr": "pg_database_size_bytes{datname=\"nexo\"}", "refId": "A" }],
+			"options": { "colorMode": "value", "graphMode": "area", "textMode": "value" },
+			"fieldConfig": {
+				"defaults": {
+					"unit": "bytes",
+					"color": { "mode": "thresholds" },
+					"thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+				}
+			}
+		},
+		{
+			"id": 4,
+			"type": "stat",
+			"title": "Commits/sec",
+			"gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [
+				{ "expr": "sum(rate(pg_stat_database_xact_commit{datname=\"nexo\"}[1m]))", "refId": "A" }
+			],
+			"options": { "colorMode": "value", "graphMode": "area", "textMode": "value" },
+			"fieldConfig": {
+				"defaults": {
+					"unit": "ops",
+					"decimals": 1,
+					"color": { "mode": "fixed", "fixedColor": "blue" }
+				}
+			}
+		},
+		{
+			"id": 5,
+			"type": "timeseries",
+			"title": "Transactions (commits / rollbacks)",
+			"gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [
+				{
+					"expr": "sum(rate(pg_stat_database_xact_commit{datname=\"nexo\"}[1m]))",
+					"legendFormat": "commits",
+					"refId": "A"
+				},
+				{
+					"expr": "sum(rate(pg_stat_database_xact_rollback{datname=\"nexo\"}[1m]))",
+					"legendFormat": "rollbacks",
+					"refId": "B"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "ops",
+					"custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 10 }
+				}
+			}
+		},
+		{
+			"id": 6,
+			"type": "timeseries",
+			"title": "Tuples (rows) per second",
+			"gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [
+				{
+					"expr": "sum(rate(pg_stat_database_tup_returned{datname=\"nexo\"}[1m]))",
+					"legendFormat": "returned",
+					"refId": "A"
+				},
+				{
+					"expr": "sum(rate(pg_stat_database_tup_fetched{datname=\"nexo\"}[1m]))",
+					"legendFormat": "fetched",
+					"refId": "B"
+				},
+				{
+					"expr": "sum(rate(pg_stat_database_tup_inserted{datname=\"nexo\"}[1m]))",
+					"legendFormat": "inserted",
+					"refId": "C"
+				},
+				{
+					"expr": "sum(rate(pg_stat_database_tup_updated{datname=\"nexo\"}[1m]))",
+					"legendFormat": "updated",
+					"refId": "D"
+				},
+				{
+					"expr": "sum(rate(pg_stat_database_tup_deleted{datname=\"nexo\"}[1m]))",
+					"legendFormat": "deleted",
+					"refId": "E"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "ops",
+					"custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 5 }
+				}
+			}
+		},
+		{
+			"id": 7,
+			"type": "table",
+			"title": "Top queries by total time (pg_stat_statements)",
+			"gridPos": { "h": 12, "w": 24, "x": 0, "y": 13 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [
+				{
+					"expr": "topk(15, pg_stat_statements_mean_exec_time)",
+					"instant": true,
+					"format": "table",
+					"refId": "A"
+				}
+			],
+			"transformations": [
+				{
+					"id": "organize",
+					"options": {
+						"excludeByName": {
+							"Time": true,
+							"__name__": true,
+							"instance": true,
+							"job": true,
+							"datname": true
+						},
+						"renameByName": { "user": "User", "short_query": "Query", "Value": "Mean ms" }
+					}
+				},
+				{
+					"id": "sortBy",
+					"options": { "fields": {}, "sort": [{ "field": "Mean ms", "desc": true }] }
+				}
+			],
+			"fieldConfig": {
+				"defaults": { "custom": { "align": "left" } },
+				"overrides": [
+					{
+						"matcher": { "id": "byName", "options": "Mean ms" },
+						"properties": [
+							{ "id": "unit", "value": "ms" },
+							{ "id": "decimals", "value": 1 },
+							{
+								"id": "custom.cellOptions",
+								"value": { "type": "color-background", "mode": "gradient" }
+							},
+							{ "id": "color", "value": { "mode": "continuous-YlRd" } }
+						]
+					}
+				]
+			}
+		},
+		{
+			"id": 8,
+			"type": "logs",
+			"title": "Slow queries (>500ms, from Postgres logs)",
+			"gridPos": { "h": 10, "w": 24, "x": 0, "y": 25 },
+			"datasource": { "type": "loki", "uid": "loki" },
+			"targets": [{ "expr": "{service=\"postgres\"} |~ \"duration:\"", "refId": "A" }],
+			"options": {
+				"showTime": true,
+				"showLabels": false,
+				"wrapLogMessage": true,
+				"dedupStrategy": "none",
+				"sortOrder": "Descending"
+			}
+		}
+	]
+}

@@ -5,6 +5,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { env as publicEnv } from '$env/dynamic/public';
 import { logger } from '$lib/server/logger';
 import { loadPrefs } from '$lib/server/flaschenpost';
+import { m } from '$lib/paraglide/messages.js';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
@@ -52,7 +53,7 @@ export const actions: Actions = {
 			logger.error('rename device failed', { userId, error: String(e) });
 			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: m.devices_toast_renamed() };
 	},
 
 	remove: async ({ request, locals }) => {
@@ -69,7 +70,7 @@ export const actions: Actions = {
 			logger.error('remove device failed', { userId, error: String(e) });
 			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: m.devices_toast_removed() };
 	},
 
 	pause: async ({ locals }) => {
@@ -83,7 +84,7 @@ export const actions: Actions = {
 			logger.error('pause prefs failed', { userId, error: String(e) });
 			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: m.devices_toast_paused() };
 	},
 
 	resume: async ({ locals }) => {
@@ -97,6 +98,6 @@ export const actions: Actions = {
 			logger.error('resume prefs failed', { userId, error: String(e) });
 			return fail(500, { error: 'DB_ERROR', correlationId: locals.correlationId });
 		}
-		return { success: true };
+		return { success: true, toast: m.devices_toast_resumed() };
 	}
 };

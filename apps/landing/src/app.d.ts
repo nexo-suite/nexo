@@ -6,6 +6,7 @@ declare global {
 		finance: string;
 		auth: string;
 		admin: string;
+		flaschen: string;
 		landing: string;
 	};
 

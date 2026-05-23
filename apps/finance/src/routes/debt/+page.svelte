@@ -12,6 +12,7 @@
 	let showForm = $state(false);
 	let editing = $state<Debt | null>(null);
 	let confirmDelete = $state(false);
+	let confirmClear = $state(false);
 	let form = $state({
 		direction: 'owe',
 		counterparty: '',
@@ -316,19 +317,14 @@
 				{/each}
 			</div>
 			<div class="mt-3 text-center">
-				<form
-					method="POST"
-					action="?/clearSettled"
-					use:enhance={() => {
-						return async ({ update }) => {
-							await update();
-						};
-					}}
+				<button
+					type="button"
+					class="text-[12px] font-medium"
+					style="color: var(--expense-ink);"
+					onclick={() => (confirmClear = true)}
 				>
-					<button type="submit" class="text-[12px] font-medium" style="color: var(--expense-ink);">
-						Clear all settled
-					</button>
-				</form>
+					Clear all settled
+				</button>
 			</div>
 		</details>
 	{/if}
@@ -496,6 +492,32 @@
 		{/if}
 	</BottomSheet>
 {/if}
+
+<BottomSheet
+	bind:open={confirmClear}
+	title="Clear settled debts?"
+	subtitle="This permanently removes all debts you've marked as paid."
+>
+	<div class="space-y-3 py-2">
+		<form
+			method="POST"
+			action="?/clearSettled"
+			use:enhance={() => {
+				return async ({ update }) => {
+					confirmClear = false;
+					await update();
+				};
+			}}
+		>
+			<button type="submit" class="btn-primary w-full" style="background: var(--color-expense);">
+				Yes, clear settled
+			</button>
+		</form>
+		<button type="button" onclick={() => (confirmClear = false)} class="btn-secondary w-full">
+			Cancel
+		</button>
+	</div>
+</BottomSheet>
 
 <style>
 	.field {

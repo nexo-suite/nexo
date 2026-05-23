@@ -1,9 +1,16 @@
 <script lang="ts">
 	import { env } from '$env/dynamic/public';
 	import { enhance } from '$app/forms';
-	import { beforeNavigate } from '$app/navigation';
 	import { getLocale, setLocale, locales } from '$lib/paraglide/runtime.js';
-	import { BottomSheet, SaveBar, SectionLabel, Toast, AboutDiagnostics } from '@nexo/ui';
+	import { m } from '$lib/paraglide/messages.js';
+	import {
+		BottomSheet,
+		SaveBar,
+		SectionLabel,
+		Toast,
+		AboutDiagnostics,
+		UnsavedGuard
+	} from '@nexo/ui';
 	import SessionsSheet from '$lib/components/apps/SessionsSheet.svelte';
 	import AppGrid from '$lib/components/apps/AppGrid.svelte';
 	import type { PageData, ActionData } from './$types';
@@ -28,17 +35,22 @@
 		tr: 'Beta — bazı düğmeler hâlâ İngilizce kekeliyor.'
 	};
 
-	const weekDayLabels: Record<string, string> = {
-		monday: 'Monday',
-		sunday: 'Sunday',
-		saturday: 'Saturday'
-	};
+	const weekDayLabels = $derived<Record<string, string>>({
+		monday: m.sheet_week_monday(),
+		sunday: m.sheet_week_sunday(),
+		saturday: m.sheet_week_saturday()
+	});
 
-	const weekDayOptions: { value: string; label: string; desc: string; icon: string }[] = [
-		{ value: 'monday', label: 'Monday', desc: 'ISO 8601 · most of Europe', icon: '🇪🇺' },
-		{ value: 'sunday', label: 'Sunday', desc: 'US convention', icon: '🇺🇸' },
-		{ value: 'saturday', label: 'Saturday', desc: 'Middle East', icon: '🌙' }
-	];
+	const weekDayOptions = $derived<{ value: string; label: string; desc: string; icon: string }[]>([
+		{ value: 'monday', label: m.sheet_week_monday(), desc: m.sheet_week_monday_desc(), icon: '🇪🇺' },
+		{ value: 'sunday', label: m.sheet_week_sunday(), desc: m.sheet_week_sunday_desc(), icon: '🇺🇸' },
+		{
+			value: 'saturday',
+			label: m.sheet_week_saturday(),
+			desc: m.sheet_week_saturday_desc(),
+			icon: '🌙'
+		}
+	]);
 
 	const initialLocale = $derived.by(() => {
 		const fromDb =
@@ -60,8 +72,13 @@
 	let displayName = $state(data.displayName ?? '');
 	// svelte-ignore state_referenced_locally
 	let weekStartDay = $state(data.weekStartDay ?? 'monday');
-	let pendingNav = $state<{ proceed: () => void } | null>(null);
 	let saving = $state(false);
+
+	function discardChanges() {
+		displayName = data.displayName ?? '';
+		weekStartDay = data.weekStartDay ?? 'monday';
+		selectedLocale = initialLocale;
+	}
 
 	type SheetField =
 		| 'name'
@@ -101,7 +118,9 @@
 			weekStartDay !== (data.weekStartDay ?? 'monday')
 	);
 
-	const firstName = $derived((data.displayName || data.user.name || 'there').split(' ')[0]);
+	const firstName = $derived(
+		(data.displayName || data.user.name || m.apps_default_first_name()).split(' ')[0]
+	);
 	const initials = $derived(
 		(data.displayName || data.user.name || 'U')
 			.split(' ')
@@ -149,7 +168,7 @@
 				monogram: 'F',
 				icon: '/icon-finance-dark.svg',
 				accent: 'var(--color-accent-finance)',
-				desc: 'Track accounts, categorize spend, see where the month went.',
+				desc: m.appdesc_finance(),
 				href: env.PUBLIC_FINANCE_URL ?? '#',
 				meta: `v${data.appVersions.finance}`
 			},
@@ -159,9 +178,9 @@
 				monogram: 'F',
 				icon: '/icon-flaschen-dark.svg',
 				accent: '#a50a50',
-				desc: "Refreshes the shift portal so I don't have to. Pings the moment a good one drops.",
+				desc: m.appdesc_flaschen(),
 				href: env.PUBLIC_FLASCHEN_URL ?? '#',
-				meta: ''
+				meta: `v${data.appVersions.flaschen}`
 			},
 			data.allowedApps.includes('admin') && {
 				id: 'admin',
@@ -169,74 +188,63 @@
 				monogram: 'A',
 				icon: '/icon-admin.svg',
 				accent: '#3b82f6',
-				desc: 'Services, users, logs — the control room.',
+				desc: m.appdesc_admin(),
 				href: env.PUBLIC_ADMIN_URL ?? '#',
 				meta: `v${data.appVersions.admin}`
 			}
 		].filter(Boolean) as LiveApp[]
 	);
 
-	const workshopApps: WorkshopApp[] = [
+	const workshopApps: WorkshopApp[] = $derived([
 		{
 			id: 'gym',
 			name: 'Gym',
 			monogram: 'G',
 			icon: '/icon-gym.svg',
 			accent: 'var(--color-accent-gym)',
-			desc: 'Log lifts, watch the progressive overload curve. Built for the once-a-week strength routine I keep forgetting to write down.',
-			meta: 'eta: when I stop missing leg day'
+			desc: m.appdesc_gym(),
+			meta: m.appmeta_gym()
 		},
 		{
 			id: 'time',
 			name: 'Time Tracker',
 			monogram: 'T',
 			accent: 'var(--color-accent-time)',
-			desc: 'Receipts for your week. Project timers + a calendar view + invoice-ready exports.',
-			meta: 'eta: q3 · stuck on the timer UI'
+			desc: m.appdesc_time(),
+			meta: m.appmeta_time()
 		}
-	];
+	]);
 
-	const ideaApps: IdeaApp[] = [
+	const ideaApps: IdeaApp[] = $derived([
 		{
 			id: 'pomodoro',
 			name: 'Pomodoro',
 			monogram: 'P',
 			accent: 'var(--color-accent-pomodoro)',
-			sub: 'a focus timer'
+			sub: m.appsub_pomodoro()
 		},
 		{
 			id: 'books',
 			name: 'Books',
 			monogram: 'B',
 			accent: 'var(--color-text-subtle)',
-			sub: 'reading log'
+			sub: m.appsub_books()
 		},
 		{
 			id: 'recipes',
 			name: 'Recipes',
 			monogram: 'R',
 			accent: 'var(--color-text-subtle)',
-			sub: 'what works'
+			sub: m.appsub_recipes()
 		},
 		{
 			id: 'movies',
 			name: 'Movies',
 			monogram: 'M',
 			accent: 'var(--color-text-subtle)',
-			sub: 'watch list'
+			sub: m.appsub_movies()
 		}
-	];
-
-	beforeNavigate(({ cancel, to }) => {
-		if (saving || !dirty || !to) return;
-		cancel();
-		pendingNav = {
-			proceed: () => {
-				pendingNav = null;
-				window.location.href = to.url.href;
-			}
-		};
-	});
+	]);
 
 	$effect(() => {
 		if (saving || !dirty) return;
@@ -258,7 +266,7 @@
 </script>
 
 <svelte:head>
-	<title>Your apps — Nexo</title>
+	<title>{m.apps_page_title()}</title>
 </svelte:head>
 
 <div class="page">
@@ -275,16 +283,19 @@
 	<div class="profile-hero">
 		<div class="avatar-big">{initials}</div>
 		<div class="who">
-			<div class="name">Hey, {firstName}</div>
+			<div class="name">{m.apps_greeting({ firstName })}</div>
 			<div class="greeting">
-				<b>{liveApps.length}</b> app{liveApps.length !== 1 ? 's' : ''} live,
-				<b>{workshopApps.length}</b> in the workshop.
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -- interpolated values are integer .length counts, not user input -->
+				{@html m.apps_status_summary({
+					live: `<b>${liveApps.length}</b>`,
+					workshop: `<b>${workshopApps.length}</b>`
+				})}
 			</div>
 		</div>
 		<button
 			type="button"
 			class="icon-btn"
-			aria-label="Edit profile"
+			aria-label={m.apps_edit_profile_aria()}
 			onclick={() => openSheet('name')}
 		>
 			<svg
@@ -307,10 +318,11 @@
 		{ideaApps}
 		financeGlance={data.financeGlance}
 		flaschenGlance={data.flaschenGlance}
+		adminGlance={data.adminGlance}
 	/>
 
 	<!-- Settings: Profile -->
-	<SectionLabel title="Profile" subtitle="same across all apps" />
+	<SectionLabel title={m.settings_profile()} subtitle={m.settings_profile_sub()} />
 
 	<form
 		id="settings-form"
@@ -330,14 +342,16 @@
 		}}
 	>
 		<div class="set-card">
-			<div class="set-scope"><b>Identity</b> · how Nexo greets you</div>
+			<div class="set-scope">
+				<b>{m.settings_scope_identity_label()}</b> · {m.settings_scope_identity_desc()}
+			</div>
 			<button type="button" class="set-row" onclick={() => openSheet('name')}>
 				<div class="sr-icon">@</div>
 				<div class="sr-text">
-					<div class="sr-label">Display name</div>
-					<div class="sr-desc">Used in greetings and shared debt items.</div>
+					<div class="sr-label">{m.settings_display_name()}</div>
+					<div class="sr-desc">{m.settings_display_name_desc()}</div>
 				</div>
-				<div class="sr-value">{displayName || 'Set name'}</div>
+				<div class="sr-value">{displayName || m.settings_display_name_empty()}</div>
 				<span class="sr-chev">
 					<svg
 						viewBox="0 0 24 24"
@@ -351,8 +365,8 @@
 			<button type="button" class="set-row" onclick={() => openSheet('email')}>
 				<div class="sr-icon">✉</div>
 				<div class="sr-text">
-					<div class="sr-label">Email</div>
-					<div class="sr-desc">Sign-in identity. One per Nexo account.</div>
+					<div class="sr-label">{m.settings_email()}</div>
+					<div class="sr-desc">{m.settings_email_desc()}</div>
 				</div>
 				<div class="sr-value">{data.user.email}</div>
 				<span class="sr-chev">
@@ -366,11 +380,13 @@
 				</span>
 			</button>
 
-			<div class="set-scope"><b>Locale</b> · how Nexo speaks</div>
+			<div class="set-scope">
+				<b>{m.settings_scope_locale_label()}</b> · {m.settings_scope_locale_desc()}
+			</div>
 			<button type="button" class="set-row" onclick={() => openSheet('language')}>
 				<div class="sr-icon">🌐</div>
 				<div class="sr-text">
-					<div class="sr-label">Language</div>
+					<div class="sr-label">{m.settings_language()}</div>
 				</div>
 				<div class="sr-value">{languageLabels[selectedLocale] ?? selectedLocale}</div>
 				<span class="sr-chev">
@@ -386,9 +402,9 @@
 			<button type="button" class="set-row" onclick={() => openSheet('week')}>
 				<div class="sr-icon">📅</div>
 				<div class="sr-text">
-					<div class="sr-label">Week starts</div>
+					<div class="sr-label">{m.settings_week_starts()}</div>
 				</div>
-				<div class="sr-value">{weekDayLabels[weekStartDay] ?? 'Monday'}</div>
+				<div class="sr-value">{weekDayLabels[weekStartDay] ?? m.sheet_week_monday()}</div>
 				<span class="sr-chev">
 					<svg
 						viewBox="0 0 24 24"
@@ -402,9 +418,9 @@
 			<button type="button" class="set-row stub-row" onclick={() => openSheet('time-format')}>
 				<div class="sr-icon">🕒</div>
 				<div class="sr-text">
-					<div class="sr-label">Time format</div>
+					<div class="sr-label">{m.settings_time_format()}</div>
 				</div>
-				<div class="sr-value stub-value">24h</div>
+				<div class="sr-value stub-value">{m.settings_time_format_value()}</div>
 				<span class="sr-chev">
 					<svg
 						viewBox="0 0 24 24"
@@ -416,14 +432,16 @@
 				</span>
 			</button>
 
-			<div class="set-scope"><b>Appearance</b> · light only, for now</div>
+			<div class="set-scope">
+				<b>{m.settings_scope_appearance_label()}</b> · {m.settings_scope_appearance_desc()}
+			</div>
 			<button type="button" class="set-row stub-row" onclick={() => openSheet('theme')}>
 				<div class="sr-icon">☀</div>
 				<div class="sr-text">
-					<div class="sr-label">Theme</div>
-					<div class="sr-desc">Dark mode arrives when it earns the bug count.</div>
+					<div class="sr-label">{m.settings_theme()}</div>
+					<div class="sr-desc">{m.settings_theme_desc()}</div>
 				</div>
-				<div class="sr-value stub-value">Light</div>
+				<div class="sr-value stub-value">{m.settings_theme_value()}</div>
 				<span class="sr-chev">
 					<svg
 						viewBox="0 0 24 24"
@@ -437,24 +455,24 @@
 		</div>
 
 		<!-- Data -->
-		<SectionLabel title="Data" subtitle="your stuff" />
+		<SectionLabel title={m.settings_data()} subtitle={m.settings_data_sub()} />
 
 		<div class="set-card">
 			<button type="button" class="set-row stub-row" onclick={() => openSheet('backups')}>
 				<div class="sr-icon">💾</div>
 				<div class="sr-text">
-					<div class="sr-label">Backups</div>
-					<div class="sr-desc">Daily, to your B2 bucket.</div>
+					<div class="sr-label">{m.settings_backups()}</div>
+					<div class="sr-desc">{m.settings_backups_desc()}</div>
 				</div>
-				<span class="dot-on">on</span>
+				<span class="dot-on">{m.settings_backups_on()}</span>
 			</button>
 			<button type="button" class="set-row stub-row" onclick={() => openSheet('export')}>
 				<div class="sr-icon">↓</div>
 				<div class="sr-text">
-					<div class="sr-label">Export everything</div>
-					<div class="sr-desc">.zip of all apps, JSON + CSV. Yours, always.</div>
+					<div class="sr-label">{m.settings_export()}</div>
+					<div class="sr-desc">{m.settings_export_desc()}</div>
 				</div>
-				<div class="sr-value stub-value">.zip</div>
+				<div class="sr-value stub-value">{m.settings_export_value()}</div>
 				<span class="sr-chev">
 					<svg
 						viewBox="0 0 24 24"
@@ -468,10 +486,10 @@
 			<button type="button" class="set-row stub-row" onclick={() => openSheet('audit')}>
 				<div class="sr-icon">📜</div>
 				<div class="sr-text">
-					<div class="sr-label">Audit log</div>
-					<div class="sr-desc">Every change you've ever made.</div>
+					<div class="sr-label">{m.settings_audit()}</div>
+					<div class="sr-desc">{m.settings_audit_desc()}</div>
 				</div>
-				<div class="sr-value stub-value">view</div>
+				<div class="sr-value stub-value">{m.settings_audit_value()}</div>
 				<span class="sr-chev">
 					<svg
 						viewBox="0 0 24 24"
@@ -485,14 +503,14 @@
 		</div>
 
 		<!-- Account -->
-		<SectionLabel title="Account" />
+		<SectionLabel title={m.settings_account()} />
 
 		<div class="set-card">
 			<button type="button" class="set-row" onclick={() => openSheet('sessions')}>
 				<div class="sr-icon">🔑</div>
 				<div class="sr-text">
-					<div class="sr-label">Sessions</div>
-					<div class="sr-desc">{data.sessions.length} active</div>
+					<div class="sr-label">{m.settings_sessions()}</div>
+					<div class="sr-desc">{m.settings_sessions_active({ count: data.sessions.length })}</div>
 				</div>
 				<div class="sr-value">{data.sessions.length}</div>
 				<span class="sr-chev">
@@ -508,7 +526,7 @@
 			<button type="button" class="set-row danger-row" onclick={() => openSheet('signout')}>
 				<div class="sr-icon">⎋</div>
 				<div class="sr-text">
-					<div class="sr-label">Sign out</div>
+					<div class="sr-label">{m.settings_signout()}</div>
 				</div>
 				<span class="sr-chev">
 					<svg
@@ -535,6 +553,16 @@
 
 	<SaveBar visible={dirty} formId="settings-form" />
 
+	<UnsavedGuard
+		{dirty}
+		formId="settings-form"
+		onDiscard={discardChanges}
+		title={m.nav_guard_msg()}
+		description=""
+		saveLabel={m.nav_guard_stay()}
+		discardLabel={m.nav_guard_discard()}
+	/>
+
 	<!-- About / diagnostics -->
 	<AboutDiagnostics
 		appName="Nexo"
@@ -549,66 +577,66 @@
 
 	<!-- Footer -->
 	<footer class="app-footer">
-		<span class="wink">made by Kevin, for the people he likes</span>
+		<span class="wink">{m.apps_footer_wink()}</span>
 	</footer>
 
 	<!-- Settings sheets -->
 	<BottomSheet
 		bind:open={settingsSheetOpen}
 		title={settingsSheetField === 'name'
-			? 'Display name'
+			? m.sheet_title_name()
 			: settingsSheetField === 'email'
-				? 'Email'
+				? m.sheet_title_email()
 				: settingsSheetField === 'language'
-					? 'Language'
+					? m.sheet_title_language()
 					: settingsSheetField === 'week'
-						? 'Week starts'
+						? m.sheet_title_week()
 						: settingsSheetField === 'time-format'
-							? 'Time format'
+							? m.sheet_title_time_format()
 							: settingsSheetField === 'theme'
-								? 'Theme'
+								? m.sheet_title_theme()
 								: settingsSheetField === 'backups'
-									? 'Backups'
+									? m.sheet_title_backups()
 									: settingsSheetField === 'export'
-										? 'Export everything'
+										? m.sheet_title_export()
 										: settingsSheetField === 'audit'
-											? 'Audit log'
+											? m.sheet_title_audit()
 											: settingsSheetField === 'sessions'
-												? 'Sessions'
+												? m.sheet_title_sessions()
 												: settingsSheetField === 'signout'
-													? 'Sign out?'
+													? m.sheet_title_signout()
 													: ''}
 	>
 		{#if settingsSheetField === 'name'}
-			<p class="sheet-sub">Used in greetings and shared items across all your apps.</p>
+			<p class="sheet-sub">{m.sheet_name_sub()}</p>
 			<div class="sheet-field">
-				<label for="sheetName">Your name</label>
+				<label for="sheetName">{m.sheet_name_label()}</label>
 				<input
 					id="sheetName"
 					type="text"
 					bind:value={displayName}
 					maxlength="32"
-					placeholder="Your name"
+					placeholder={m.sheet_name_placeholder()}
 				/>
 			</div>
 			<div class="sheet-hint">
-				Just a first name works. Friends see this in Finance debts and shared items.
+				{m.sheet_name_hint()}
 			</div>
 			<button type="button" class="sheet-done" onclick={() => (settingsSheetOpen = false)}
-				>Done</button
+				>{m.sheet_action_done()}</button
 			>
 		{:else if settingsSheetField === 'email'}
-			<p class="sheet-sub">Your sign-in identity. Changing it requires verification.</p>
+			<p class="sheet-sub">{m.sheet_email_sub()}</p>
 			<div class="sheet-info">
-				Currently <b>{data.user.email}</b><br />
-				Verified · primary
+				{m.sheet_email_currently()} <b>{data.user.email}</b><br />
+				{m.sheet_email_verified()}
 			</div>
-			<div class="sheet-stub-notice">Email change not yet available.</div>
+			<div class="sheet-stub-notice">{m.sheet_email_stub()}</div>
 			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
-				>Close</button
+				>{m.sheet_action_close()}</button
 			>
 		{:else if settingsSheetField === 'language'}
-			<p class="sheet-sub">Affects every app's interface text.</p>
+			<p class="sheet-sub">{m.sheet_language_sub()}</p>
 			<div class="sheet-picker">
 				{#each locales as locale (locale)}
 					<button
@@ -627,10 +655,10 @@
 				{/each}
 			</div>
 			<button type="button" class="sheet-done" onclick={() => (settingsSheetOpen = false)}
-				>Done</button
+				>{m.sheet_action_done()}</button
 			>
 		{:else if settingsSheetField === 'week'}
-			<p class="sheet-sub">Used by calendars, the Finance week-strip, and weekly summaries.</p>
+			<p class="sheet-sub">{m.sheet_week_sub()}</p>
 			<div class="sheet-picker">
 				{#each weekDayOptions as opt (opt.value)}
 					<button
@@ -649,122 +677,107 @@
 				{/each}
 			</div>
 			<button type="button" class="sheet-done" onclick={() => (settingsSheetOpen = false)}
-				>Done</button
+				>{m.sheet_action_done()}</button
 			>
 		{:else if settingsSheetField === 'time-format'}
-			<p class="sheet-sub">Coming soon.</p>
+			<p class="sheet-sub">{m.sheet_time_format_sub()}</p>
 			<div class="sheet-picker">
 				<button type="button" class="sheet-opt active" onclick={() => stubAction('time-format')}>
 					<span class="sheet-opt-icon">🕐</span>
 					<div class="sheet-opt-text">
-						<span class="sheet-opt-name">24-hour</span>
-						<span class="sheet-opt-desc">17:30</span>
+						<span class="sheet-opt-name">{m.sheet_time_format_24h()}</span>
+						<span class="sheet-opt-desc">{m.sheet_time_format_24h_eg()}</span>
 					</div>
 					<span class="sheet-radio"></span>
 				</button>
 				<button type="button" class="sheet-opt" style="opacity: 0.55; pointer-events: none;">
 					<span class="sheet-opt-icon">🕧</span>
 					<div class="sheet-opt-text">
-						<span class="sheet-opt-name">12-hour</span>
-						<span class="sheet-opt-desc">5:30 PM</span>
+						<span class="sheet-opt-name">{m.sheet_time_format_12h()}</span>
+						<span class="sheet-opt-desc">{m.sheet_time_format_12h_eg()}</span>
 					</div>
 					<span class="sheet-radio"></span>
 				</button>
 			</div>
-			<div class="sheet-stub-notice">Time format setting coming soon.</div>
+			<div class="sheet-stub-notice">{m.sheet_time_format_stub()}</div>
 			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
-				>Close</button
+				>{m.sheet_action_close()}</button
 			>
 		{:else if settingsSheetField === 'theme'}
-			<p class="sheet-sub">Currently light-only — dark mode is on the maybe-later list.</p>
+			<p class="sheet-sub">{m.sheet_theme_sub()}</p>
 			<div class="sheet-picker">
 				<button type="button" class="sheet-opt active" onclick={() => stubAction('theme')}>
 					<span class="sheet-opt-icon">☀️</span>
 					<div class="sheet-opt-text">
-						<span class="sheet-opt-name">Light</span>
-						<span class="sheet-opt-desc">The only one that exists, for now.</span>
+						<span class="sheet-opt-name">{m.sheet_theme_light()}</span>
+						<span class="sheet-opt-desc">{m.sheet_theme_light_desc()}</span>
 					</div>
 					<span class="sheet-radio"></span>
 				</button>
 				<button type="button" class="sheet-opt" style="opacity: 0.55; pointer-events: none;">
 					<span class="sheet-opt-icon">🌙</span>
 					<div class="sheet-opt-text">
-						<span class="sheet-opt-name">Dark</span>
-						<span class="sheet-opt-desc">Coming when it earns the bug count.</span>
+						<span class="sheet-opt-name">{m.sheet_theme_dark()}</span>
+						<span class="sheet-opt-desc">{m.sheet_theme_dark_desc()}</span>
 					</div>
 					<span class="sheet-radio"></span>
 				</button>
 				<button type="button" class="sheet-opt" style="opacity: 0.55; pointer-events: none;">
 					<span class="sheet-opt-icon">💻</span>
 					<div class="sheet-opt-text">
-						<span class="sheet-opt-name">System</span>
-						<span class="sheet-opt-desc">Will follow your iOS preference.</span>
+						<span class="sheet-opt-name">{m.sheet_theme_system()}</span>
+						<span class="sheet-opt-desc">{m.sheet_theme_system_desc()}</span>
 					</div>
 					<span class="sheet-radio"></span>
 				</button>
 			</div>
 			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
-				>Close</button
+				>{m.sheet_action_close()}</button
 			>
 		{:else if settingsSheetField === 'backups'}
-			<p class="sheet-sub">Daily snapshot of every app's data.</p>
-			<div class="sheet-stub-notice">Backup management coming soon.</div>
+			<p class="sheet-sub">{m.sheet_backups_sub()}</p>
+			<div class="sheet-stub-notice">{m.sheet_backups_stub()}</div>
 			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
-				>Close</button
+				>{m.sheet_action_close()}</button
 			>
 		{:else if settingsSheetField === 'export'}
 			<p class="sheet-sub">
-				One zip with every app's data. Open it on your laptop with anything that reads JSON or CSV.
+				{m.sheet_export_sub()}
 			</p>
 			<div class="sheet-info">
-				<b>What's inside:</b><br />
-				· Finance · accounts, transactions, expenses, debts (CSV + JSON)<br />
-				· Profile · your settings and locale<br />
-				· Audit log · every change you've made
+				<b>{m.sheet_export_inside_label()}</b><br />
+				· {m.sheet_export_inside_finance()}<br />
+				· {m.sheet_export_inside_profile()}<br />
+				· {m.sheet_export_inside_audit()}
 			</div>
-			<div class="sheet-stub-notice">Export not yet available.</div>
+			<div class="sheet-stub-notice">{m.sheet_export_stub()}</div>
 			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
-				>Close</button
+				>{m.sheet_action_close()}</button
 			>
 		{:else if settingsSheetField === 'audit'}
-			<p class="sheet-sub">Every state-changing thing that's happened to your data.</p>
-			<div class="sheet-stub-notice">Audit log viewer coming soon.</div>
+			<p class="sheet-sub">{m.sheet_audit_sub()}</p>
+			<div class="sheet-stub-notice">{m.sheet_audit_stub()}</div>
 			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
-				>Close</button
+				>{m.sheet_action_close()}</button
 			>
 		{:else if settingsSheetField === 'sessions'}
 			<SessionsSheet sessions={data.sessions} onclose={() => (settingsSheetOpen = false)} />
 		{:else if settingsSheetField === 'signout'}
 			<p class="sheet-sub">
-				You'll be signed out from every Nexo app on this device. Your data stays where it is.
+				{m.sheet_signout_sub()}
 			</p>
 			<div class="sheet-actions">
 				<button
 					type="button"
 					class="sheet-btn-secondary"
-					onclick={() => (settingsSheetOpen = false)}>Stay</button
+					onclick={() => (settingsSheetOpen = false)}>{m.sheet_signout_stay()}</button
 				>
-				<a href={`${env.PUBLIC_AUTH_URL}/signout`} class="sheet-btn-danger">Sign out</a>
+				<a href={`${env.PUBLIC_AUTH_URL}/signout`} class="sheet-btn-danger"
+					>{m.sheet_signout_confirm()}</a
+				>
 			</div>
 		{/if}
 	</BottomSheet>
-
-	<!-- Navigation guard -->
-	{#if pendingNav}
-		<div class="nav-guard">
-			<div class="nav-guard-card">
-				<p class="nav-guard-msg">You have unsaved changes.</p>
-				<div class="nav-guard-actions">
-					<button type="button" class="nav-guard-btn discard" onclick={pendingNav.proceed}
-						>Discard</button
-					>
-					<button type="button" class="nav-guard-btn stay" onclick={() => (pendingNav = null)}
-						>Stay</button
-					>
-				</div>
-			</div>
-		</div>
-	{/if}
 </div>
 
 <Toast bind:open={toastOpen} type={toastType} message={toastMessage} duration={3000} />
@@ -878,7 +891,6 @@
 		color: var(--color-text-muted);
 		line-height: 1.45;
 	}
-	.who .greeting b,
 	.who .greeting :global(b) {
 		color: var(--color-text-primary);
 		font-weight: 500;
@@ -1215,22 +1227,6 @@
 		border-radius: 50%;
 		background: var(--color-accent);
 	}
-	.sheet-done {
-		width: 100%;
-		height: 48px;
-		margin-top: 16px;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		border-radius: var(--radius-md);
-		border: none;
-		background: var(--color-accent);
-		color: #fff;
-		cursor: pointer;
-	}
-	.sheet-done:active {
-		opacity: 0.85;
-	}
 	.sheet-done.secondary {
 		background: var(--color-bg-1);
 		color: var(--color-text-primary);
@@ -1239,7 +1235,6 @@
 	.sheet-actions {
 		display: flex;
 		gap: 10px;
-		margin-top: 16px;
 	}
 	.sheet-btn-secondary {
 		flex: 1;
@@ -1274,70 +1269,5 @@
 	}
 	.sheet-btn-danger:active {
 		opacity: 0.85;
-	}
-
-	/* ─── Navigation guard ─── */
-	.nav-guard {
-		position: fixed;
-		inset: 0;
-		z-index: 100;
-		display: grid;
-		place-items: center;
-		background: rgb(0 0 0 / 0.3);
-		backdrop-filter: blur(4px);
-		padding: 24px;
-		animation: fade-in var(--duration-fast) var(--ease-out);
-	}
-	.nav-guard-card {
-		width: 100%;
-		max-width: 300px;
-		background: var(--color-surface-1);
-		border: 1px solid var(--color-border-default);
-		border-radius: var(--radius-xl);
-		padding: 24px 20px 20px;
-		box-shadow: 0 16px 48px -12px rgb(0 0 0 / 0.15);
-	}
-	.nav-guard-msg {
-		font-size: 15px;
-		font-weight: 500;
-		text-align: center;
-		margin: 0 0 16px;
-		color: var(--color-text-primary);
-	}
-	.nav-guard-actions {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 8px;
-	}
-	.nav-guard-btn {
-		height: 42px;
-		border-radius: var(--radius-md);
-		border: none;
-		font: inherit;
-		font-size: 14px;
-		font-weight: 600;
-		cursor: pointer;
-		transition: opacity var(--duration-fast) var(--ease-out);
-	}
-	.nav-guard-btn:active {
-		opacity: 0.8;
-	}
-	.nav-guard-btn.discard {
-		background: var(--color-bg-1);
-		border: 1px solid var(--color-border-default);
-		color: var(--color-text-muted);
-	}
-	.nav-guard-btn.stay {
-		background: var(--color-accent);
-		color: #fff;
-	}
-
-	@keyframes fade-in {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
 	}
 </style>

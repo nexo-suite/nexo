@@ -11,7 +11,13 @@ const appVersions = (() => {
 	const raw = env.APP_VERSIONS_JSON;
 	if (raw) {
 		try {
-			return JSON.parse(raw) as { finance: string; auth: string; admin: string; landing: string };
+			return JSON.parse(raw) as {
+				finance: string;
+				auth: string;
+				admin: string;
+				flaschen: string;
+				landing: string;
+			};
 		} catch {
 			// Fall through to build-time fallback
 		}

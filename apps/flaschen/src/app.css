@@ -708,6 +708,10 @@ body {
 	padding: 8px 6px;
 	transition: all var(--dur-fast) var(--ease-out);
 	color: inherit;
+	user-select: none;
+	-webkit-user-select: none;
+	-webkit-touch-callout: none;
+	touch-action: manipulation;
 }
 .wk-cell .d {
 	font-family: var(--font-mono);
@@ -911,6 +915,10 @@ body {
 	z-index: 2;
 	padding: 0;
 	appearance: none;
+	user-select: none;
+	-webkit-user-select: none;
+	-webkit-touch-callout: none;
+	touch-action: none;
 }
 .tr-handle::before {
 	content: '';

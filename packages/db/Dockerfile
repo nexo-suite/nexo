@@ -1,22 +1,15 @@
 # syntax=docker/dockerfile:1.7
 #
-# Migration runner — uses pnpm fetch + offline install so a workspace
-# package add/remove doesn't require updating this file.
+# Thin migration runner. Build context is produced by `nexo prepare-contexts`,
+# which runs `pnpm --prod --legacy deploy @nexo/db`. The deployed context
+# contains dist/src/migrate.js and dist/migrations/*.sql (copied during the
+# package's build step).
 
 FROM node:24-alpine
 WORKDIR /app
-RUN corepack enable
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-# pnpm v10+ refuses to purge node_modules without a TTY unless CI=true.
-ENV CI=true
-
-COPY pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm fetch
 
 COPY . .
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install -r --offline --frozen-lockfile
 
 ENV NODE_ENV=production
-CMD ["node", "--experimental-strip-types", "packages/db/src/migrate.ts"]
+
+CMD ["node", "dist/src/migrate.js"]

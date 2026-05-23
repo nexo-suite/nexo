@@ -3,6 +3,10 @@
 	"version": "0.3.0",
 	"private": true,
 	"type": "module",
+	"files": [
+		"dist",
+		"package.json"
+	],
 	"scripts": {
 		"build": "tsc",
 		"dev": "node --watch src/index.ts",

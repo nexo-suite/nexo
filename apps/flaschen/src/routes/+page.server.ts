@@ -1,6 +1,7 @@
-import type { PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 import { Temporal } from '@js-temporal/polyfill';
 import { and, asc, eq, gte, lt, sql } from 'drizzle-orm';
+import { fail } from '@sveltejs/kit';
 import {
 	db,
 	flaschenAccount,
@@ -18,6 +19,7 @@ import {
 	rangeForDays,
 	ReconnectRequiredError,
 	ApiError,
+	acceptShiftOffer,
 	windowFailDetail,
 	withinLengthRange,
 	meetsAdvanceNotice,
@@ -151,3 +153,92 @@ function formatTodayLabel(): string {
 		return '';
 	}
 }
+
+export const actions: Actions = {
+	takeShift: async ({ request, locals }) => {
+		const userId = locals.user!.id;
+		const fd = await request.formData();
+		const dedupeKey = String(fd.get('dedupeKey') ?? '').trim();
+		if (!dedupeKey) return fail(400, { takeError: 'INVALID_KEY' });
+
+		// Atomic claim: flip stillAvailable=false in the same statement that
+		// reads the offer payload. A second concurrent click hits zero rows and
+		// short-circuits to OFFER_GONE without touching the upstream API.
+		const claimed = await db
+			.update(flaschenSeenOffer)
+			.set({ stillAvailable: false })
+			.where(
+				and(
+					eq(flaschenSeenOffer.userId, userId),
+					eq(flaschenSeenOffer.dedupeKey, dedupeKey),
+					eq(flaschenSeenOffer.stillAvailable, true)
+				)
+			)
+			.returning({ offer: flaschenSeenOffer.offer });
+
+		if (claimed.length === 0) {
+			const exists = await db
+				.select({ id: flaschenSeenOffer.id })
+				.from(flaschenSeenOffer)
+				.where(
+					and(eq(flaschenSeenOffer.userId, userId), eq(flaschenSeenOffer.dedupeKey, dedupeKey))
+				)
+				.limit(1);
+			return exists.length === 0
+				? fail(404, { takeError: 'OFFER_NOT_FOUND' })
+				: fail(409, { takeError: 'OFFER_GONE' });
+		}
+
+		const offer = claimed[0].offer;
+
+		const releaseClaim = async () => {
+			await db
+				.update(flaschenSeenOffer)
+				.set({ stillAvailable: true })
+				.where(
+					and(eq(flaschenSeenOffer.userId, userId), eq(flaschenSeenOffer.dedupeKey, dedupeKey))
+				);
+		};
+
+		try {
+			await acceptShiftOffer(userId, offer);
+		} catch (e) {
+			if (e instanceof ReconnectRequiredError) {
+				// Token issue, not the offer — let the user retry after reconnecting.
+				await releaseClaim();
+				return fail(401, { takeError: 'RECONNECT_REQUIRED' });
+			}
+			if (e instanceof ApiError) {
+				logger.warn('takeShift upstream rejected', {
+					userId,
+					correlationId: locals.correlationId,
+					dedupeKey,
+					upstreamStatus: e.status,
+					upstreamBody: e.body.slice(0, 500)
+				});
+				// 4xx from upstream usually means the slot was just taken by
+				// somebody else; keep it claimed locally so it disappears from
+				// the dashboard.
+				if (e.status >= 400 && e.status < 500) {
+					return fail(409, { takeError: 'OFFER_GONE' });
+				}
+				// 5xx — Flaschenpost transient; release so the user can retry.
+				await releaseClaim();
+				return fail(502, {
+					takeError: 'UPSTREAM_ERROR',
+					correlationId: locals.correlationId
+				});
+			}
+			logger.error('takeShift failed', {
+				userId,
+				correlationId: locals.correlationId,
+				dedupeKey,
+				error: String(e)
+			});
+			await releaseClaim();
+			return fail(500, { takeError: 'UNKNOWN', correlationId: locals.correlationId });
+		}
+
+		return { takeSuccess: true, takenDedupeKey: dedupeKey };
+	}
+};

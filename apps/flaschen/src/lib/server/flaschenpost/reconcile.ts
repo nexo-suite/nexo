@@ -7,7 +7,7 @@ import {
 	type FlaschenPrefs,
 	type ShiftOfferPayload
 } from '@nexo/db';
-import { and, eq, notInArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import { dedupeKey, matchesWindow, withinLengthRange, meetsAdvanceNotice } from './match';
 
 const DEFAULT_PREFS: Omit<FlaschenPrefs, 'userId' | 'updatedAt'> = {
@@ -66,6 +66,8 @@ export type ReconcileResult = {
 	matchedOffers: ShiftOfferPayload[];
 };
 
+const UPSERT_CHUNK_SIZE = 100;
+
 /** Insert previously unseen offers, mark which match the user's prefs, and
  *  return the freshly matched ones so the caller can send notifications. */
 export async function reconcileOffers(
@@ -75,8 +77,6 @@ export async function reconcileOffers(
 	offers: ShiftOfferPayload[]
 ): Promise<ReconcileResult> {
 	const matchedOffers: ShiftOfferPayload[] = [];
-	let newOffers = 0;
-	let newMatches = 0;
 
 	const liveKeys = offers.map(dedupeKey);
 	if (liveKeys.length === 0) {
@@ -93,47 +93,71 @@ export async function reconcileOffers(
 			);
 	}
 
-	for (const offer of offers) {
-		const key = dedupeKey(offer);
+	if (offers.length === 0) {
+		return { totalOffers: 0, newOffers: 0, newMatches: 0, matchedOffers };
+	}
+
+	type Computed = {
+		offer: ShiftOfferPayload;
+		key: string;
+		isStrictMatch: boolean;
+		isBorderline: boolean;
+	};
+	const computed: Computed[] = offers.map((offer) => {
 		const inWindow = matchesWindow(prefs, overrides, offer);
 		const okLength = withinLengthRange(prefs, offer);
 		const okNotice = meetsAdvanceNotice(prefs, offer);
 		const isStrictMatch = inWindow && okLength && okNotice;
 		const isBorderline = inWindow && !isStrictMatch;
+		return { offer, key: dedupeKey(offer), isStrictMatch, isBorderline };
+	});
 
+	let newOffers = 0;
+	let newMatches = 0;
+	const now = new Date();
+
+	for (let i = 0; i < computed.length; i += UPSERT_CHUNK_SIZE) {
+		const chunk = computed.slice(i, i + UPSERT_CHUNK_SIZE);
+		const rows = chunk.map((c) => ({
+			userId,
+			dedupeKey: c.key,
+			offer: c.offer,
+			matched: c.isStrictMatch,
+			borderline: c.isBorderline,
+			notified: false,
+			stillAvailable: true
+		}));
 		const result = await db
 			.insert(flaschenSeenOffer)
-			.values({
-				userId,
-				dedupeKey: key,
-				offer,
-				matched: isStrictMatch,
-				borderline: isBorderline,
-				notified: false,
-				stillAvailable: true
-			})
+			.values(rows)
 			.onConflictDoUpdate({
 				target: [flaschenSeenOffer.userId, flaschenSeenOffer.dedupeKey],
 				set: {
-					lastSeenAt: new Date(),
-					offer,
-					matched: isStrictMatch,
-					borderline: isBorderline,
+					lastSeenAt: now,
+					offer: sql`excluded.offer`,
+					matched: sql`excluded.matched`,
+					borderline: sql`excluded.borderline`,
 					stillAvailable: true
 				}
 			})
 			.returning({
-				id: flaschenSeenOffer.id,
+				dedupeKey: flaschenSeenOffer.dedupeKey,
 				notified: flaschenSeenOffer.notified,
 				inserted: sql<boolean>`(xmax = 0)`
 			});
 
-		const row = result[0];
-		const wasNew = row?.inserted === true;
-		if (wasNew) newOffers++;
-		if (isStrictMatch && wasNew && !row.notified) {
-			newMatches++;
-			matchedOffers.push(offer);
+		const byKey = new Map(result.map((r) => [r.dedupeKey, r]));
+		for (const c of chunk) {
+			const row = byKey.get(c.key);
+			if (!row) continue;
+			if (row.inserted === true) newOffers++;
+			// Notify on first sighting OR when an already-stored offer is now a
+			// match but hasn't been pushed yet (e.g., user added an "available"
+			// override that flips the offer to matching).
+			if (c.isStrictMatch && !row.notified) {
+				newMatches++;
+				matchedOffers.push(c.offer);
+			}
 		}
 	}
 
@@ -145,6 +169,45 @@ export async function reconcileOffers(
 		newMatches,
 		matchedOffers
 	};
+}
+
+/** Mark a set of offers as successfully notified. Called by the worker after
+ *  push delivery so a failed push retries on the next tick. */
+export async function markOffersNotified(userId: string, dedupeKeys: string[]): Promise<void> {
+	if (dedupeKeys.length === 0) return;
+	await db
+		.update(flaschenSeenOffer)
+		.set({ notified: true })
+		.where(
+			and(eq(flaschenSeenOffer.userId, userId), inArray(flaschenSeenOffer.dedupeKey, dedupeKeys))
+		);
+}
+
+/** Re-evaluate the matched/borderline flags of every still-available stored
+ *  offer against the current prefs+overrides without making an API call. Used
+ *  after the user changes filter prefs or date overrides so the dashboard
+ *  reflects the new logic immediately, not after the next worker poll. */
+export async function recomputeMatchedFlags(
+	userId: string,
+	prefs: FlaschenPrefs,
+	overrides: FlaschenDateOverride[]
+): Promise<void> {
+	const rows = await db
+		.select({ id: flaschenSeenOffer.id, offer: flaschenSeenOffer.offer })
+		.from(flaschenSeenOffer)
+		.where(and(eq(flaschenSeenOffer.userId, userId), eq(flaschenSeenOffer.stillAvailable, true)));
+
+	for (const r of rows) {
+		const inWindow = matchesWindow(prefs, overrides, r.offer);
+		const okLength = withinLengthRange(prefs, r.offer);
+		const okNotice = meetsAdvanceNotice(prefs, r.offer);
+		const isStrictMatch = inWindow && okLength && okNotice;
+		const isBorderline = inWindow && !isStrictMatch;
+		await db
+			.update(flaschenSeenOffer)
+			.set({ matched: isStrictMatch, borderline: isBorderline })
+			.where(eq(flaschenSeenOffer.id, r.id));
+	}
 }
 
 async function rememberLocations(userId: string, offers: ShiftOfferPayload[]): Promise<void> {

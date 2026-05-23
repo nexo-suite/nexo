@@ -4,7 +4,8 @@ import {
 	db,
 	flaschenAccount,
 	flaschenDateOverride,
-	flaschenPollLog
+	flaschenPollLog,
+	flaschenSeenOffer
 } from '@nexo/db';
 import { and, eq, gte, isNull, lt, or } from 'drizzle-orm';
 import { createLogger } from '@nexo/logger';
@@ -13,6 +14,7 @@ import {
 	listShiftOffers,
 	loadPrefs,
 	reconcileOffers,
+	markOffersNotified,
 	rangeForDays,
 	formatOfferBody,
 	dedupeKey,
@@ -51,6 +53,9 @@ const POLL_JITTER_MS = Number(process.env.FLASCHEN_POLL_JITTER_MS ?? 30_000);
 const KEEPALIVE_INTERVAL_MS = Number(
 	process.env.FLASCHEN_KEEPALIVE_INTERVAL_MS ?? 20 * 60 * 60_000
 );
+const CLEANUP_INTERVAL_MS = Number(process.env.FLASCHEN_CLEANUP_INTERVAL_MS ?? 24 * 60 * 60_000);
+const SEEN_OFFER_TTL_DAYS = Number(process.env.FLASCHEN_SEEN_OFFER_TTL_DAYS ?? 14);
+const POLL_LOG_TTL_DAYS = Number(process.env.FLASCHEN_POLL_LOG_TTL_DAYS ?? 30);
 const QUIET_HOURS = parseQuietHours(process.env.FLASCHEN_QUIET_HOURS ?? '22-06');
 const TZ = 'Europe/Berlin';
 
@@ -95,6 +100,7 @@ let lastTickOk = false;
 let lastTickLatencyMs = 0;
 let lastTickError: string | null = null;
 let lastKeepaliveAt: number | null = null;
+let lastCleanupAt: number | null = null;
 let accountsSeen = 0;
 const startedAt = Date.now();
 
@@ -120,6 +126,10 @@ async function tick(): Promise<void> {
 
 	await keepalivePass().catch((e) => {
 		logger.error('keepalive pass uncaught', { error: String(e) });
+	});
+
+	await cleanupPass().catch((e) => {
+		logger.error('cleanup pass uncaught', { error: String(e) });
 	});
 
 	if (inQuietHours()) {
@@ -192,6 +202,41 @@ async function keepalivePass(): Promise<void> {
 	lastKeepaliveAt = Date.now();
 }
 
+/** Once per day, delete rows that aren't useful anymore: gone offers older than
+ * SEEN_OFFER_TTL_DAYS, and poll-log entries older than POLL_LOG_TTL_DAYS. The
+ * latest poll-log entry per user is preserved by the dashboard separately, so
+ * trimming here just bounds disk and keeps the dashboard query fast. */
+async function cleanupPass(): Promise<void> {
+	const now = Date.now();
+	if (lastCleanupAt !== null && now - lastCleanupAt < CLEANUP_INTERVAL_MS) return;
+
+	const offerCutoff = new Date(now - SEEN_OFFER_TTL_DAYS * 24 * 60 * 60_000);
+	const pollCutoff = new Date(now - POLL_LOG_TTL_DAYS * 24 * 60 * 60_000);
+
+	try {
+		const offerDel = await db
+			.delete(flaschenSeenOffer)
+			.where(
+				and(
+					eq(flaschenSeenOffer.stillAvailable, false),
+					lt(flaschenSeenOffer.lastSeenAt, offerCutoff)
+				)
+			)
+			.returning({ id: flaschenSeenOffer.id });
+		const pollDel = await db
+			.delete(flaschenPollLog)
+			.where(lt(flaschenPollLog.ranAt, pollCutoff))
+			.returning({ id: flaschenPollLog.id });
+		logger.info('cleanup', {
+			offersDeleted: offerDel.length,
+			pollLogsDeleted: pollDel.length
+		});
+		lastCleanupAt = now;
+	} catch (e) {
+		logger.error('cleanup failed', { error: String(e) });
+	}
+}
+
 async function pollOne(userId: string): Promise<void> {
 	try {
 		const prefs = await loadPrefs(userId);
@@ -232,14 +277,26 @@ async function pollOne(userId: string): Promise<void> {
 				logger.info('suppressed push (user quiet hours)', { userId, dedupeKey: dedupeKey(offer) });
 				continue;
 			}
-			await sendToUser(userId, 'flaschen', {
-				title: `Neue Schicht: ${offer.warehouse.name}`,
-				body: formatOfferBody(offer),
-				tag: dedupeKey(offer),
-				url: `/?shift=${encodeURIComponent(dedupeKey(offer))}`
-			}).catch((e) => {
+			try {
+				const sendResult = await sendToUser(userId, 'flaschen', {
+					title: `Neue Schicht: ${offer.warehouse.name}`,
+					body: formatOfferBody(offer),
+					tag: dedupeKey(offer),
+					url: `/?shift=${encodeURIComponent(dedupeKey(offer))}`
+				});
+				if (sendResult.sent > 0) {
+					await markOffersNotified(userId, [dedupeKey(offer)]);
+				} else {
+					logger.warn('push delivered to no subscribers — will retry next tick', {
+						userId,
+						dedupeKey: dedupeKey(offer),
+						pruned: sendResult.pruned,
+						failed: sendResult.failed
+					});
+				}
+			} catch (e) {
 				logger.error('push send failed', { userId, error: String(e) });
-			});
+			}
 		}
 
 		if (result.newMatches > 0) {
@@ -339,6 +396,7 @@ const healthServer = createServer((req, res) => {
 		lastTickOk,
 		lastTickError,
 		lastKeepaliveAt: lastKeepaliveAt ? new Date(lastKeepaliveAt).toISOString() : null,
+		lastCleanupAt: lastCleanupAt ? new Date(lastCleanupAt).toISOString() : null,
 		accountsSeen,
 		checks: {
 			tick: {
@@ -362,6 +420,9 @@ logger.info('starting', {
 	pollIntervalMs: POLL_INTERVAL_MS,
 	jitterMs: POLL_JITTER_MS,
 	keepaliveIntervalMs: KEEPALIVE_INTERVAL_MS,
+	cleanupIntervalMs: CLEANUP_INTERVAL_MS,
+	seenOfferTtlDays: SEEN_OFFER_TTL_DAYS,
+	pollLogTtlDays: POLL_LOG_TTL_DAYS,
 	quietHours: QUIET_HOURS
 });
 
