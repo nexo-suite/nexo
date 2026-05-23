@@ -50,13 +50,42 @@ function normalizeKey(raw: string): string {
 	return raw.replace(/\\n/g, '\n');
 }
 
-// Upsert the sticky comment by marker. Returns the comment ID.
+// Upsert the sticky comment.
+//
+// Lookup order:
+//   1. `knownCommentId` (passed by the caller from PRState.commentId) — direct
+//      `updateComment`, no list scan. This is the hot path and the dedup fix:
+//      a redelivered webhook can't race with `findStickyComment` and create a
+//      second sticky if we already know the comment ID.
+//   2. Fallback to `findStickyComment` (marker scan over the first 100
+//      comments) for the cold-start case where state was just rehydrated and
+//      the commentId hasn't been set yet, or where the prior sticky was
+//      deleted out of band.
+//
+// Returns the comment ID so callers can persist it back into PRState.
 export async function upsertStickyComment(
 	octokit: Octokit,
 	env: Env,
 	prNumber: number,
-	body: string
+	body: string,
+	knownCommentId?: number
 ): Promise<number> {
+	if (knownCommentId && knownCommentId > 0) {
+		try {
+			await octokit.issues.updateComment({
+				owner: env.owner,
+				repo: env.repo,
+				comment_id: knownCommentId,
+				body
+			});
+			return knownCommentId;
+		} catch (err) {
+			if (!isNotFound(err)) throw err;
+			// Comment was deleted out of band — fall through to scan + recreate.
+			logger.info('known sticky comment id missing, will rescan', { prNumber, knownCommentId });
+		}
+	}
+
 	const existing = await findStickyComment(octokit, env, prNumber);
 	if (existing) {
 		await octokit.issues.updateComment({
@@ -76,6 +105,10 @@ export async function upsertStickyComment(
 	return data.id;
 }
 
+function isNotFound(err: unknown): boolean {
+	return typeof err === 'object' && err !== null && (err as { status?: number }).status === 404;
+}
+
 async function findStickyComment(
 	octokit: Octokit,
 	env: Env,
@@ -90,20 +123,6 @@ async function findStickyComment(
 	});
 	const found = data.find((c) => c.body?.includes(marker));
 	return found ? found.id : null;
-}
-
-export async function postReply(
-	octokit: Octokit,
-	env: Env,
-	prNumber: number,
-	body: string
-): Promise<void> {
-	await octokit.issues.createComment({
-		owner: env.owner,
-		repo: env.repo,
-		issue_number: prNumber,
-		body
-	});
 }
 
 export async function dispatchUnstable(

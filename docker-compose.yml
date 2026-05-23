@@ -713,6 +713,9 @@ services:
       APP_VERSION: ${APP_VERSION_BOT:-}
       APP_COMMIT: ${APP_COMMIT:-}
       APP_BUILD_TIME: ${APP_BUILD_TIME:-}
+      BOT_STATE_FILE: /data/bot-state.json
+    volumes:
+      - bot_data:/data
     healthcheck:
       test:
         [
@@ -763,3 +766,4 @@ volumes:
   prometheus_data:
   caddy_data:
   caddy_config:
+  bot_data:

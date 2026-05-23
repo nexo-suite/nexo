@@ -4,8 +4,15 @@ import { readFileSync } from 'node:fs';
 import { createLogger } from '@nexo/logger';
 import { registerWebhooks } from './webhooks.js';
 import type { Env } from './github.js';
+import { initStateFromDisk, setOnChange, snapshot } from './state.js';
+import { loadStateFromDisk, saveStateToDisk } from './store.js';
 
 const logger = createLogger('bot');
+
+// Rehydrate persistent state before any webhook can land. From this point on,
+// every mutation in state.ts triggers a synchronous write through the store.
+initStateFromDisk(loadStateFromDisk());
+setOnChange(() => saveStateToDisk(snapshot()));
 
 const {
 	GH_CLIENT_ID,

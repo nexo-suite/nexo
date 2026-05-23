@@ -10,7 +10,6 @@ import { parseCommand } from './commands.js';
 import {
 	getInstallationOctokit,
 	getPRHeadSha,
-	postReply,
 	probeImageReadiness,
 	upsertStickyComment,
 	type Env
@@ -61,7 +60,7 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 				setPRState(state);
 
 				const body = renderComment({ state, otherPRPins: {} });
-				const commentId = await upsertStickyComment(octokit, env, prNumber, body);
+				const commentId = await upsertStickyComment(octokit, env, prNumber, body, state.commentId);
 				state.commentId = commentId;
 				setPRState(state);
 			} catch (e) {
@@ -78,13 +77,19 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 			if (!state) return;
 			state.headSha = newSha;
 			// New commits → fresh `:pr-<n>` builds will publish; reset image
-			// readiness to pending and let registry_package re-flip them.
+			// readiness to pending and let registry_package re-flip them. The
+			// registry_package handler will auto-redeploy services whose
+			// intent is still true once the new image lands.
 			state.images = freshImages();
 			setPRState(state);
 			try {
 				const octokit = await getInstallationOctokit(env);
 				const body = renderComment({ state, otherPRPins: {} });
-				await upsertStickyComment(octokit, env, prNumber, body);
+				const commentId = await upsertStickyComment(octokit, env, prNumber, body, state.commentId);
+				if (commentId !== state.commentId) {
+					state.commentId = commentId;
+					setPRState(state);
+				}
 			} catch (e) {
 				logger.error('failed to update sticky on sync', { prNumber, error: String(e) });
 			}
@@ -113,17 +118,22 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 			try {
 				const octokit = await getInstallationOctokit(env);
 				if (!(await isMaintainer(octokit, env.owner, env.repo, sender))) {
-					await postReply(
-						octokit,
-						env,
-						prNumber,
-						`@${sender} this command is restricted to repo maintainers.`
-					);
-					// Re-render to revert any unauthorized checkbox flip.
+					// Silently revert any unauthorized checkbox flip. The reverted
+					// sticky is its own rejection signal — no separate reply needed.
 					const state = getPRState(prNumber);
 					if (state) {
 						const reverted = renderComment({ state, otherPRPins: {} });
-						await upsertStickyComment(octokit, env, prNumber, reverted);
+						const commentId = await upsertStickyComment(
+							octokit,
+							env,
+							prNumber,
+							reverted,
+							state.commentId
+						);
+						if (commentId !== state.commentId) {
+							state.commentId = commentId;
+							setPRState(state);
+						}
 					}
 					return;
 				}
@@ -154,12 +164,8 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 			try {
 				const octokit = await getInstallationOctokit(env);
 				if (!(await isMaintainer(octokit, env.owner, env.repo, sender))) {
-					await postReply(
-						octokit,
-						env,
-						prNumber,
-						`@${sender} this command is restricted to repo maintainers.`
-					);
+					// Non-maintainer slash command — ignore silently. Logged for audit.
+					logger.info('rejected non-maintainer slash command', { prNumber, sender, cmd });
 					return;
 				}
 				ensurePRState(prNumber, {
@@ -173,7 +179,17 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 				if (cmd.kind === 'status') {
 					const state = getPRState(prNumber)!;
 					const body = renderComment({ state, otherPRPins: {} });
-					await upsertStickyComment(octokit, env, prNumber, body);
+					const commentId = await upsertStickyComment(
+						octokit,
+						env,
+						prNumber,
+						body,
+						state.commentId
+					);
+					if (commentId !== state.commentId) {
+						state.commentId = commentId;
+						setPRState(state);
+					}
 					return;
 				}
 
@@ -226,14 +242,34 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 			setPRState(state);
 			try {
 				const octokit = await getInstallationOctokit(env);
-				// If the maintainer ticked the box before the image was ready, the
-				// reconciler held off on dispatching. Now that the image is ready,
-				// re-reconcile to actually bring it up.
 				if (state.intent[app as UnstableApp]) {
-					await reconcile({ octokit, env, prNumber });
+					// Image just landed and the maintainer wants this service up. Two
+					// scenarios converge here:
+					//   1. They ticked before the image was ready → reconcile would
+					//      normally do nothing because intent didn't change, so we pass
+					//      `forceApps` to make it dispatch.
+					//   2. Same intent across a `pull_request.synchronize` (new commits
+					//      arrived) → same handling: force the redeploy onto the new
+					//      image.
+					await reconcile({
+						octokit,
+						env,
+						prNumber,
+						forceApps: [app as UnstableApp]
+					});
 				} else {
 					const body = renderComment({ state, otherPRPins: {} });
-					await upsertStickyComment(octokit, env, prNumber, body);
+					const commentId = await upsertStickyComment(
+						octokit,
+						env,
+						prNumber,
+						body,
+						state.commentId
+					);
+					if (commentId !== state.commentId) {
+						state.commentId = commentId;
+						setPRState(state);
+					}
 				}
 			} catch (e) {
 				logger.error('failed to handle image readiness', { prNumber, app, error: String(e) });
@@ -276,18 +312,24 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 			if (conclusion !== 'success') {
 				try {
 					const octokit = await getInstallationOctokit(env);
-					await postReply(
-						octokit,
-						env,
-						prNumber,
-						`❌ Unstable workflow failed: [${title}](${runUrl}). Reverting intent — re-tick to retry.`
-					);
-					// Failed up/down → revert the activity hint; reconciler will
-					// untick on next render based on actual intent.
+					// Surface the failure as a notice on the sticky and revert the
+					// activity hint so the comment shows untruck → unticked. The
+					// next successful reconcile clears the notice.
+					state.notice = `Unstable workflow failed: [${title}](${runUrl}). Re-tick to retry.`;
 					for (const app of UNSTABLE_APPS) delete state.activity[app];
 					setPRState(state);
 					const body = renderComment({ state, otherPRPins: {} });
-					await upsertStickyComment(octokit, env, prNumber, body);
+					const commentId = await upsertStickyComment(
+						octokit,
+						env,
+						prNumber,
+						body,
+						state.commentId
+					);
+					if (commentId !== state.commentId) {
+						state.commentId = commentId;
+						setPRState(state);
+					}
 				} catch (e) {
 					logger.error('failed to post unstable failure', { prNumber, error: String(e) });
 				}

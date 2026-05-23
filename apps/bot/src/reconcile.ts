@@ -12,7 +12,7 @@
 import type { Octokit } from '@octokit/rest';
 import { createLogger } from '@nexo/logger';
 import { renderComment } from './comment.js';
-import { dispatchUnstable, postReply, upsertStickyComment, type Env } from './github.js';
+import { dispatchUnstable, upsertStickyComment, type Env } from './github.js';
 import {
 	UNSTABLE_APPS,
 	clearPin,
@@ -37,10 +37,14 @@ export type ReconcileInput = {
 	// Override the persisted intent before reconciling — used for slash
 	// commands and checkbox toggles that already know the desired state.
 	intentOverride?: Partial<Record<UnstableApp, boolean>>;
+	// Apps for which we should dispatch `up` even if intent didn't change.
+	// Used by the registry_package.published handler to redeploy a still-ticked
+	// service onto a freshly-built image when the head sha advances.
+	forceApps?: UnstableApp[];
 };
 
 export async function reconcile(input: ReconcileInput): Promise<void> {
-	const { octokit, env, prNumber, intentOverride } = input;
+	const { octokit, env, prNumber, intentOverride, forceApps } = input;
 	const state = getPRState(prNumber);
 	if (!state) {
 		logger.warn('reconcile called without state', { prNumber });
@@ -49,25 +53,27 @@ export async function reconcile(input: ReconcileInput): Promise<void> {
 
 	const previousIntent = { ...state.intent };
 	const desiredIntent = { ...previousIntent, ...(intentOverride ?? {}) };
+	const force = new Set<UnstableApp>(forceApps ?? []);
 
 	// Compute pin holders so we can refuse intent on apps already taken by
 	// another PR (single-up-per-service v1 invariant).
 	const otherPRPins = otherPinsFor(prNumber);
 
 	// Apply the intent diff: produce final intent (after refusals), and a list
-	// of (app, action) to dispatch.
+	// of (app, action) to dispatch. Refusals are silently absorbed — the
+	// sticky comment already shows the conflicting other-PR pin via
+	// `renderCheckbox`'s ⚠️ branch, so a separate notice is redundant.
 	const finalIntent = { ...desiredIntent } as Record<UnstableApp, boolean>;
 	const dispatches: Array<{ app: UnstableApp; action: 'up' | 'down' }> = [];
-	const refusals: UnstableApp[] = [];
 
 	for (const app of UNSTABLE_APPS) {
 		const was = previousIntent[app];
 		const want = desiredIntent[app];
-		if (was === want) continue;
+		const isForced = force.has(app) && want;
+		if (was === want && !isForced) continue;
 
 		if (want) {
 			if (otherPRPins[app]) {
-				refusals.push(app);
 				finalIntent[app] = false;
 				continue;
 			}
@@ -89,6 +95,10 @@ export async function reconcile(input: ReconcileInput): Promise<void> {
 	}
 
 	state.intent = finalIntent;
+	// A successful intent change clears any prior failure notice — the user
+	// took an action, the sticky should reflect the new state without the old
+	// banner.
+	if (state.notice) state.notice = undefined;
 	setPRState(state);
 
 	// Re-render comment with the freshly-applied intent.
@@ -96,15 +106,10 @@ export async function reconcile(input: ReconcileInput): Promise<void> {
 		state,
 		otherPRPins: otherPinsFor(prNumber)
 	});
-	await upsertStickyComment(octokit, env, prNumber, body);
-
-	for (const r of refusals) {
-		await postReply(
-			octokit,
-			env,
-			prNumber,
-			`⚠️ \`${r}\` is currently up for another PR — close that one first or use \`/down ${r}\` from the holder PR.`
-		);
+	const commentId = await upsertStickyComment(octokit, env, prNumber, body, state.commentId);
+	if (commentId !== state.commentId) {
+		state.commentId = commentId;
+		setPRState(state);
 	}
 
 	for (const d of dispatches) {
@@ -130,7 +135,11 @@ export async function tearDownPR(
 	}
 	setPRState(state);
 	const body = renderComment({ state, otherPRPins: otherPinsFor(prNumber) });
-	await upsertStickyComment(octokit, env, prNumber, body);
+	const commentId = await upsertStickyComment(octokit, env, prNumber, body, state.commentId);
+	if (commentId !== state.commentId) {
+		state.commentId = commentId;
+		setPRState(state);
+	}
 	if (opts.dispatch) {
 		await dispatchUnstable(octokit, env, 'down-all-for-pr', { prNumber });
 	}
@@ -150,7 +159,17 @@ export async function resetAllAfterDeploy(octokit: Octokit, env: Env): Promise<v
 		setPRState(state);
 		const body = renderComment({ state, otherPRPins: {} });
 		try {
-			await upsertStickyComment(octokit, env, state.prNumber, body);
+			const commentId = await upsertStickyComment(
+				octokit,
+				env,
+				state.prNumber,
+				body,
+				state.commentId
+			);
+			if (commentId !== state.commentId) {
+				state.commentId = commentId;
+				setPRState(state);
+			}
 		} catch (e) {
 			logger.warn('failed to update sticky on deploy reset', {
 				prNumber: state.prNumber,

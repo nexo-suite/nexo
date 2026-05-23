@@ -54,10 +54,13 @@ export function renderComment(ctx: RenderContext): string {
 
 	const checkboxes = UNSTABLE_APPS.map((app) => renderCheckbox(app, ctx));
 
+	const noticeBlock = state.notice ? [`> [!warning]`, `> ${state.notice}`, ''] : [];
+
 	return [
 		MARKER(state.prNumber),
 		'## 🧪 Unstable deployments — restricted to maintainers',
 		'',
+		...noticeBlock,
 		`This PR's images: \`ghcr.io/nexo-suite/nexo-<app>:pr-${state.prNumber}\``,
 		'',
 		'### Image build status',

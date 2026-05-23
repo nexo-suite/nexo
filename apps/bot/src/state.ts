@@ -6,9 +6,9 @@
 //   • The VPS's `.env.unstable` + running containers are the source of truth
 //     for *current state* — what's actually deployed.
 //
-// This file holds the bot's reconciler view. State is rebuilt from webhooks
-// on every restart; nothing is persisted. Re-syncs happen on PR open/sync
-// and after workflow_run completion.
+// Persistence: this module keeps an in-memory mirror; every mutation also
+// flushes to disk via `store.ts` so PR state, intent, and pin map survive
+// bot restarts. `initStateFromDisk()` rehydrates the maps on startup.
 
 export type UnstableApp = 'auth' | 'admin' | 'finance' | 'flaschen' | 'landing';
 
@@ -32,6 +32,9 @@ export type PRState = {
 	images: Record<UnstableApp, ImageStatus>;
 	intent: Record<UnstableApp, boolean>;
 	activity: Partial<Record<UnstableApp, AppActivity>>;
+	// Transient surfaced message — appears as a callout in the sticky comment.
+	// Set on workflow failure; cleared on the next successful reconcile.
+	notice?: string;
 };
 
 export type ServicePin = {
@@ -43,16 +46,41 @@ const prState = new Map<number, PRState>();
 // Each app may be pinned to at most one PR at a time. v1 invariant.
 const pins = new Map<UnstableApp, ServicePin>();
 
+// Bump on every mutation so the persistence module can flush; lazily
+// resolved after `initStateFromDisk()` so we don't pay for disk writes
+// during the rehydrate-from-snapshot bootstrap.
+let onChange: (() => void) | null = null;
+
+export function setOnChange(handler: (() => void) | null): void {
+	onChange = handler;
+}
+
+function flush(): void {
+	if (onChange) onChange();
+}
+
+export function initStateFromDisk(loaded: {
+	prs: Map<number, PRState>;
+	pins: Map<UnstableApp, ServicePin>;
+}): void {
+	prState.clear();
+	for (const [k, v] of loaded.prs) prState.set(k, v);
+	pins.clear();
+	for (const [k, v] of loaded.pins) pins.set(k, v);
+}
+
 export function getPRState(prNumber: number): PRState | undefined {
 	return prState.get(prNumber);
 }
 
 export function setPRState(state: PRState): void {
 	prState.set(state.prNumber, state);
+	flush();
 }
 
 export function deletePRState(prNumber: number): void {
 	prState.delete(prNumber);
+	flush();
 }
 
 export function listPRStates(): PRState[] {
@@ -65,10 +93,21 @@ export function getPin(app: UnstableApp): ServicePin | undefined {
 
 export function setPin(app: UnstableApp, pin: ServicePin): void {
 	pins.set(app, pin);
+	flush();
 }
 
 export function clearPin(app: UnstableApp): void {
 	pins.delete(app);
+	flush();
+}
+
+// Snapshot accessor for the persistence layer — returns the live maps so
+// the store can serialize them without a copy.
+export function snapshot(): {
+	prs: Map<number, PRState>;
+	pins: Map<UnstableApp, ServicePin>;
+} {
+	return { prs: prState, pins };
 }
 
 export function freshImages(): Record<UnstableApp, ImageStatus> {
