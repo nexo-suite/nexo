@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 #
 # Thin runtime image. Build context is produced by `nexo prepare-contexts`,
-# which runs `pnpm --prod --legacy deploy` for this app — so the context
+# which runs `pnpm --prod deploy` for this app — so the context
 # already contains package.json, node_modules, and the build/ output.
 #
 # All PUBLIC_* values are read via $env/dynamic/public at runtime, so the

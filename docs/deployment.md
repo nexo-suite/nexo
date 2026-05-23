@@ -142,30 +142,34 @@ FLASCHEN_OAUTH_CLIENT_ID=86fe707f-ea47-4bf3-aa81-42579bf180cd
 
 ### CI/CD pipeline
 
-The pipeline lives in `.github/workflows/ci.yml`. Heavy lifting is done by the `@nexo/cli` workspace package (`tools/cli/`, invoked as `pnpm exec nexo …`) and `scripts/deploy.mjs`. The workflow file itself is declarative — no matrix loops, no inline retag bash.
+The pipeline lives in `.github/workflows/ci.yml`. Heavy lifting is done by the `@nexo/cli` workspace package (`tools/cli/`, invoked as `pnpm exec nexo …`) and `scripts/deploy.mjs`. The workflow file is a flat list of named steps — no composite actions, no inline retag bash.
 
 **Core principle:** every code change is built **exactly once**, on its first PR. Every later transition (PR → main → release PR → release) is a registry-side `imagetools` retag (~5s), not a rebuild.
 
+**Decision is data, not control flow.** The first build step runs `nexo ci-init`, which inspects the GitHub event and writes `.nexo/ci-context.json` — a frozen snapshot of `{event, sha, prNumber, sourcePrNumber, isReleasePleasePr, strategy, tags, fromTag, push, gitCommit, buildTime}`. Subsequent commands (`build-apps`, `prepare-contexts`, `build-images`, `retag`) read that file and self-skip when their stage doesn't apply, so the YAML body has zero `if:` conditionals on application logic.
+
 ```mermaid
 flowchart TD
-  A[Feature branch PR opens] -->|pull_request| B[quality: pnpm qc]
-  A -->|pull_request, parallel| C[build-and-push]
-  C --> C1["nexo ci<br/>full build, tag :pr-N"]
+  A[Feature branch PR opens] -->|pull_request| B[checks: 9 named steps in parallel]
+  A -->|pull_request, parallel| C[build]
+  C --> C0["nexo ci-init<br/>strategy=full, tags=[pr-N], push=true"]
+  C0 --> C1["build-apps · prepare-contexts<br/>build-images (push) · retag (no-op)"]
   C1 --> D[GHCR: 7 × :pr-N images]
 
   D -->|merge to main| E[push event]
-  E --> F[quality]
-  E --> G[build-and-push]
-  G --> G1["nexo ci<br/>retag :pr-N → :main-SHA + :main"]
+  E --> F[checks]
+  E --> G[build]
+  G --> G0["nexo ci-init<br/>strategy=retag, from=pr-N, tags=[main-SHA, main]"]
+  G0 --> G1["build-apps · prepare-contexts · build-images (no-op)<br/>retag (run)"]
   G1 --> H[release-please]
   H -->|releasable changes| I[Release PR opened/updated]
   H -->|no releasable changes| Z((idle))
 
-  I -->|pull_request, head=release-please--*| J[build-and-push]
-  J --> J1["nexo ci<br/>retag :main → :pr-N"]
+  I -->|pull_request, head=release-please--*| J[build]
+  J --> J1["nexo ci-init → strategy=retag<br/>retag :main → :pr-N"]
 
   I -->|merge release PR| K[push event]
-  K --> L[build-and-push: retag again]
+  K --> L[build: retag again, fast-path]
   L --> M[release-please: creates GitHub release]
   M --> N[promote]
   N --> N1["nexo promote<br/>retag :main-SHA → :latest + :version"]
@@ -181,20 +185,20 @@ flowchart TD
 
 #### 1. Feature branch PR opens — `pull_request` event
 
-| Job                         | Action                                                                                                                                                 |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `quality`                   | `pnpm qc` (sort, format, sync, knip, lint, type-check, build, test)                                                                                    |
-| `build-and-push` (parallel) | `nexo ci --push` → `pnpm sync && translate && build`, prepare 7 build contexts via `pnpm deploy`, `docker buildx build --push` for each, tag `:pr-<n>` |
+| Job                | Steps                                                                                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checks`           | `pnpm package:check` → `format:check` → `sync` → `translate` → `build:packages` → `knip` → `lint` → `type:check` → `test`. Each is its own collapsible Actions step.                                          |
+| `build` (parallel) | `nexo ci-init` (strategy=`full`, tags=`[pr-<n>]`, push=`true`) → GHCR login → buildx → `build-apps` → `prepare-contexts` (`pnpm deploy --prod` per app) → `build-images --push` → `retag` (no-op for `full`). |
 
 **Result:** 7 fresh `:pr-<n>` images in `ghcr.io/nexo-suite/nexo-*`.
 
 #### 2. PR merges to `main` — `push` event
 
-| Job              | Action                                                                                                                                                                                                                                             |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `quality`        | Re-runs against the merge commit                                                                                                                                                                                                                   |
-| `build-and-push` | `nexo ci --push` looks up the source PR via `gh api /commits/<sha>/pulls`. If found → **retag fast-path**: `imagetools create pr-<n> → main-<sha>, main` (~5s, no rebuild). If not found (direct push) → full build with tags `[main-<sha>, main]` |
-| `release-please` | If conventional-commit changes accumulated since last release → opens or updates a release PR titled `chore(main): release …`. **No release happens yet.**                                                                                         |
+| Job              | Action                                                                                                                                                                                                                                                                       |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checks`         | Re-runs against the merge commit                                                                                                                                                                                                                                             |
+| `build`          | `nexo ci-init` looks up the source PR via `gh api /commits/<sha>/pulls`. If found → strategy=`retag`, from=`pr-<n>`, tags=`[main-<sha>, main]`. The four pipeline steps then run unchanged: `build-apps`/`prepare-contexts`/`build-images` self-skip, `retag` does the work. |
+| `release-please` | If conventional-commit changes accumulated since last release → opens or updates a release PR titled `chore(main): release …`. **No release happens yet.**                                                                                                                   |
 
 **Result:** `:main-<sha>` + `:main` exist; release PR may be pending.
 
@@ -202,19 +206,44 @@ flowchart TD
 
 The release PR is a normal PR, so it triggers the same `pull_request` workflow:
 
-| Job              | Action                                                                                                                                                                                 |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `quality`        | Runs against the version-bumped state                                                                                                                                                  |
-| `build-and-push` | `nexo ci --push` detects head ref `release-please--*` → **retag fast-path**: `imagetools create main → pr-<n>`. No rebuild — the release PR's `:pr-<n>` images mirror current `:main`. |
+| Job      | Action                                                                                                                                                                                                                                 |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checks` | Runs against the version-bumped state                                                                                                                                                                                                  |
+| `build`  | `nexo ci-init` detects head ref `release-please--*` → strategy=`retag`, from=`main`, tags=`[pr-<n>]`. `retag` does the work; the build/prepare/build-images steps self-skip. The release PR's `:pr-<n>` images mirror current `:main`. |
 
 #### 4. Release PR merges — `push` event again, but with releases
 
 | Job                 | Action                                                                                                                                                                                                                                                                      |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `build-and-push`    | Retag `:pr-<n>` → `:main-<sha>` + `:main` (same fast-path as step 2)                                                                                                                                                                                                        |
+| `build`             | Retag `:pr-<n>` → `:main-<sha>` + `:main` (same fast-path as step 2)                                                                                                                                                                                                        |
 | `release-please`    | Now creates GitHub releases (`releases_created=true`), pushes per-app tags. The `collect-versions` step runs `pnpm exec nexo collect-versions` which reads `$RP_OUTPUTS_JSON` and emits `{"auth":"0.6.0","admin":"…","finance":"…","flaschen":"…","landing":"…","bot":"…"}` |
 | `promote`           | `pnpm exec nexo promote` reads `RELEASE_VERSIONS_JSON` + `GITHUB_SHA`, retags `:main-<sha>` → `:latest` + `:<version>` per app via `imagetools create`                                                                                                                      |
 | `deploy-production` | SSH to VPS → `git fetch && reset --hard origin/main` → `node scripts/deploy.mjs`                                                                                                                                                                                            |
+
+### The build-job context (`nexo ci-init`)
+
+`nexo ci-init` is the only build-job step that reads the GitHub event environment. It writes `.nexo/ci-context.json` once, and emits two values to `$GITHUB_OUTPUT` for the workflow itself:
+
+| Output                       | Used by                                  |
+| ---------------------------- | ---------------------------------------- |
+| `steps.ctx.outputs.strategy` | _(reference only — not currently gated)_ |
+| `steps.ctx.outputs.push`     | `if:` on the GHCR login step             |
+
+Every other CLI command (`build-apps`, `prepare-contexts`, `build-images`, `retag`) reads the context file directly and self-skips when its stage doesn't apply. The pipeline stays the same flat sequence regardless of strategy:
+
+```yaml
+- name: Build apps
+  run: pnpm exec nexo build-apps # no-op on retag
+
+- name: Prepare deploy contexts
+  run: pnpm exec nexo prepare-contexts # no-op on retag
+
+- name: Build & push container images
+  run: pnpm exec nexo build-images # no-op on retag
+
+- name: Retag images
+  run: pnpm exec nexo retag # no-op on full
+```
 
 ### Deploy script (`scripts/deploy.mjs`)
 

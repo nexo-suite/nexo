@@ -3,9 +3,10 @@
 import { Command } from 'commander';
 import { prepareContexts } from './commands/prepare-contexts.ts';
 import { buildImages } from './commands/build-images.ts';
+import { buildApps } from './commands/build-apps.ts';
 import { retag } from './commands/retag.ts';
 import { promote } from './commands/promote.ts';
-import { ciDecide } from './commands/ci-decide.ts';
+import { ciInit } from './commands/ci-init.ts';
 import { collectVersions } from './commands/collect-versions.ts';
 import { fail } from './lib/log.ts';
 
@@ -15,6 +16,23 @@ program
 	.name('nexo')
 	.description('Build, tag, and promote Nexo container images.')
 	.showHelpAfterError();
+
+program
+	.command('ci-init')
+	.description(
+		'Build the immutable CI context for this run; persist to .nexo/ci-context.json. ' +
+			'Run as the first build step — every other nexo command reads from that file.'
+	)
+	.action(() => {
+		ciInit();
+	});
+
+program
+	.command('build-apps')
+	.description('Run `pnpm build`; no-ops on the retag fast-path')
+	.action(() => {
+		buildApps();
+	});
 
 program
 	.command('prepare-contexts')
@@ -27,11 +45,14 @@ program
 
 program
 	.command('build-images')
-	.description('Build (and optionally push) images from prepared contexts')
+	.description(
+		'Build (and optionally push) images from prepared contexts. ' +
+			'Reads tags / push / gitCommit / buildTime from the CI context unless overridden.'
+	)
 	.option('-a, --app <name>', 'restrict to a single app')
 	.option('-o, --out-dir <path>', 'context root', 'out')
-	.option('-t, --tag <tag...>', 'image tag (repeatable)')
-	.option('--push', 'push to GHCR after build', false)
+	.option('-t, --tag <tag...>', 'image tag (repeatable, overrides context)')
+	.option('--push', 'push to GHCR after build (overrides context)')
 	.option('--git-commit <sha>')
 	.option('--build-time <iso>')
 	.action(
@@ -39,11 +60,10 @@ program
 			app?: string;
 			outDir: string;
 			tag?: string[];
-			push: boolean;
+			push?: boolean;
 			gitCommit?: string;
 			buildTime?: string;
 		}) => {
-			if (!opts.tag || opts.tag.length === 0) fail('build-images: --tag is required');
 			buildImages({
 				app: opts.app,
 				outDir: opts.outDir,
@@ -57,11 +77,14 @@ program
 
 program
 	.command('retag')
-	.description('Registry-side retag (no layer ops) for one or all apps')
+	.description(
+		'Registry-side retag (no layer ops) for one or all apps. ' +
+			'Reads from-tag / tags from the CI context unless overridden.'
+	)
 	.option('-a, --app <name>', 'restrict to a single app')
-	.requiredOption('--from <tag>', 'source tag')
-	.requiredOption('--to <tag...>', 'one or more destination tags')
-	.action((opts: { app?: string; from: string; to: string[] }) => {
+	.option('--from <tag>', 'source tag (overrides context)')
+	.option('--to <tag...>', 'one or more destination tags (overrides context)')
+	.action((opts: { app?: string; from?: string; to?: string[] }) => {
 		retag({ app: opts.app, from: opts.from, to: opts.to });
 	});
 
@@ -77,15 +100,6 @@ program
 	.action((opts: { gitCommit?: string; versions?: string }) => {
 		const versions: Record<string, string> = opts.versions ? JSON.parse(opts.versions) : {};
 		promote({ gitCommit: opts.gitCommit ?? '', versions });
-	});
-
-program
-	.command('ci-decide')
-	.description(
-		'Decide retag vs full-build strategy for the current event; emit strategy/tags/from-tag to $GITHUB_OUTPUT'
-	)
-	.action(() => {
-		ciDecide();
 	});
 
 program
