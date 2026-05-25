@@ -53,19 +53,24 @@ pnpm docker:observe  # start Loki + Grafana locally
 
 ## Tech stack quick reference
 
-| What      | How                                                                      |
-| --------- | ------------------------------------------------------------------------ |
-| Framework | SvelteKit 2 + Svelte 5 runes (`$props`, `$state`, `$derived`, `$effect`) |
-| Styling   | Tailwind CSS v4 with `@theme {}` tokens in `app.css`                     |
-| i18n      | Paraglide.js — `import { m } from '$lib/paraglide/messages.js'`          |
-| ORM       | Drizzle — schemas in `packages/db/schema/`, imported as `@nexo/db`       |
-| Auth      | Better Auth — central server at `apps/auth`, apps validate via API       |
-| Forms     | SvelteKit form actions with `use:enhance`                                |
-| Modals    | Custom `BottomSheet.svelte` (drag-to-dismiss), not a library             |
-| Icons     | `lucide-svelte` (tree-shaken)                                            |
-| PWA       | `@vite-pwa/sveltekit` with `registerType: 'autoUpdate'`                  |
-| Build     | Turborepo — `turbo.json` defines task dependencies                       |
-| CI        | GitHub Actions — lint/build/test on PR, deploy on release tag            |
+| What       | How                                                                          |
+| ---------- | ---------------------------------------------------------------------------- |
+| Framework  | SvelteKit 2 + Svelte 5 runes (`$props`, `$state`, `$derived`, `$effect`)     |
+| Styling    | Tailwind CSS v4 with `@theme {}` tokens in `app.css`                         |
+| i18n       | Paraglide.js — `import { m } from '$lib/paraglide/messages.js'`              |
+| ORM        | Drizzle — schemas in `packages/db/schema/`, imported as `@nexo/db`           |
+| Auth       | Better Auth — central server at `apps/auth`, apps validate via API           |
+| Forms      | SvelteKit form actions with `use:enhance`                                    |
+| Modals     | Custom `BottomSheet.svelte` (drag-to-dismiss), not a library                 |
+| Icons      | `lucide-svelte` (tree-shaken)                                                |
+| PWA        | `@vite-pwa/sveltekit` with `registerType: 'autoUpdate'`                      |
+| Build      | Turborepo — `turbo.json` defines task dependencies                           |
+| Bundling   | Vite 8 (rolldown + oxc internals); `tsdown` for libs and `apps/bot`          |
+| Lint       | `oxlint` (JS/TS) + `eslint-plugin-svelte` (Svelte template rules only)       |
+| Format     | `oxfmt` (Tailwind class sorting built in — no `prettier-plugin-tailwindcss`) |
+| Type-check | `svelte-check-native` for SvelteKit / `@nexo/ui`, `tsgo` elsewhere           |
+| Hooks      | `simple-git-hooks` + `lint-staged` run `oxlint --fix` and `oxfmt` on commit  |
+| CI         | GitHub Actions — lint/build/test on PR, deploy on release tag                |
 
 ## Established patterns
 
@@ -299,14 +304,14 @@ Always cast `numeric` to `Number()` when returning to the client.
 ### Run quality checks
 
 ```bash
-pnpm qc  # runs: sort-package-json, prettier, svelte-kit sync, knip, eslint, svelte-check, build, vitest
+pnpm qc  # runs: package:check, format:check (oxfmt), sync, translate, build, knip, lint (oxlint + eslint-svelte), type:check (svelte-check-native / tsgo), test
 ```
 
 Fix common issues:
 
-- Format: `pnpm format`
+- Format: `pnpm format` (oxfmt; runs automatically on staged files via lint-staged)
 - Package sort: `pnpm package:format`
-- Lint: `pnpm lint -- --fix` (per-app via turbo)
+- Lint: `pnpm exec oxlint --fix` for JS/TS, `pnpm lint -- --fix` for `.svelte` template rules
 - Type errors on paraglide: ensure `allowJs: true` in tsconfig
 
 ## What NOT to do
@@ -321,3 +326,6 @@ Fix common issues:
 - Don't add dependencies without checking if existing packages cover the need
 - Don't create `.d.ts` files for paraglide — `allowJs: true` handles it
 - Don't use `uuid` for auth schema IDs — Better Auth uses `text` IDs
+- Don't reach for Prettier or vanilla ESLint — they're gone. JS/TS is owned by `oxlint` + `oxfmt`; only `.svelte` files still go through `eslint-plugin-svelte` for template rules.
+- Don't add `tsconfig.build.json` to a workspace package — `tsdown.config.ts` is the single source of build truth, with `.d.ts` emit included.
+- Don't `export type { X } from './*.svelte'` — `tsgo`/`svelte-check-native` can't resolve it. Extract types into a sibling `.types.ts` (see `packages/ui/src/BottomNav.types.ts`).

@@ -198,17 +198,19 @@ Opens Drizzle Studio at `https://local.drizzle.studio` — a visual browser for 
 ### Running checks before committing
 
 ```bash
-pnpm qc   # full quality gate: sort, format, sync, knip, lint, type:check, build, test
+pnpm qc   # full quality gate: package:check, format:check (oxfmt), sync, translate, build, knip, lint (oxlint + eslint-svelte), type:check (svelte-check-native / tsgo), test
 ```
 
 Or run individual steps while developing:
 
 ```bash
-pnpm type:check   # TypeScript + svelte-check
-pnpm lint         # ESLint
-pnpm format       # Prettier
+pnpm type:check   # svelte-check-native (apps + @nexo/ui) and tsgo (everything else)
+pnpm lint         # oxlint on JS/TS, ESLint on .svelte template rules
+pnpm format       # oxfmt (Tailwind class sorting included)
 pnpm test         # Vitest unit tests
 ```
+
+A `simple-git-hooks` pre-commit hook runs `oxlint --fix` and `oxfmt` on staged files automatically — so most lint/format issues are gone before `pnpm qc` ever runs.
 
 ### Adding or updating translations
 
@@ -288,5 +290,8 @@ The `docker exec` command uses the container name Docker assigns. If it differs,
 **Paraglide messages not updating**
 The Paraglide Vite plugin recompiles on file change during dev. If messages seem stale, restart the dev server. The compiled output is `.js` only (no `.d.ts`) — `allowJs: true` in tsconfig handles type inference.
 
-**`svelte-check` errors on `$lib/paraglide/messages`**
+**`svelte-check-native` errors on `$lib/paraglide/messages`**
 Ensure `allowJs: true` is in the app's `tsconfig.json`. The Paraglide plugin generates JS with JSDoc annotations, not TypeScript declarations.
+
+**`svelte-check-native` can't resolve `export type { X } from './*.svelte'`**
+The tsgo-backed type-checker can't follow type-only re-exports through Svelte components. Move the type to a sibling `.types.ts` file and import from there — see `packages/ui/src/BottomNav.types.ts` for the pattern.

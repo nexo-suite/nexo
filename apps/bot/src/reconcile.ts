@@ -12,7 +12,7 @@
 import type { Octokit } from '@octokit/rest';
 import { createLogger } from '@nexo/logger';
 import { renderComment } from './comment.js';
-import { dispatchUnstable, upsertStickyComment, type Env } from './github.js';
+import { dispatchUnstable, probeImageReadiness, upsertStickyComment, type Env } from './github.js';
 import {
 	UNSTABLE_APPS,
 	clearPin,
@@ -106,20 +106,16 @@ export async function reconcile(input: ReconcileInput): Promise<void> {
 		state,
 		otherPRPins: otherPinsFor(prNumber)
 	});
-	const commentId = await upsertStickyComment(octokit, env, prNumber, body, state.commentId);
-	if (commentId !== state.commentId) {
-		state.commentId = commentId;
-		setPRState(state);
-	}
+	await upsertStickyComment(octokit, env, state, body);
 
 	for (const d of dispatches) {
 		await dispatchUnstable(octokit, env, d.action, { service: d.app, prNumber });
 	}
 }
 
-// Tear down everything for one PR (PR closed, or maintainer typed `/down all`).
-// Doesn't touch pins held by other PRs.
-export async function tearDownPR(
+// Tear down everything for one PR (PR closed). Doesn't touch pins held by
+// other PRs.
+async function tearDownPR(
 	octokit: Octokit,
 	env: Env,
 	prNumber: number,
@@ -135,11 +131,7 @@ export async function tearDownPR(
 	}
 	setPRState(state);
 	const body = renderComment({ state, otherPRPins: otherPinsFor(prNumber) });
-	const commentId = await upsertStickyComment(octokit, env, prNumber, body, state.commentId);
-	if (commentId !== state.commentId) {
-		state.commentId = commentId;
-		setPRState(state);
-	}
+	await upsertStickyComment(octokit, env, state, body);
 	if (opts.dispatch) {
 		await dispatchUnstable(octokit, env, 'down-all-for-pr', { prNumber });
 	}
@@ -159,17 +151,7 @@ export async function resetAllAfterDeploy(octokit: Octokit, env: Env): Promise<v
 		setPRState(state);
 		const body = renderComment({ state, otherPRPins: {} });
 		try {
-			const commentId = await upsertStickyComment(
-				octokit,
-				env,
-				state.prNumber,
-				body,
-				state.commentId
-			);
-			if (commentId !== state.commentId) {
-				state.commentId = commentId;
-				setPRState(state);
-			}
+			await upsertStickyComment(octokit, env, state, body);
 		} catch (e) {
 			logger.warn('failed to update sticky on deploy reset', {
 				prNumber: state.prNumber,
@@ -208,4 +190,40 @@ export function ensurePRState(prNumber: number, defaults: Omit<PRState, 'prNumbe
 	const state: PRState = { prNumber, ...defaults };
 	setPRState(state);
 	return state;
+}
+
+// Bot startup recovery. The `registry_package.published` webhook is our
+// primary signal for "image is ready" — if the bot is down when it fires,
+// the sticky stays stuck on ⏳ until the next push. On boot, walk every PR
+// in persisted state and re-probe the registry by tag. For PRs whose
+// intent is already true on a now-ready image, run reconcile so the
+// dispatch we missed during downtime catches up.
+export async function bootstrapImageProbes(octokit: Octokit, env: Env): Promise<void> {
+	for (const state of listPRStates()) {
+		try {
+			const ready = await probeImageReadiness(octokit, env, state.prNumber);
+			let imagesChanged = false;
+			for (const app of UNSTABLE_APPS) {
+				if (ready[app] && state.images[app] !== 'ready') {
+					state.images[app] = 'ready';
+					imagesChanged = true;
+				}
+			}
+			if (!imagesChanged) continue;
+			setPRState(state);
+
+			const forceApps = UNSTABLE_APPS.filter((app) => state.intent[app] && ready[app]);
+			if (forceApps.length > 0) {
+				await reconcile({ octokit, env, prNumber: state.prNumber, forceApps });
+			} else {
+				const body = renderComment({ state, otherPRPins: otherPinsFor(state.prNumber) });
+				await upsertStickyComment(octokit, env, state, body);
+			}
+		} catch (e) {
+			logger.error('bootstrap probe failed for PR', {
+				prNumber: state.prNumber,
+				error: String(e)
+			});
+		}
+	}
 }

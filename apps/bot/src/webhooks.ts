@@ -6,10 +6,8 @@
 import type { Webhooks } from '@octokit/webhooks';
 import { createLogger } from '@nexo/logger';
 import { extractPRFromMarker, parseIntent } from './comment.js';
-import { parseCommand } from './commands.js';
 import {
 	getInstallationOctokit,
-	getPRHeadSha,
 	probeImageReadiness,
 	upsertStickyComment,
 	type Env
@@ -24,13 +22,7 @@ import {
 	withPRLock,
 	type UnstableApp
 } from './state.js';
-import {
-	ensurePRState,
-	onPRClosed,
-	reconcile,
-	resetAllAfterDeploy,
-	tearDownPR
-} from './reconcile.js';
+import { ensurePRState, onPRClosed, reconcile, resetAllAfterDeploy } from './reconcile.js';
 import { renderComment } from './comment.js';
 
 const logger = createLogger('bot');
@@ -60,9 +52,7 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 				setPRState(state);
 
 				const body = renderComment({ state, otherPRPins: {} });
-				const commentId = await upsertStickyComment(octokit, env, prNumber, body, state.commentId);
-				state.commentId = commentId;
-				setPRState(state);
+				await upsertStickyComment(octokit, env, state, body);
 			} catch (e) {
 				logger.error('failed to initialise sticky comment', { prNumber, error: String(e) });
 			}
@@ -85,11 +75,7 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 			try {
 				const octokit = await getInstallationOctokit(env);
 				const body = renderComment({ state, otherPRPins: {} });
-				const commentId = await upsertStickyComment(octokit, env, prNumber, body, state.commentId);
-				if (commentId !== state.commentId) {
-					state.commentId = commentId;
-					setPRState(state);
-				}
+				await upsertStickyComment(octokit, env, state, body);
 			} catch (e) {
 				logger.error('failed to update sticky on sync', { prNumber, error: String(e) });
 			}
@@ -109,6 +95,13 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 	});
 
 	webhooks.on('issue_comment.edited', async ({ payload }) => {
+		// Skip our own edits — the bot patches the sticky after every reconcile,
+		// and GitHub fires `issue_comment.edited` for the bot's PATCH just like
+		// for a human's. Without this guard, every bot edit triggers another
+		// reconcile + edit, burning rate limit and inflating the comment's
+		// edit-count (we hit 589 once before this filter landed).
+		if (payload.sender.type === 'Bot') return;
+
 		const body = payload.comment.body ?? '';
 		const prNumber = extractPRFromMarker(body);
 		if (!prNumber) return;
@@ -123,17 +116,7 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 					const state = getPRState(prNumber);
 					if (state) {
 						const reverted = renderComment({ state, otherPRPins: {} });
-						const commentId = await upsertStickyComment(
-							octokit,
-							env,
-							prNumber,
-							reverted,
-							state.commentId
-						);
-						if (commentId !== state.commentId) {
-							state.commentId = commentId;
-							setPRState(state);
-						}
+						await upsertStickyComment(octokit, env, state, reverted);
 					}
 					return;
 				}
@@ -148,64 +131,6 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 				await reconcile({ octokit, env, prNumber, intentOverride: intent });
 			} catch (e) {
 				logger.error('failed to apply checkbox edit', { prNumber, error: String(e) });
-			}
-		});
-	});
-
-	webhooks.on('issue_comment.created', async ({ payload }) => {
-		// PRs surface as issues for the comment API; ignore non-PR issues.
-		if (!payload.issue.pull_request) return;
-		const cmd = parseCommand(payload.comment.body ?? '');
-		if (!cmd) return;
-		const prNumber = payload.issue.number;
-		const sender = payload.sender.login;
-
-		await withPRLock(prNumber, async () => {
-			try {
-				const octokit = await getInstallationOctokit(env);
-				if (!(await isMaintainer(octokit, env.owner, env.repo, sender))) {
-					// Non-maintainer slash command — ignore silently. Logged for audit.
-					logger.info('rejected non-maintainer slash command', { prNumber, sender, cmd });
-					return;
-				}
-				ensurePRState(prNumber, {
-					commentId: 0,
-					headSha: await getPRHeadSha(octokit, env, prNumber),
-					images: freshImages(),
-					intent: freshIntent(),
-					activity: {}
-				});
-
-				if (cmd.kind === 'status') {
-					const state = getPRState(prNumber)!;
-					const body = renderComment({ state, otherPRPins: {} });
-					const commentId = await upsertStickyComment(
-						octokit,
-						env,
-						prNumber,
-						body,
-						state.commentId
-					);
-					if (commentId !== state.commentId) {
-						state.commentId = commentId;
-						setPRState(state);
-					}
-					return;
-				}
-
-				if (cmd.kind === 'down-all') {
-					await tearDownPR(octokit, env, prNumber, { dispatch: true });
-					return;
-				}
-
-				await reconcile({
-					octokit,
-					env,
-					prNumber,
-					intentOverride: { [cmd.app]: cmd.kind === 'up' } as Record<UnstableApp, boolean>
-				});
-			} catch (e) {
-				logger.error('failed to handle slash command', { prNumber, error: String(e) });
 			}
 		});
 	});
@@ -259,17 +184,7 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 					});
 				} else {
 					const body = renderComment({ state, otherPRPins: {} });
-					const commentId = await upsertStickyComment(
-						octokit,
-						env,
-						prNumber,
-						body,
-						state.commentId
-					);
-					if (commentId !== state.commentId) {
-						state.commentId = commentId;
-						setPRState(state);
-					}
+					await upsertStickyComment(octokit, env, state, body);
 				}
 			} catch (e) {
 				logger.error('failed to handle image readiness', { prNumber, app, error: String(e) });
@@ -319,17 +234,7 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 					for (const app of UNSTABLE_APPS) delete state.activity[app];
 					setPRState(state);
 					const body = renderComment({ state, otherPRPins: {} });
-					const commentId = await upsertStickyComment(
-						octokit,
-						env,
-						prNumber,
-						body,
-						state.commentId
-					);
-					if (commentId !== state.commentId) {
-						state.commentId = commentId;
-						setPRState(state);
-					}
+					await upsertStickyComment(octokit, env, state, body);
 				} catch (e) {
 					logger.error('failed to post unstable failure', { prNumber, error: String(e) });
 				}

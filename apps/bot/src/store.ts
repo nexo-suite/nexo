@@ -32,6 +32,7 @@ type StoredPRState = {
 	intent: Record<UnstableApp, boolean>;
 	activity: Partial<Record<UnstableApp, { sinceMs: number; runUrl?: string }>>;
 	notice?: string;
+	lastBody?: string;
 };
 
 type Snapshot = {
@@ -141,7 +142,8 @@ function normalizePR(stored: StoredPRState): PRState {
 		images,
 		intent,
 		activity,
-		notice: stored.notice
+		notice: stored.notice,
+		lastBody: stored.lastBody
 	};
 }
 
@@ -153,6 +155,7 @@ function toStored(state: PRState): StoredPRState {
 		images: state.images,
 		intent: state.intent,
 		activity: state.activity,
-		notice: state.notice
+		notice: state.notice,
+		lastBody: state.lastBody
 	};
 }
