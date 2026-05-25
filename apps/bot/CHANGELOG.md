@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/nexo-suite/nexo/compare/bot-v0.4.0...bot-v0.5.0) (2026-05-25)
+
+
+### Features
+
+* **bot:** enable calorie unstable previews ([4ccde88](https://github.com/nexo-suite/nexo/commit/4ccde8886f56dacdd71875aafd686f874db0f2cd))
+* modernize toolchain + calorie app + admin redesign + observability ([9ae85a6](https://github.com/nexo-suite/nexo/commit/9ae85a61b08d2ff8f62d0ba6568ef4dee9dfd1bf))
+
 ## [0.4.0](https://github.com/nexo-suite/nexo/compare/bot-v0.3.0...bot-v0.4.0) (2026-05-23)
 
 
