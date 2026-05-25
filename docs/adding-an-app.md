@@ -80,31 +80,34 @@ pnpm db:migrate
 		"build": "vite build",
 		"dev": "vite dev --port 3003",
 		"preview": "vite preview",
-		"type:check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"lint": "eslint ."
+		"type:check": "svelte-kit sync && svelte-check-native --tsconfig ./tsconfig.json",
+		"type:check:watch": "svelte-kit sync && svelte-check-native --tsconfig ./tsconfig.json --watch",
+		"lint": "eslint \"**/*.svelte\"",
+		"lint:fix": "eslint \"**/*.svelte\" --fix"
 	},
 	"dependencies": {
 		"@nexo/db": "workspace:*",
 		"@nexo/errors": "workspace:*",
 		"@nexo/logger": "workspace:*",
-		"better-auth": "^1.6.10",
-		"drizzle-orm": "^0.45.2"
+		"better-auth": "catalog:",
+		"drizzle-orm": "catalog:"
 	},
 	"devDependencies": {
-		"@inlang/paraglide-sveltekit": "^0.16.1",
-		"@sveltejs/adapter-node": "^5.5.4",
-		"@sveltejs/kit": "^2.59.1",
-		"@sveltejs/vite-plugin-svelte": "^7.1.0",
-		"@tailwindcss/vite": "^4.2.4",
-		"@vite-pwa/sveltekit": "^1.1.0",
-		"svelte": "^5.55.5",
-		"svelte-check": "^4.4.8",
-		"tailwindcss": "^4.2.4",
-		"typescript": "^6.0.3",
-		"vite": "^8.0.11"
+		"@inlang/paraglide-js": "catalog:",
+		"@sveltejs/adapter-node": "catalog:",
+		"@sveltejs/kit": "catalog:",
+		"@sveltejs/vite-plugin-svelte": "catalog:",
+		"@tailwindcss/vite": "catalog:",
+		"@vite-pwa/sveltekit": "catalog:",
+		"svelte": "catalog:",
+		"svelte-check-native": "catalog:",
+		"tailwindcss": "catalog:",
+		"vite": "catalog:"
 	}
 }
 ```
+
+Pin every shared dep to `catalog:` so the version comes from `pnpm-workspace.yaml` and the whole suite stays in lockstep. JS/TS lint and format are owned by the root `oxlint` + `oxfmt` setup — `lint` here only covers the `.svelte` template rules that still go through `eslint-plugin-svelte`. Don't add `"prettier"` or a Prettier config; `oxfmt` handles formatting (Tailwind class sorting included).
 
 Pick the next available port (finance is 3002, admin is 3004, so gym gets 3003).
 
@@ -115,6 +118,8 @@ Pick the next available port (finance is 3002, admin is 3004, so gym gets 3003).
 These are identical across all apps — copy from `apps/finance` and adjust the app name:
 
 **`svelte.config.js`** — change nothing, it's the same for all apps.
+
+**`eslint.config.js`** — copy verbatim from `apps/finance/eslint.config.js`. It pulls in `eslint-plugin-svelte` for `.svelte`-template rules only; JS/TS files are linted by the root `oxlint` and don't need anything extra here.
 
 **`tsconfig.json`** — same as auth/finance.
 

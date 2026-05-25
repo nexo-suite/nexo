@@ -143,16 +143,6 @@
 		align-items: baseline;
 	}
 
-	.hm-target {
-		font-family: var(--font-display);
-		font-feature-settings: 'tnum' 1;
-		font-variation-settings:
-			'opsz' 18,
-			'wght' 450;
-		font-size: 11px;
-		color: var(--color-text-subtle);
-	}
-
 	.heat-card {
 		padding: 16px;
 	}
@@ -265,10 +255,5 @@
 	.ds-pct.under {
 		color: oklch(50% 0.1 88);
 		background: color-mix(in oklab, var(--color-undertarget) 18%, var(--color-bg-0));
-	}
-
-	.ds-list {
-		display: flex;
-		flex-direction: column;
 	}
 </style>

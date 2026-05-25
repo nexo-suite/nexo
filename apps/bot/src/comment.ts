@@ -77,8 +77,7 @@ export function renderComment(ctx: RenderContext): string {
 		'',
 		'To opt in as a viewer: open the app\'s settings → Diagnostics → "Use unstable when available". Untick to go back.',
 		'',
-		'> Auto-clears on PR close and after every production release deploy.',
-		'> Slash-commands: `/up <app>`, `/down <app>`, `/down all`, `/status`'
+		'> Auto-clears on PR close and after every production release deploy.'
 	].join('\n');
 }
 

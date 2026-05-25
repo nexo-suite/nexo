@@ -6,7 +6,7 @@ import { createAppAuth } from '@octokit/auth-app';
 import { Octokit } from '@octokit/rest';
 import { createLogger } from '@nexo/logger';
 import { MARKER } from './comment.js';
-import { UNSTABLE_APPS, type UnstableApp } from './state.js';
+import { setPRState, UNSTABLE_APPS, type PRState, type UnstableApp } from './state.js';
 
 const logger = createLogger('bot');
 const GH_API_VERSION = '2022-11-28';
@@ -52,24 +52,28 @@ function normalizeKey(raw: string): string {
 
 // Upsert the sticky comment.
 //
-// Lookup order:
-//   1. `knownCommentId` (passed by the caller from PRState.commentId) — direct
-//      `updateComment`, no list scan. This is the hot path and the dedup fix:
-//      a redelivered webhook can't race with `findStickyComment` and create a
-//      second sticky if we already know the comment ID.
-//   2. Fallback to `findStickyComment` (marker scan over the first 100
-//      comments) for the cold-start case where state was just rehydrated and
-//      the commentId hasn't been set yet, or where the prior sticky was
-//      deleted out of band.
+// Dedup contract: callers pass the full PRState; we compare `body` against
+// `state.lastBody` and short-circuit when they match (no API call, no
+// `updated_at` bump, no `issue_comment.edited` echo). On every successful
+// PATCH/POST we mutate `state.commentId` + `state.lastBody` and `setPRState`
+// so the cache survives restarts.
 //
-// Returns the comment ID so callers can persist it back into PRState.
+// Lookup order when we *do* hit the API:
+//   1. `state.commentId` (set on previous upsert) — direct `updateComment`,
+//      no list scan. Hot path.
+//   2. Fallback to `findStickyComment` (marker scan over the first 100
+//      comments) for cold-start or out-of-band deletion.
 export async function upsertStickyComment(
 	octokit: Octokit,
 	env: Env,
-	prNumber: number,
-	body: string,
-	knownCommentId?: number
-): Promise<number> {
+	state: PRState,
+	body: string
+): Promise<void> {
+	if (state.lastBody === body && state.commentId > 0) return;
+
+	const knownCommentId = state.commentId;
+	let resolvedId: number | null = null;
+
 	if (knownCommentId && knownCommentId > 0) {
 		try {
 			await octokit.issues.updateComment({
@@ -78,31 +82,41 @@ export async function upsertStickyComment(
 				comment_id: knownCommentId,
 				body
 			});
-			return knownCommentId;
+			resolvedId = knownCommentId;
 		} catch (err) {
 			if (!isNotFound(err)) throw err;
 			// Comment was deleted out of band — fall through to scan + recreate.
-			logger.info('known sticky comment id missing, will rescan', { prNumber, knownCommentId });
+			logger.info('known sticky comment id missing, will rescan', {
+				prNumber: state.prNumber,
+				knownCommentId
+			});
 		}
 	}
 
-	const existing = await findStickyComment(octokit, env, prNumber);
-	if (existing) {
-		await octokit.issues.updateComment({
-			owner: env.owner,
-			repo: env.repo,
-			comment_id: existing,
-			body
-		});
-		return existing;
+	if (resolvedId === null) {
+		const existing = await findStickyComment(octokit, env, state.prNumber);
+		if (existing) {
+			await octokit.issues.updateComment({
+				owner: env.owner,
+				repo: env.repo,
+				comment_id: existing,
+				body
+			});
+			resolvedId = existing;
+		} else {
+			const { data } = await octokit.issues.createComment({
+				owner: env.owner,
+				repo: env.repo,
+				issue_number: state.prNumber,
+				body
+			});
+			resolvedId = data.id;
+		}
 	}
-	const { data } = await octokit.issues.createComment({
-		owner: env.owner,
-		repo: env.repo,
-		issue_number: prNumber,
-		body
-	});
-	return data.id;
+
+	state.commentId = resolvedId;
+	state.lastBody = body;
+	setPRState(state);
 }
 
 function isNotFound(err: unknown): boolean {
@@ -168,13 +182,4 @@ export async function probeImageReadiness(
 		})
 	);
 	return out;
-}
-
-export async function getPRHeadSha(octokit: Octokit, env: Env, prNumber: number): Promise<string> {
-	const { data } = await octokit.pulls.get({
-		owner: env.owner,
-		repo: env.repo,
-		pull_number: prNumber
-	});
-	return data.head.sha;
 }

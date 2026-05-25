@@ -14,10 +14,6 @@ export type UnstableApp = 'auth' | 'admin' | 'finance' | 'flaschen' | 'landing';
 
 export const UNSTABLE_APPS: UnstableApp[] = ['auth', 'admin', 'finance', 'flaschen', 'landing'];
 
-export function isUnstableApp(value: string): value is UnstableApp {
-	return (UNSTABLE_APPS as string[]).includes(value);
-}
-
 export type ImageStatus = 'pending' | 'ready';
 
 export type AppActivity = {
@@ -35,6 +31,11 @@ export type PRState = {
 	// Transient surfaced message — appears as a callout in the sticky comment.
 	// Set on workflow failure; cleared on the next successful reconcile.
 	notice?: string;
+	// Last body we PATCHed onto the sticky. Used to skip the GitHub API call
+	// when a fresh render is byte-identical to what's already there — without
+	// this, every webhook (registry events × 5 apps, syncs, workflow runs)
+	// records another comment edit even when the visible state didn't change.
+	lastBody?: string;
 };
 
 export type ServicePin = {

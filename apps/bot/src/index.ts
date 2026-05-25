@@ -3,7 +3,8 @@ import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { createLogger } from '@nexo/logger';
 import { registerWebhooks } from './webhooks.js';
-import type { Env } from './github.js';
+import { bootstrapImageProbes } from './reconcile.js';
+import { getInstallationOctokit, type Env } from './github.js';
 import { initStateFromDisk, setOnChange, snapshot } from './state.js';
 import { loadStateFromDisk, saveStateToDisk } from './store.js';
 
@@ -73,3 +74,15 @@ createServer((req, res) => {
 }).listen(Number(PORT), () => {
 	logger.info('bot started', { port: PORT });
 });
+
+// Re-probe the registry for every persisted PR so any image-ready events
+// that fired while the bot was down get reflected on the sticky. Runs
+// fire-and-forget — webhooks are already serving by the time this lands.
+void (async () => {
+	try {
+		const octokit = await getInstallationOctokit(env);
+		await bootstrapImageProbes(octokit, env);
+	} catch (e) {
+		logger.error('bootstrap probe failed', { error: String(e) });
+	}
+})();
