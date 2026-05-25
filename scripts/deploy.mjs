@@ -15,8 +15,8 @@
 //
 // Reads from environment (set via appleboy/ssh-action `envs:`):
 //   APP_VERSION_AUTH, APP_VERSION_ADMIN, APP_VERSION_FINANCE,
-//   APP_VERSION_FLASCHEN, APP_VERSION_LANDING, APP_VERSION_BOT
-//   APP_COMMIT, APP_BUILD_TIME
+//   APP_VERSION_FLASCHEN, APP_VERSION_CALORIE, APP_VERSION_LANDING,
+//   APP_VERSION_BOT, APP_COMMIT, APP_BUILD_TIME
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, writeFileSync } from 'node:fs';
@@ -27,6 +27,7 @@ const PROD_SERVICES = [
 	'nexo-admin',
 	'nexo-finance',
 	'nexo-flaschen',
+	'nexo-calorie',
 	'nexo-landing',
 	'nexo-bot',
 	'nexo-db'
@@ -36,6 +37,7 @@ const HEALTH_HOSTS = [
 	'admin.krieger2501.de',
 	'finance.krieger2501.de',
 	'flaschen.krieger2501.de',
+	'calorie.krieger2501.de',
 	'krieger2501.de'
 ];
 const HEALTH_WAIT_SECONDS = 30;
@@ -127,6 +129,7 @@ function buildVersionsJson() {
 		auth: process.env.APP_VERSION_AUTH ?? '',
 		admin: process.env.APP_VERSION_ADMIN ?? '',
 		flaschen: process.env.APP_VERSION_FLASCHEN ?? '',
+		calorie: process.env.APP_VERSION_CALORIE ?? '',
 		landing: process.env.APP_VERSION_LANDING ?? ''
 	};
 	return JSON.stringify(versions);

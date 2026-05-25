@@ -10,6 +10,7 @@ export const APPS: readonly App[] = [
 	{ name: 'admin', dir: 'apps/admin', pkg: '@nexo/admin', image: 'nexo-admin' },
 	{ name: 'finance', dir: 'apps/finance', pkg: '@nexo/finance', image: 'nexo-finance' },
 	{ name: 'flaschen', dir: 'apps/flaschen', pkg: '@nexo/flaschen', image: 'nexo-flaschen' },
+	{ name: 'calorie', dir: 'apps/calorie', pkg: '@nexo/calorie', image: 'nexo-calorie' },
 	{ name: 'landing', dir: 'apps/landing', pkg: '@nexo/landing', image: 'nexo-landing' },
 	{ name: 'bot', dir: 'apps/bot', pkg: '@nexo/bot', image: 'nexo-bot' },
 	{ name: 'db', dir: 'packages/db', pkg: '@nexo/db', image: 'nexo-db' }
