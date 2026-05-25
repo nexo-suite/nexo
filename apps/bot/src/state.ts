@@ -10,9 +10,16 @@
 // flushes to disk via `store.ts` so PR state, intent, and pin map survive
 // bot restarts. `initStateFromDisk()` rehydrates the maps on startup.
 
-export type UnstableApp = 'auth' | 'admin' | 'finance' | 'flaschen' | 'landing';
+export type UnstableApp = 'auth' | 'admin' | 'finance' | 'flaschen' | 'calorie' | 'landing';
 
-export const UNSTABLE_APPS: UnstableApp[] = ['auth', 'admin', 'finance', 'flaschen', 'landing'];
+export const UNSTABLE_APPS: UnstableApp[] = [
+	'auth',
+	'admin',
+	'finance',
+	'flaschen',
+	'calorie',
+	'landing'
+];
 
 export type ImageStatus = 'pending' | 'ready';
 

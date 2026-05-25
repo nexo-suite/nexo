@@ -27,6 +27,7 @@ export const MARKER = (prNumber: number) => `<!-- nexo-unstable pr:${prNumber} -
 const APP_LABEL: Record<UnstableApp, string> = {
 	auth: 'auth',
 	admin: 'admin',
+	calorie: 'calorie',
 	finance: 'finance',
 	flaschen: 'flaschen',
 	landing: 'landing'

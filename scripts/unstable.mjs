@@ -25,7 +25,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const ENV_FILE = '.env.unstable';
 
-const UNSTABLE_APPS = new Set(['auth', 'admin', 'finance', 'flaschen', 'landing']);
+const UNSTABLE_APPS = new Set(['auth', 'admin', 'finance', 'flaschen', 'calorie', 'landing']);
 
 const [, , action, ...rest] = process.argv;
 
