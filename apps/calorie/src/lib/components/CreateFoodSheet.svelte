@@ -117,7 +117,7 @@
 	}
 </script>
 
-<BottomSheet bind:open title={m.create_food_heading()}>
+<BottomSheet bind:open title={m.create_food_heading()} subtitle={m.create_food_subtitle()}>
 	<div class="content">
 		<div class="title-block">
 			<input
@@ -143,6 +143,8 @@
 			<span class="rule-eyebrow">{m.create_food_per100g()}</span>
 			<span class="rule-line"></span>
 		</div>
+
+		<p class="macro-hint-text">{m.create_food_macro_hint()}</p>
 
 		<div class="macro-grid">
 			<label class="macro-cell macro-kcal">
@@ -201,10 +203,12 @@
 			<div class="error">{error}</div>
 		{/if}
 
-		<button class="save-cta" type="button" onclick={save} disabled={saving}>
-			<Check size={15} strokeWidth={2.2} />
-			<span>{m.create_food_save()}</span>
-		</button>
+		<div class="save-bar">
+			<button class="save-cta" type="button" onclick={save} disabled={saving}>
+				<Check size={15} strokeWidth={2.2} />
+				<span>{m.create_food_save()}</span>
+			</button>
+		</div>
 	</div>
 </BottomSheet>
 
@@ -276,6 +280,14 @@
 		letter-spacing: 0.22em;
 		text-transform: uppercase;
 		color: var(--color-text-faint);
+	}
+
+	.macro-hint-text {
+		margin: -4px 0 0;
+		font-size: 12px;
+		line-height: 1.45;
+		color: var(--color-text-subtle);
+		font-style: italic;
 	}
 
 	/* ── Nutrition-label grid ── */
@@ -413,6 +425,19 @@
 		font-size: 12.5px;
 	}
 
+	.save-bar {
+		position: sticky;
+		bottom: 0;
+		display: flex;
+		padding: 10px 0 6px;
+		margin-top: 6px;
+		background: linear-gradient(
+			to top,
+			var(--color-surface-1) 70%,
+			color-mix(in oklab, var(--color-surface-1) 50%, transparent)
+		);
+	}
+
 	.save-cta {
 		all: unset;
 		cursor: pointer;
@@ -421,7 +446,6 @@
 		align-items: center;
 		gap: 6px;
 		padding: 14px 20px;
-		margin-top: 2px;
 		background: var(--color-ember);
 		color: oklch(98% 0.008 70);
 		border-radius: 14px;
@@ -432,6 +456,7 @@
 		transition:
 			transform 120ms,
 			background 160ms;
+		flex: 1;
 	}
 
 	.save-cta:active:not(:disabled) {

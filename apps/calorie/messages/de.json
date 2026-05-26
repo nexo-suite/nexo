@@ -111,6 +111,8 @@
 	"add_search_hint": "Mindestens 3 Buchstaben tippen, um zu suchen.",
 	"create_food_cta": "Als eigenes Lebensmittel anlegen",
 	"create_food_heading": "Neues eigenes Lebensmittel",
+	"create_food_subtitle": "Für Selbstgemachtes oder was Open Food Facts noch nicht kennt. Bleibt privat.",
+	"create_food_macro_hint": "Werte stehen auf dem Etikett, je 100 g. Lass die Makros bei 0, wenn du nur die Kalorien weißt.",
 	"create_food_name": "Name",
 	"create_food_name_placeholder": "Tante Roswithas Linsensuppe",
 	"create_food_brand": "Marke oder Notiz",

@@ -111,6 +111,8 @@
 	"add_search_hint": "Type at least 3 letters to search.",
 	"create_food_cta": "Create as your own food",
 	"create_food_heading": "New custom food",
+	"create_food_subtitle": "For homemade meals or things Open Food Facts doesn't have. Private to you.",
+	"create_food_macro_hint": "Find these on the nutrition label, per 100 g. Leave macros at 0 if you only know calories.",
 	"create_food_name": "Name",
 	"create_food_name_placeholder": "Aunt Roswitha's Linsensuppe",
 	"create_food_brand": "Brand or note",

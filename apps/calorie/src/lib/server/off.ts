@@ -26,7 +26,7 @@ import { cleanBrand, cleanName } from './off-cleaners';
  */
 
 const USER_AGENT = 'Nexo-Calorie/1.0 (mail@krieger2501.de)';
-const FETCH_TIMEOUT_MS = 4500;
+const FETCH_TIMEOUT_MS = 3000;
 const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 const OFF_ENV = (env.OFF_ENV ?? 'prod') as 'prod' | 'staging';

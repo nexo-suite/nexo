@@ -1490,7 +1490,7 @@
 		color: var(--color-overtarget);
 	}
 
-	.search-wrap.searching .search-icon {
+	.search-wrap.searching :global(.search-icon) {
 		animation: search-pulse 1200ms ease-in-out infinite;
 	}
 	@keyframes search-pulse {

@@ -147,7 +147,7 @@
 	.sheet-backdrop {
 		position: fixed;
 		inset: 0;
-		z-index: 50;
+		z-index: 100;
 		display: flex;
 		flex-direction: column;
 		justify-content: flex-end;

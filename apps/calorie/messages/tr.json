@@ -111,6 +111,8 @@
 	"add_search_hint": "Aramak için en az 3 harf yaz.",
 	"create_food_cta": "Kendi yiyeceğin olarak ekle",
 	"create_food_heading": "Yeni kendi yiyeceğin",
+	"create_food_subtitle": "Ev yapımı yemekler veya Open Food Facts'ta olmayanlar için. Sadece sana özel.",
+	"create_food_macro_hint": "Bu değerler etikette 100 g başına yazıyor. Sadece kaloriyi biliyorsan makroları 0 bırak.",
 	"create_food_name": "İsim",
 	"create_food_name_placeholder": "Roswitha Teyzenin mercimek çorbası",
 	"create_food_brand": "Marka veya not",
