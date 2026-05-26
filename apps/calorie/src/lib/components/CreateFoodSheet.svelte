@@ -146,46 +146,50 @@
 
 		<p class="macro-hint-text">{m.create_food_macro_hint()}</p>
 
-		<div class="macro-grid">
-			<label class="macro-cell macro-kcal">
+		<div class="macro-list">
+			<label class="macro-row macro-kcal">
+				<span class="macro-name">{m.nutrition_calories()}</span>
 				<input
-					class="macro-num"
+					class="macro-input"
 					type="text"
 					inputmode="numeric"
 					bind:value={kcal}
 					placeholder="0"
 				/>
-				<span class="macro-label">{m.unit_kcal()}</span>
+				<span class="macro-suffix">{m.unit_kcal()}</span>
 			</label>
-			<label class="macro-cell" style="--c:var(--color-protein)">
+			<label class="macro-row" style="--c:var(--color-protein)">
+				<span class="macro-name">{m.macro_protein()}</span>
 				<input
-					class="macro-num"
+					class="macro-input"
 					type="text"
 					inputmode="numeric"
 					bind:value={p}
 					placeholder="0"
 				/>
-				<span class="macro-label">P · g</span>
+				<span class="macro-suffix">g</span>
 			</label>
-			<label class="macro-cell" style="--c:var(--color-carbs)">
+			<label class="macro-row" style="--c:var(--color-carbs)">
+				<span class="macro-name">{m.macro_carbs()}</span>
 				<input
-					class="macro-num"
+					class="macro-input"
 					type="text"
 					inputmode="numeric"
 					bind:value={c}
 					placeholder="0"
 				/>
-				<span class="macro-label">C · g</span>
+				<span class="macro-suffix">g</span>
 			</label>
-			<label class="macro-cell" style="--c:var(--color-fat)">
+			<label class="macro-row" style="--c:var(--color-fat)">
+				<span class="macro-name">{m.macro_fat()}</span>
 				<input
-					class="macro-num"
+					class="macro-input"
 					type="text"
 					inputmode="numeric"
 					bind:value={f}
 					placeholder="0"
 				/>
-				<span class="macro-label">F · g</span>
+				<span class="macro-suffix">g</span>
 			</label>
 		</div>
 
@@ -290,83 +294,97 @@
 		font-style: italic;
 	}
 
-	/* ── Nutrition-label grid ── */
-	.macro-grid {
-		display: grid;
-		grid-template-columns: 1.4fr 1fr 1fr 1fr;
-		gap: 1px;
-		background: var(--color-border-subtle);
+	/* ── Nutrition-label list (vertical) ── */
+	.macro-list {
+		display: flex;
+		flex-direction: column;
+		background: var(--color-surface-1);
 		border: 1px solid var(--color-border-default);
-		border-radius: 12px;
+		border-radius: 14px;
 		overflow: hidden;
 	}
 
-	.macro-cell {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 4px;
-		padding: 14px 8px 12px;
-		background: var(--color-surface-1);
+	.macro-row {
+		display: grid;
+		grid-template-columns: 1fr auto 28px;
+		gap: 12px;
+		align-items: baseline;
+		padding: 14px 18px;
 		cursor: text;
 		transition: background 160ms;
 		position: relative;
+		border-bottom: 1px solid var(--color-border-subtle);
 	}
 
-	.macro-cell:focus-within {
-		background: color-mix(in oklab, var(--c, var(--color-ember)) 5%, var(--color-surface-1));
+	.macro-row:last-child {
+		border-bottom: none;
 	}
 
-	.macro-cell::before {
+	.macro-row:focus-within {
+		background: color-mix(in oklab, var(--c, var(--color-ember)) 5%, transparent);
+	}
+
+	.macro-row::before {
 		content: '';
 		position: absolute;
 		left: 0;
-		right: 0;
-		bottom: 0;
-		height: 2px;
+		top: 14px;
+		bottom: 14px;
+		width: 3px;
+		border-radius: 0 2px 2px 0;
 		background: var(--c, var(--color-ember));
 		opacity: 0;
 		transition: opacity 160ms;
 	}
 
-	.macro-cell:focus-within::before {
-		opacity: 0.7;
+	.macro-row:focus-within::before {
+		opacity: 0.85;
 	}
 
-	.macro-num {
+	.macro-name {
+		font-family: var(--font-display);
+		font-variation-settings:
+			'opsz' 36,
+			'SOFT' 60,
+			'wght' 460;
+		font-size: 16px;
+		letter-spacing: -0.005em;
+		color: var(--color-text-primary);
+	}
+
+	.macro-row:not(.macro-kcal) .macro-name {
+		color: color-mix(in oklab, var(--c) 70%, var(--color-text-primary));
+	}
+
+	.macro-kcal .macro-name {
+		color: var(--color-ember-deep);
+	}
+
+	.macro-input {
 		all: unset;
 		font-family: var(--font-display);
 		font-feature-settings: 'tnum' 1;
 		font-variation-settings:
-			'opsz' 60,
-			'SOFT' 80,
+			'opsz' 36,
+			'SOFT' 60,
 			'wght' 500;
-		font-size: 26px;
-		letter-spacing: -0.025em;
+		font-size: 22px;
+		letter-spacing: -0.015em;
 		color: var(--color-text-primary);
-		text-align: center;
-		width: 100%;
-		min-width: 0;
+		text-align: right;
+		min-width: 60px;
 	}
 
-	.macro-num::placeholder {
+	.macro-input::placeholder {
 		color: var(--color-text-faint);
 	}
 
-	.macro-label {
+	.macro-suffix {
 		font-family: var(--font-mono);
-		font-size: 9.5px;
-		letter-spacing: 0.16em;
-		text-transform: uppercase;
+		font-size: 11px;
+		letter-spacing: 0.08em;
 		color: var(--color-text-subtle);
-	}
-
-	.macro-cell:not(.macro-kcal) .macro-label {
-		color: color-mix(in oklab, var(--c) 70%, var(--color-text-subtle));
-	}
-
-	.macro-kcal .macro-label {
-		color: var(--color-ember-deep);
+		text-align: left;
 	}
 
 	/* ── Live macro→kcal hint ── */
