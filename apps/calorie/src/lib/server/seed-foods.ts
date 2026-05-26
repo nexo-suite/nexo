@@ -7,8 +7,10 @@
  * search rate limit and gives instant perceived performance even offline-ish.
  *
  * Nutrition values are rounded approximations from BLS / OFF aggregates; they're
- * good enough for tracking. The list is intentionally small — adding entries is
- * cheap. Once we get past ~150 we should swap to a CSV + validator.
+ * good enough for tracking. Fiber and sugar are filled in where the value is
+ * well-established; foods with `0` mean they're genuinely zero (meat, oils,
+ * black coffee). The list is intentionally small — adding entries is cheap.
+ * Once we get past ~150 we should swap to a CSV + validator.
  */
 
 export type SeedFood = {
@@ -31,7 +33,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 9,
 		carbs100g: 53,
 		fat100g: 3,
-		fiber100g: 2.5
+		fiber100g: 2.5,
+		sugars100g: 3
 	},
 	{
 		id: 'seed-vollkornbrot',
@@ -40,7 +43,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 8.5,
 		carbs100g: 41,
 		fat100g: 3,
-		fiber100g: 7
+		fiber100g: 7,
+		sugars100g: 2.5
 	},
 	{
 		id: 'seed-weissbrot',
@@ -49,7 +53,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 8,
 		carbs100g: 49,
 		fat100g: 3,
-		fiber100g: 2
+		fiber100g: 2,
+		sugars100g: 5
 	},
 
 	// Dairy
@@ -59,7 +64,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 67,
 		protein100g: 12,
 		carbs100g: 4,
-		fat100g: 0.3
+		fat100g: 0.3,
+		fiber100g: 0,
+		sugars100g: 4
 	},
 	{
 		id: 'seed-quark-40',
@@ -67,7 +74,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 160,
 		protein100g: 11,
 		carbs100g: 3,
-		fat100g: 11
+		fat100g: 11,
+		fiber100g: 0,
+		sugars100g: 3
 	},
 	{
 		id: 'seed-joghurt-natur',
@@ -76,6 +85,7 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 3.5,
 		carbs100g: 4.7,
 		fat100g: 3.3,
+		fiber100g: 0,
 		sugars100g: 4.7
 	},
 	{
@@ -84,7 +94,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 130,
 		protein100g: 6,
 		carbs100g: 4,
-		fat100g: 10
+		fat100g: 10,
+		fiber100g: 0,
+		sugars100g: 4
 	},
 	{
 		id: 'seed-milch-35',
@@ -92,7 +104,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 64,
 		protein100g: 3.4,
 		carbs100g: 4.8,
-		fat100g: 3.5
+		fat100g: 3.5,
+		fiber100g: 0,
+		sugars100g: 4.8
 	},
 	{
 		id: 'seed-milch-15',
@@ -100,7 +114,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 47,
 		protein100g: 3.4,
 		carbs100g: 4.9,
-		fat100g: 1.5
+		fat100g: 1.5,
+		fiber100g: 0,
+		sugars100g: 4.9
 	},
 	{
 		id: 'seed-butter',
@@ -108,7 +124,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 740,
 		protein100g: 0.7,
 		carbs100g: 0.6,
-		fat100g: 82
+		fat100g: 82,
+		fiber100g: 0,
+		sugars100g: 0.6
 	},
 	{
 		id: 'seed-gouda',
@@ -116,7 +134,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 356,
 		protein100g: 25,
 		carbs100g: 0,
-		fat100g: 28
+		fat100g: 28,
+		fiber100g: 0,
+		sugars100g: 0
 	},
 	{
 		id: 'seed-camembert',
@@ -124,7 +144,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 300,
 		protein100g: 20,
 		carbs100g: 0.5,
-		fat100g: 24
+		fat100g: 24,
+		fiber100g: 0,
+		sugars100g: 0.5
 	},
 	{
 		id: 'seed-frischkaese',
@@ -132,7 +154,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 250,
 		protein100g: 6,
 		carbs100g: 4,
-		fat100g: 24
+		fat100g: 24,
+		fiber100g: 0,
+		sugars100g: 3
 	},
 
 	// Eggs & meat & fish
@@ -142,7 +166,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 155,
 		protein100g: 13,
 		carbs100g: 1.1,
-		fat100g: 11
+		fat100g: 11,
+		fiber100g: 0,
+		sugars100g: 1.1
 	},
 	{
 		id: 'seed-haehnchenbrust',
@@ -150,7 +176,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 165,
 		protein100g: 31,
 		carbs100g: 0,
-		fat100g: 3.6
+		fat100g: 3.6,
+		fiber100g: 0,
+		sugars100g: 0
 	},
 	{
 		id: 'seed-lachs',
@@ -158,7 +186,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 208,
 		protein100g: 20,
 		carbs100g: 0,
-		fat100g: 13
+		fat100g: 13,
+		fiber100g: 0,
+		sugars100g: 0
 	},
 	{
 		id: 'seed-hackfleisch-rind',
@@ -166,7 +196,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 250,
 		protein100g: 26,
 		carbs100g: 0,
-		fat100g: 17
+		fat100g: 17,
+		fiber100g: 0,
+		sugars100g: 0
 	},
 	{
 		id: 'seed-leberwurst',
@@ -174,7 +206,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 326,
 		protein100g: 14,
 		carbs100g: 1.5,
-		fat100g: 29
+		fat100g: 29,
+		fiber100g: 0,
+		sugars100g: 0.5
 	},
 	{
 		id: 'seed-schinken-gekocht',
@@ -182,7 +216,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 110,
 		protein100g: 21,
 		carbs100g: 0.5,
-		fat100g: 3
+		fat100g: 3,
+		fiber100g: 0,
+		sugars100g: 0.5
 	},
 	{
 		id: 'seed-salami',
@@ -190,7 +226,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 380,
 		protein100g: 22,
 		carbs100g: 1,
-		fat100g: 32
+		fat100g: 32,
+		fiber100g: 0,
+		sugars100g: 1
 	},
 
 	// Carbs
@@ -201,7 +239,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 2,
 		carbs100g: 17,
 		fat100g: 0.1,
-		fiber100g: 2.2
+		fiber100g: 2.2,
+		sugars100g: 0.8
 	},
 	{
 		id: 'seed-reis-weiss',
@@ -209,7 +248,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 130,
 		protein100g: 2.7,
 		carbs100g: 28,
-		fat100g: 0.3
+		fat100g: 0.3,
+		fiber100g: 0.4,
+		sugars100g: 0
 	},
 	{
 		id: 'seed-reis-vollkorn',
@@ -218,7 +259,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 2.7,
 		carbs100g: 26,
 		fat100g: 1,
-		fiber100g: 1.8
+		fiber100g: 1.8,
+		sugars100g: 0.4
 	},
 	{
 		id: 'seed-nudeln',
@@ -227,7 +269,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 5.8,
 		carbs100g: 31,
 		fat100g: 0.9,
-		fiber100g: 1.8
+		fiber100g: 1.8,
+		sugars100g: 0.6
 	},
 	{
 		id: 'seed-haferflocken',
@@ -236,7 +279,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 13,
 		carbs100g: 67,
 		fat100g: 7,
-		fiber100g: 10
+		fiber100g: 10,
+		sugars100g: 1
 	},
 	{
 		id: 'seed-muesli',
@@ -245,7 +289,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 10,
 		carbs100g: 65,
 		fat100g: 6,
-		fiber100g: 7
+		fiber100g: 7,
+		sugars100g: 15
 	},
 
 	// Fruit
@@ -308,7 +353,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 0.9,
 		carbs100g: 3.9,
 		fat100g: 0.2,
-		fiber100g: 1.2
+		fiber100g: 1.2,
+		sugars100g: 2.6
 	},
 	{
 		id: 'seed-gurke',
@@ -317,7 +363,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 0.7,
 		carbs100g: 3.6,
 		fat100g: 0.1,
-		fiber100g: 0.5
+		fiber100g: 0.5,
+		sugars100g: 1.7
 	},
 	{
 		id: 'seed-karotte',
@@ -326,7 +373,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 0.9,
 		carbs100g: 9.6,
 		fat100g: 0.2,
-		fiber100g: 2.8
+		fiber100g: 2.8,
+		sugars100g: 4.7
 	},
 	{
 		id: 'seed-paprika',
@@ -335,7 +383,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 1,
 		carbs100g: 6,
 		fat100g: 0.3,
-		fiber100g: 2.1
+		fiber100g: 2.1,
+		sugars100g: 4.2
 	},
 	{
 		id: 'seed-spinat',
@@ -344,7 +393,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 2.9,
 		carbs100g: 3.6,
 		fat100g: 0.4,
-		fiber100g: 2.2
+		fiber100g: 2.2,
+		sugars100g: 0.4
 	},
 	{
 		id: 'seed-brokkoli',
@@ -353,7 +403,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 2.8,
 		carbs100g: 7,
 		fat100g: 0.4,
-		fiber100g: 2.6
+		fiber100g: 2.6,
+		sugars100g: 1.7
 	},
 	{
 		id: 'seed-zwiebel',
@@ -362,7 +413,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 1.1,
 		carbs100g: 9.3,
 		fat100g: 0.1,
-		fiber100g: 1.7
+		fiber100g: 1.7,
+		sugars100g: 4.2
 	},
 	{
 		id: 'seed-avocado',
@@ -371,7 +423,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 2,
 		carbs100g: 9,
 		fat100g: 15,
-		fiber100g: 7
+		fiber100g: 7,
+		sugars100g: 0.7
 	},
 
 	// Fats, nuts, legumes
@@ -381,7 +434,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 884,
 		protein100g: 0,
 		carbs100g: 0,
-		fat100g: 100
+		fat100g: 100,
+		fiber100g: 0,
+		sugars100g: 0
 	},
 	{
 		id: 'seed-mandeln',
@@ -390,7 +445,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 21,
 		carbs100g: 22,
 		fat100g: 50,
-		fiber100g: 12
+		fiber100g: 12,
+		sugars100g: 4.4
 	},
 	{
 		id: 'seed-walnuesse',
@@ -399,7 +455,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 15,
 		carbs100g: 14,
 		fat100g: 65,
-		fiber100g: 7
+		fiber100g: 7,
+		sugars100g: 2.6
 	},
 	{
 		id: 'seed-tofu',
@@ -407,7 +464,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 76,
 		protein100g: 8,
 		carbs100g: 1.9,
-		fat100g: 4.8
+		fat100g: 4.8,
+		fiber100g: 0.3,
+		sugars100g: 0.6
 	},
 	{
 		id: 'seed-linsen',
@@ -416,7 +475,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 9,
 		carbs100g: 20,
 		fat100g: 0.4,
-		fiber100g: 7.9
+		fiber100g: 7.9,
+		sugars100g: 1.8
 	},
 	{
 		id: 'seed-kichererbsen',
@@ -425,7 +485,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 8.9,
 		carbs100g: 27,
 		fat100g: 2.6,
-		fiber100g: 7.6
+		fiber100g: 7.6,
+		sugars100g: 4.8
 	},
 
 	// Sweets, spreads, drinks
@@ -436,6 +497,7 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 6.3,
 		carbs100g: 57,
 		fat100g: 31,
+		fiber100g: 3,
 		sugars100g: 56
 	},
 	{
@@ -445,6 +507,7 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 0.3,
 		carbs100g: 82,
 		fat100g: 0,
+		fiber100g: 0,
 		sugars100g: 82
 	},
 	{
@@ -454,6 +517,7 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 0.4,
 		carbs100g: 60,
 		fat100g: 0.1,
+		fiber100g: 1,
 		sugars100g: 50
 	},
 	{
@@ -463,6 +527,7 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		protein100g: 0,
 		carbs100g: 100,
 		fat100g: 0,
+		fiber100g: 0,
 		sugars100g: 100
 	},
 	{
@@ -471,7 +536,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 1,
 		protein100g: 0.1,
 		carbs100g: 0,
-		fat100g: 0
+		fat100g: 0,
+		fiber100g: 0,
+		sugars100g: 0
 	},
 	{
 		id: 'seed-tee-schwarz',
@@ -479,7 +546,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 1,
 		protein100g: 0,
 		carbs100g: 0.3,
-		fat100g: 0
+		fat100g: 0,
+		fiber100g: 0,
+		sugars100g: 0
 	},
 	{
 		id: 'seed-wasser',
@@ -487,7 +556,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 0,
 		protein100g: 0,
 		carbs100g: 0,
-		fat100g: 0
+		fat100g: 0,
+		fiber100g: 0,
+		sugars100g: 0
 	},
 	{
 		id: 'seed-bier-pils',
@@ -495,7 +566,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 43,
 		protein100g: 0.5,
 		carbs100g: 3.6,
-		fat100g: 0
+		fat100g: 0,
+		fiber100g: 0,
+		sugars100g: 0
 	},
 	{
 		id: 'seed-rotwein',
@@ -503,7 +576,9 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 85,
 		protein100g: 0.1,
 		carbs100g: 2.6,
-		fat100g: 0
+		fat100g: 0,
+		fiber100g: 0,
+		sugars100g: 0.6
 	},
 	{
 		id: 'seed-weisswein',
@@ -511,6 +586,8 @@ export const SEED_FOODS: ReadonlyArray<SeedFood> = [
 		kcal100g: 82,
 		protein100g: 0.1,
 		carbs100g: 2.6,
-		fat100g: 0
+		fat100g: 0,
+		fiber100g: 0,
+		sugars100g: 1
 	}
 ];
