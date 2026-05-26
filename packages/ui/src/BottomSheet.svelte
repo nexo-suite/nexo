@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 
 	let {
 		open = $bindable(false),
@@ -23,21 +23,33 @@
 	let closing = $state(false);
 
 	$effect(() => {
-		if (open) {
-			mounted = true;
-			closing = false;
-			dragY = 0;
-		} else if (mounted && !closing) {
-			closing = true;
-			const height = sheetEl?.offsetHeight ?? 300;
-			dragY = height;
-			const timer = setTimeout(() => {
-				mounted = false;
-				closing = false;
-				dragY = 0;
-			}, 320);
-			return () => clearTimeout(timer);
-		}
+		// Only `open` should drive this effect — wrap the body in untrack so writes
+		// to mounted/closing/dragY don't self-retrigger and cancel our own timers.
+		const isOpen = open;
+		return untrack(() => {
+			if (isOpen) {
+				// Defer mount one frame so the click that opened us has fully propagated
+				// before the scrim/panel become event targets. Without this, a fast click
+				// can land on the scrim immediately after render and fire its onclick={close},
+				// dismissing the sheet on the same gesture that opened it.
+				const raf = requestAnimationFrame(() => {
+					mounted = true;
+					closing = false;
+					dragY = 0;
+				});
+				return () => cancelAnimationFrame(raf);
+			} else if (mounted && !closing) {
+				closing = true;
+				const height = sheetEl?.offsetHeight ?? 300;
+				dragY = height;
+				const timer = setTimeout(() => {
+					mounted = false;
+					closing = false;
+					dragY = 0;
+				}, 320);
+				return () => clearTimeout(timer);
+			}
+		});
 	});
 
 	function close() {

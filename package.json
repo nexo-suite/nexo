@@ -41,7 +41,7 @@
 	},
 	"lint-staged": {
 		"*.{js,ts,mjs,cjs,svelte,svelte.ts,svelte.js}": "oxlint --fix",
-		"*": "oxfmt"
+		"*.{js,ts,mjs,cjs,json,jsonc,md}": "oxfmt"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.1.0",
