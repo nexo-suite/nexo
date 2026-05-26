@@ -52,7 +52,7 @@ const config: KnipConfig = {
 			project: ['src/**/*.ts']
 		},
 		'packages/db': {
-			entry: ['src/migrate.ts', 'schema/*.ts'],
+			entry: ['schema/*.ts'],
 			project: ['src/**/*.ts', 'schema/**/*.ts'],
 			drizzle: false
 		},
