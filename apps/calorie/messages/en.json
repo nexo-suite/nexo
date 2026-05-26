@@ -17,6 +17,7 @@
 	"action_log_manually": "Log manually",
 	"action_torch": "Torch",
 	"unit_kcal": "kcal",
+	"nutrition_calories": "Calories",
 	"kcal_remaining": "remaining",
 	"kcal_over": "over target",
 	"unit_g": "g",

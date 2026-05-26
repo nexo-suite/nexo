@@ -88,12 +88,26 @@
 	}
 
 	const backdropOpacity = $derived(sheetEl ? 1 - (dragY / (sheetEl.offsetHeight * 0.6)) * 0.6 : 1);
+
+	// Portal action — moves the element to document.body on mount. Without this,
+	// the sheet's `position: fixed` is at the mercy of any ancestor with
+	// transform/filter/backdrop-filter/contain that silently establishes a
+	// containing block. Easier to escape the DOM tree than to audit every
+	// ancestor in every consuming app.
+	function portal(node: HTMLElement) {
+		document.body.appendChild(node);
+		return {
+			destroy() {
+				if (node.parentNode) node.parentNode.removeChild(node);
+			}
+		};
+	}
 </script>
 
 <svelte:window onkeydown={onKeydown} />
 
 {#if mounted}
-	<div class="sheet-backdrop" role="dialog" aria-modal="true" aria-label={title}>
+	<div use:portal class="sheet-backdrop" role="dialog" aria-modal="true" aria-label={title}>
 		<button
 			type="button"
 			class="sheet-scrim"
