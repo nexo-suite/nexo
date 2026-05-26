@@ -3,7 +3,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import UnitStepper from './UnitStepper.svelte';
 	import CreateFoodSheet from './CreateFoodSheet.svelte';
-	import type { Food, FoodUnit, MealSlot } from '$lib/types';
+	import type { Food, FoodUnit, MacroTier, MealSlot } from '$lib/types';
 	import { m } from '$lib/paraglide/messages.js';
 
 	type SearchSource = 'user' | 'cache' | 'seed' | 'off';
@@ -27,6 +27,7 @@
 		foods = [],
 		favoriteIds = [],
 		recentIds = [],
+		tier = 'extended',
 		onClose,
 		onBuildMeal
 	}: {
@@ -34,6 +35,7 @@
 		foods?: Food[];
 		favoriteIds?: string[];
 		recentIds?: string[];
+		tier?: MacroTier;
 		onClose: () => void;
 		onBuildMeal: (slot: MealSlot) => void;
 	} = $props();
@@ -471,7 +473,12 @@
 	{/if}
 </section>
 
-<CreateFoodSheet bind:open={createOpen} initialName={query.trim()} onCreated={handleCreated} />
+<CreateFoodSheet
+	bind:open={createOpen}
+	initialName={query.trim()}
+	{tier}
+	onCreated={handleCreated}
+/>
 
 {#snippet rowButton(r: DisplayRow)}
 	{@const f = r.food}

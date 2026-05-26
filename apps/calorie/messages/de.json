@@ -122,6 +122,8 @@
 	"create_food_error_name": "Name ist erforderlich.",
 	"create_food_error_kcal": "Kalorien müssen eine positive Zahl sein.",
 	"create_food_per100g": "Pro 100 g",
+	"create_food_section_macros": "Makros",
+	"create_food_section_detail": "Details",
 	"create_food_use_macro_kcal": "übernehmen",
 	"created_label": "Angelegt",
 	"source_generic_label": "Generisch",

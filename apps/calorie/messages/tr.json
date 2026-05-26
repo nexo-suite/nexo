@@ -122,6 +122,8 @@
 	"create_food_error_name": "İsim zorunlu.",
 	"create_food_error_kcal": "Kalori pozitif bir sayı olmalı.",
 	"create_food_per100g": "100 g başına",
+	"create_food_section_macros": "Makrolar",
+	"create_food_section_detail": "Detay",
 	"create_food_use_macro_kcal": "bunu kullan",
 	"created_label": "Oluşturuldu",
 	"source_generic_label": "Genel",

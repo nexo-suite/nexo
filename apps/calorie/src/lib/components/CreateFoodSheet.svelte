@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { Check, X } from '@lucide/svelte';
 	import { BottomSheet } from '@nexo/ui';
+	import type { MacroTier } from '$lib/types';
+	import { tierShowsFiber, tierShowsSugar } from '$lib/calc';
 	import { m } from '$lib/paraglide/messages.js';
 
 	type CreatedFood = {
@@ -21,10 +23,12 @@
 	let {
 		open = $bindable(false),
 		initialName = '',
+		tier = 'extended',
 		onCreated
 	}: {
 		open: boolean;
 		initialName?: string;
+		tier?: MacroTier;
 		onCreated: (food: CreatedFood) => void;
 	} = $props();
 
@@ -34,8 +38,20 @@
 	let p = $state('');
 	let c = $state('');
 	let f = $state('');
+	let fiber = $state('');
+	let sugar = $state('');
 	let saving = $state(false);
 	let error = $state<string | null>(null);
+
+	// Mirror the tracking-tier from settings: only ask for what the user
+	// actually tracks. Basic users see just calories; extended adds protein;
+	// full unlocks the rest.
+	const showProtein = $derived(tier !== 'basic');
+	const showCarbsFat = $derived(tier === 'full');
+	const showFiber = $derived(tier === 'full' && tierShowsFiber(tier));
+	const showSugar = $derived(tier === 'full' && tierShowsSugar(tier));
+	const showDetailHeader = $derived(showFiber || showSugar);
+	const showMacrosHeader = $derived(showProtein);
 
 	// Reset whenever the sheet (re)opens.
 	let lastOpenSnapshot = false;
@@ -47,6 +63,8 @@
 			p = '';
 			c = '';
 			f = '';
+			fiber = '';
+			sugar = '';
 			error = null;
 		}
 		lastOpenSnapshot = open;
@@ -101,7 +119,9 @@
 					kcal100g: k,
 					protein100g: Number(p) || 0,
 					carbs100g: Number(c) || 0,
-					fat100g: Number(f) || 0
+					fat100g: Number(f) || 0,
+					fiber100g: fiber.trim() ? Number(fiber) : null,
+					sugars100g: sugar.trim() ? Number(sugar) : null
 				})
 			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -158,39 +178,85 @@
 				/>
 				<span class="macro-suffix">{m.unit_kcal()}</span>
 			</label>
-			<label class="macro-row" style="--c:var(--color-protein)">
-				<span class="macro-name">{m.macro_protein()}</span>
-				<input
-					class="macro-input"
-					type="text"
-					inputmode="numeric"
-					bind:value={p}
-					placeholder="0"
-				/>
-				<span class="macro-suffix">g</span>
-			</label>
-			<label class="macro-row" style="--c:var(--color-carbs)">
-				<span class="macro-name">{m.macro_carbs()}</span>
-				<input
-					class="macro-input"
-					type="text"
-					inputmode="numeric"
-					bind:value={c}
-					placeholder="0"
-				/>
-				<span class="macro-suffix">g</span>
-			</label>
-			<label class="macro-row" style="--c:var(--color-fat)">
-				<span class="macro-name">{m.macro_fat()}</span>
-				<input
-					class="macro-input"
-					type="text"
-					inputmode="numeric"
-					bind:value={f}
-					placeholder="0"
-				/>
-				<span class="macro-suffix">g</span>
-			</label>
+
+			{#if showMacrosHeader}
+				<div class="section-divider">
+					<span class="section-label">{m.create_food_section_macros()}</span>
+				</div>
+
+				{#if showProtein}
+					<label class="macro-row" style="--c:var(--color-protein)">
+						<span class="macro-name">{m.macro_protein()}</span>
+						<input
+							class="macro-input"
+							type="text"
+							inputmode="numeric"
+							bind:value={p}
+							placeholder="0"
+						/>
+						<span class="macro-suffix">g</span>
+					</label>
+				{/if}
+
+				{#if showCarbsFat}
+					<label class="macro-row" style="--c:var(--color-carbs)">
+						<span class="macro-name">{m.macro_carbs()}</span>
+						<input
+							class="macro-input"
+							type="text"
+							inputmode="numeric"
+							bind:value={c}
+							placeholder="0"
+						/>
+						<span class="macro-suffix">g</span>
+					</label>
+					<label class="macro-row" style="--c:var(--color-fat)">
+						<span class="macro-name">{m.macro_fat()}</span>
+						<input
+							class="macro-input"
+							type="text"
+							inputmode="numeric"
+							bind:value={f}
+							placeholder="0"
+						/>
+						<span class="macro-suffix">g</span>
+					</label>
+				{/if}
+			{/if}
+
+			{#if showDetailHeader}
+				<div class="section-divider">
+					<span class="section-label">{m.create_food_section_detail()}</span>
+				</div>
+
+				{#if showFiber}
+					<label class="macro-row" style="--c:var(--color-fiber, var(--color-text-muted))">
+						<span class="macro-name">{m.macro_fiber()}</span>
+						<input
+							class="macro-input"
+							type="text"
+							inputmode="numeric"
+							bind:value={fiber}
+							placeholder="0"
+						/>
+						<span class="macro-suffix">g</span>
+					</label>
+				{/if}
+
+				{#if showSugar}
+					<label class="macro-row" style="--c:var(--color-sugar, var(--color-text-muted))">
+						<span class="macro-name">{m.macro_sugar()}</span>
+						<input
+							class="macro-input"
+							type="text"
+							inputmode="numeric"
+							bind:value={sugar}
+							placeholder="0"
+						/>
+						<span class="macro-suffix">g</span>
+					</label>
+				{/if}
+			{/if}
 		</div>
 
 		{#if showMacroKcalHint}
@@ -318,6 +384,23 @@
 
 	.macro-row:last-child {
 		border-bottom: none;
+	}
+
+	.section-divider {
+		display: flex;
+		align-items: center;
+		gap: 0;
+		padding: 10px 18px 4px;
+		background: color-mix(in oklab, var(--color-bg-1) 60%, var(--color-surface-1));
+		border-bottom: 1px solid var(--color-border-subtle);
+	}
+
+	.section-label {
+		font-family: var(--font-mono);
+		font-size: 9px;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: var(--color-text-faint);
 	}
 
 	.macro-row:focus-within {

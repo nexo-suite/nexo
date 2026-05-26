@@ -273,6 +273,7 @@
 							foods={data.foods}
 							favoriteIds={data.favoriteIds}
 							recentIds={data.recentFoodIds}
+							tier={profile.tier}
 							onClose={closeSlotPanel}
 							onBuildMeal={buildMealForSlot}
 						/>
