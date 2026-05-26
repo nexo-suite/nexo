@@ -3,6 +3,7 @@
 	import { dev } from '$app/environment';
 	import { env } from '$env/dynamic/public';
 	import { getLocale } from '$lib/paraglide/runtime.js';
+	import { m } from '$lib/paraglide/messages.js';
 	import {
 		AboutDiagnostics,
 		BottomSheet,
@@ -17,20 +18,20 @@
 
 	let { data } = $props();
 
-	const currencies = [
-		{ code: 'EUR', symbol: '€', label: 'Euro' },
-		{ code: 'USD', symbol: '$', label: 'Dollar' },
-		{ code: 'GBP', symbol: '£', label: 'Pound' },
-		{ code: 'CHF', symbol: 'Fr', label: 'Franc' },
-		{ code: 'TRY', symbol: '₺', label: 'Lira' }
-	];
+	const currencies = $derived([
+		{ code: 'EUR', symbol: '€', label: m.currency_eur_label() },
+		{ code: 'USD', symbol: '$', label: m.currency_usd_label() },
+		{ code: 'GBP', symbol: '£', label: m.currency_gbp_label() },
+		{ code: 'CHF', symbol: 'Fr', label: m.currency_chf_label() },
+		{ code: 'TRY', symbol: '₺', label: m.currency_try_label() }
+	]);
 
-	const forecastWindows = [
-		{ value: '30', label: '30 days', desc: 'Just the next month' },
-		{ value: '60', label: '60 days', desc: 'Two salary cycles' },
-		{ value: '90', label: '90 days', desc: 'Recommended · catches most one-times' },
-		{ value: '180', label: '180 days', desc: 'Half a year · less precise late' }
-	];
+	const forecastWindows = $derived([
+		{ value: '30', label: m.forecast_window_30(), desc: m.forecast_window_30_desc() },
+		{ value: '60', label: m.forecast_window_60(), desc: m.forecast_window_60_desc() },
+		{ value: '90', label: m.forecast_window_90(), desc: m.forecast_window_90_desc() },
+		{ value: '180', label: m.forecast_window_180(), desc: m.forecast_window_180_desc() }
+	]);
 
 	const languageLabels: Record<string, string> = {
 		en: 'English',
@@ -38,17 +39,17 @@
 		tr: 'Türkçe'
 	};
 
-	const weekStartLabels: Record<string, string> = {
-		monday: 'Monday',
-		sunday: 'Sunday',
-		saturday: 'Saturday'
-	};
+	const weekStartLabels: Record<string, string> = $derived({
+		monday: m.week_starts_monday(),
+		sunday: m.week_starts_sunday(),
+		saturday: m.week_starts_saturday()
+	});
 
-	const themeLabels: Record<string, string> = {
-		system: 'System',
-		light: 'Light',
-		dark: 'Dark'
-	};
+	const themeLabels: Record<string, string> = $derived({
+		system: m.theme_system(),
+		light: m.theme_light(),
+		dark: m.theme_dark()
+	});
 
 	const defaultEmoji: Record<string, string> = {
 		checking: '🏦',
@@ -141,10 +142,7 @@
 </script>
 
 <div class="page">
-	<PageHeader
-		title="Settings"
-		subtitle="Finance-specific knobs live here. Everything global is in the hub."
-	>
+	<PageHeader title={m.settings_page_title()} subtitle={m.settings_page_subtitle()}>
 		{#snippet avatar()}<UserAvatarMenu />{/snippet}
 	</PageHeader>
 
@@ -155,12 +153,12 @@
 		{hubUrl}
 		displayName={data.profile.displayName}
 		language={languageLabels[currentLocale] ?? currentLocale}
-		weekStarts={weekStartLabels[data.profile.weekStartDay] ?? 'Monday'}
+		weekStarts={weekStartLabels[data.profile.weekStartDay] ?? m.week_starts_monday()}
 		theme={themeLabels[data.profile.theme] ?? data.profile.theme}
 	/>
 
 	<!-- ─── Finance — app-specific (editable) ─── -->
-	<SectionLabel title="Finance" subtitle="just this app" />
+	<SectionLabel title={m.settings_section_finance()} subtitle={m.settings_section_finance_subtitle()} />
 
 	<form
 		id="settings-form"
@@ -174,14 +172,14 @@
 		class="form"
 	>
 		<div class="set-card">
-			<div class="set-scope"><b>Money basics</b></div>
+			<div class="set-scope"><b>{m.settings_card_money_basics()}</b></div>
 
 			<!-- Currency -->
 			<button type="button" class="set-row" onclick={() => (currencySheetOpen = true)}>
 				<div class="sr-icon">{currentCurrency?.symbol ?? '€'}</div>
 				<div class="sr-text">
-					<div class="sr-label">Currency</div>
-					<div class="sr-desc">Display only — no conversions.</div>
+					<div class="sr-label">{m.settings_currency()}</div>
+					<div class="sr-desc">{m.settings_currency_desc()}</div>
 				</div>
 				<div class="sr-value">{selectedCurrency} · {currentCurrency?.symbol ?? ''}</div>
 				<span class="sr-chev">
@@ -203,10 +201,10 @@
 						: '🏦'}
 				</div>
 				<div class="sr-text">
-					<div class="sr-label">Default account</div>
-					<div class="sr-desc">New expenses suggest this account first.</div>
+					<div class="sr-label">{m.settings_default_account()}</div>
+					<div class="sr-desc">{m.settings_default_account_desc()}</div>
 				</div>
-				<div class="sr-value">{selectedAccount?.name ?? 'None'}</div>
+				<div class="sr-value">{selectedAccount?.name ?? m.common_none()}</div>
 				<span class="sr-chev">
 					<svg
 						viewBox="0 0 24 24"
@@ -222,26 +220,30 @@
 			<div class="set-row" style="cursor: default">
 				<div class="sr-icon">,0</div>
 				<div class="sr-text">
-					<div class="sr-label">Hide cents</div>
-					<div class="sr-desc">Round to nearest euro everywhere.</div>
+					<div class="sr-label">{m.settings_hide_cents()}</div>
+					<div class="sr-desc">{m.settings_hide_cents_desc()}</div>
 				</div>
 				<div class="sr-toggle">
-					<Toggle bind:checked={hideCents} ariaLabel="Hide cents" />
+					<Toggle bind:checked={hideCents} ariaLabel={m.settings_hide_cents()} />
 				</div>
 			</div>
 		</div>
 
 		<div class="set-card">
-			<div class="set-scope"><b>Forecast & flows</b></div>
+			<div class="set-scope"><b>{m.settings_card_forecast_flows()}</b></div>
 
 			<!-- Excluded from liquid -->
 			<button type="button" class="set-row" onclick={() => (excludedSheetOpen = true)}>
 				<div class="sr-icon">⊘</div>
 				<div class="sr-text">
-					<div class="sr-label">Excluded from liquid</div>
-					<div class="sr-desc">Crypto & locked balances skip the dashboard hero.</div>
+					<div class="sr-label">{m.settings_excluded_from_liquid()}</div>
+					<div class="sr-desc">{m.settings_excluded_from_liquid_desc()}</div>
 				</div>
-				<div class="sr-value">{excludedCount} acct{excludedCount !== 1 ? 's' : ''}</div>
+				<div class="sr-value">
+					{excludedCount === 1
+						? m.settings_excluded_count_one({ count: excludedCount })
+						: m.settings_excluded_count_other({ count: excludedCount })}
+				</div>
 				<span class="sr-chev">
 					<svg
 						viewBox="0 0 24 24"
@@ -257,9 +259,9 @@
 			<button type="button" class="set-row" onclick={() => (forecastSheetOpen = true)}>
 				<div class="sr-icon">📈</div>
 				<div class="sr-text">
-					<div class="sr-label">Forecast window</div>
+					<div class="sr-label">{m.settings_forecast_window()}</div>
 				</div>
-				<div class="sr-value">{currentForecast?.label ?? '90 days'}</div>
+				<div class="sr-value">{currentForecast?.label ?? m.forecast_window_90()}</div>
 				<span class="sr-chev">
 					<svg
 						viewBox="0 0 24 24"
@@ -275,24 +277,24 @@
 			<div class="set-row" style="cursor: default">
 				<div class="sr-icon">⇄</div>
 				<div class="sr-text">
-					<div class="sr-label">Include debt in forecast</div>
-					<div class="sr-desc">Open debts dent or lift the projection.</div>
+					<div class="sr-label">{m.settings_include_debt()}</div>
+					<div class="sr-desc">{m.settings_include_debt_desc()}</div>
 				</div>
 				<div class="sr-toggle">
-					<Toggle bind:checked={includeDebt} ariaLabel="Include debt in forecast" />
+					<Toggle bind:checked={includeDebt} ariaLabel={m.settings_include_debt()} />
 				</div>
 			</div>
 		</div>
 
 		<div class="set-card">
-			<div class="set-scope"><b>Organize</b></div>
+			<div class="set-scope"><b>{m.settings_card_organize()}</b></div>
 
 			<!-- Categories (stub) -->
 			<button type="button" class="set-row stub-row" onclick={() => {}}>
 				<div class="sr-icon">🏷</div>
 				<div class="sr-text">
-					<div class="sr-label">Categories</div>
-					<div class="sr-desc">housing · utility · subscription · …</div>
+					<div class="sr-label">{m.settings_categories()}</div>
+					<div class="sr-desc">{m.settings_categories_desc()}</div>
 				</div>
 				<div class="sr-value stub-value">7</div>
 				<span class="sr-chev">
@@ -310,8 +312,8 @@
 			<button type="button" class="set-row stub-row" onclick={() => {}}>
 				<div class="sr-icon">↓</div>
 				<div class="sr-text">
-					<div class="sr-label">Export Finance data</div>
-					<div class="sr-desc">CSV of transactions, accounts, debts.</div>
+					<div class="sr-label">{m.settings_export()}</div>
+					<div class="sr-desc">{m.settings_export_desc()}</div>
 				</div>
 				<div class="sr-value stub-value">.csv</div>
 				<span class="sr-chev">
@@ -338,8 +340,8 @@
 		<a class="set-row danger-row" href={`${env.PUBLIC_AUTH_URL ?? ''}/signout`}>
 			<div class="sr-icon">⎋</div>
 			<div class="sr-text">
-				<div class="sr-label">Sign out</div>
-				<div class="sr-desc">Out of all Nexo apps. You can sign back in any time.</div>
+				<div class="sr-label">{m.settings_signout()}</div>
+				<div class="sr-desc">{m.settings_signout_desc()}</div>
 			</div>
 			<span class="sr-chev">
 				<svg
@@ -368,13 +370,13 @@
 </div>
 
 <!-- ─── Sticky save bar ─── -->
-<SaveBar visible={dirty} hint="Unsaved changes" label="Save" formId="settings-form" />
+<SaveBar visible={dirty} hint={m.common_unsaved_changes()} label={m.common_save()} formId="settings-form" />
 
 <!-- ─── Currency sheet ─── -->
 <BottomSheet
 	bind:open={currencySheetOpen}
-	title="Currency"
-	subtitle="Display only — amounts stay as-is, no conversions."
+	title={m.settings_currency()}
+	subtitle={m.settings_currency_sheet_subtitle()}
 >
 	<div class="sheet-picker">
 		{#each currencies as c (c.code)}
@@ -397,7 +399,7 @@
 	</div>
 	<div class="sheet-actions">
 		<button type="button" class="sheet-done" onclick={() => (currencySheetOpen = false)}
-			>Done</button
+			>{m.common_done()}</button
 		>
 	</div>
 </BottomSheet>
@@ -405,8 +407,8 @@
 <!-- ─── Default account sheet ─── -->
 <BottomSheet
 	bind:open={accountSheetOpen}
-	title="Default account"
-	subtitle="Pre-selected when adding new flows."
+	title={m.settings_default_account()}
+	subtitle={m.settings_default_account_sheet_subtitle()}
 >
 	<div class="sheet-picker">
 		<button
@@ -419,8 +421,8 @@
 		>
 			<span class="sheet-opt-icon">—</span>
 			<span class="sheet-opt-text">
-				<span class="sheet-opt-name">None</span>
-				<span class="sheet-opt-desc">No default</span>
+				<span class="sheet-opt-name">{m.common_none()}</span>
+				<span class="sheet-opt-desc">{m.common_no_default()}</span>
 			</span>
 			<span class="sheet-radio"></span>
 		</button>
@@ -443,7 +445,7 @@
 		{/each}
 	</div>
 	<div class="sheet-actions">
-		<button type="button" class="sheet-done" onclick={() => (accountSheetOpen = false)}>Done</button
+		<button type="button" class="sheet-done" onclick={() => (accountSheetOpen = false)}>{m.common_done()}</button
 		>
 	</div>
 </BottomSheet>
@@ -451,8 +453,8 @@
 <!-- ─── Forecast window sheet ─── -->
 <BottomSheet
 	bind:open={forecastSheetOpen}
-	title="Forecast window"
-	subtitle="How far ahead the trajectory projects on the dashboard and forecast screen."
+	title={m.settings_forecast_window()}
+	subtitle={m.settings_forecast_window_sheet_subtitle()}
 >
 	<div class="sheet-picker">
 		{#each forecastWindows as fw (fw.value)}
@@ -475,7 +477,7 @@
 	</div>
 	<div class="sheet-actions">
 		<button type="button" class="sheet-done" onclick={() => (forecastSheetOpen = false)}
-			>Done</button
+			>{m.common_done()}</button
 		>
 	</div>
 </BottomSheet>
@@ -483,8 +485,8 @@
 <!-- ─── Excluded from liquid sheet ─── -->
 <BottomSheet
 	bind:open={excludedSheetOpen}
-	title="Excluded from liquid"
-	subtitle="Excluded accounts stay visible but skip the dashboard hero, forecast, and the savings rate."
+	title={m.settings_excluded_from_liquid()}
+	subtitle={m.settings_excluded_from_liquid_sheet_subtitle()}
 >
 	<div class="excluded-card">
 		{#each accountsState as account (account.id)}
@@ -522,11 +524,11 @@
 		{/each}
 	</div>
 	<p class="excluded-hint">
-		Toggled-on accounts skip the <b class="excluded-highlight">{fmtBalance(liquidTotal)}</b> liquid total.
+		{m.settings_excluded_hint({ amount: fmtBalance(liquidTotal) })}
 	</p>
 	<div class="sheet-actions">
 		<button type="button" class="sheet-done" onclick={() => (excludedSheetOpen = false)}
-			>Done</button
+			>{m.common_done()}</button
 		>
 	</div>
 </BottomSheet>

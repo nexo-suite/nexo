@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { APPS, findApp, type App } from '../apps.ts';
 import { pnpmDeployAsync } from '../lib/pnpm.ts';
@@ -60,10 +60,19 @@ export async function prepareContexts(opts: PrepareOpts = {}): Promise<void> {
 
 async function prepareOne(app: App, outDir: string, repoRoot: string): Promise<void> {
 	const target = join(outDir, app.name);
-	step(`${app.name}: pnpm deploy → ${target}`);
-
 	if (existsSync(target)) rmSync(target, { recursive: true, force: true });
-	await pnpmDeployAsync({ pkg: app.pkg, out: target, cwd: repoRoot });
+	mkdirSync(target, { recursive: true });
+
+	if (app.strategy === 'bundle') {
+		// tsdown bundles all deps inline — context is just the app's dist/.
+		// No pnpm deploy, no node_modules, no package.json needed at runtime.
+		step(`${app.name}: copy dist → ${target}`);
+		const distSrc = join(repoRoot, app.dir, 'dist');
+		cpSync(distSrc, join(target, 'dist'), { recursive: true });
+	} else {
+		step(`${app.name}: pnpm deploy → ${target}`);
+		await pnpmDeployAsync({ pkg: app.pkg, out: target, cwd: repoRoot });
+	}
 
 	const dockerfileSrc = join(repoRoot, app.dir, 'Dockerfile');
 	const dockerfileDst = join(target, 'Dockerfile');

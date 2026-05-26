@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getIntlLocale } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let {
 		monthlyIncome,
@@ -28,12 +29,13 @@
 
 	// Emoji + verdict for saved%
 	const verdict = $derived.by(() => {
-		if (monthlyIncome === 0) return { emoji: '🌱', text: 'Add income to see your pulse' };
-		if (savedPct < 0) return { emoji: '🔥', text: `Burning ${Math.abs(savedPct)}% of income` };
-		if (savedPct < 5) return { emoji: '😅', text: 'Razor thin this month' };
-		if (savedPct < 15) return { emoji: '🙂', text: `Keeping ${savedPct}% — okay` };
-		if (savedPct < 30) return { emoji: '✨', text: `Saving ${savedPct}% — solid` };
-		return { emoji: '🚀', text: `Saving ${savedPct}% — chef's kiss` };
+		if (monthlyIncome === 0) return { emoji: '🌱', text: m.cashflow_verdict_no_income() };
+		if (savedPct < 0)
+			return { emoji: '🔥', text: m.cashflow_verdict_burning({ pct: Math.abs(savedPct) }) };
+		if (savedPct < 5) return { emoji: '😅', text: m.cashflow_verdict_thin() };
+		if (savedPct < 15) return { emoji: '🙂', text: m.cashflow_verdict_okay({ pct: savedPct }) };
+		if (savedPct < 30) return { emoji: '✨', text: m.cashflow_verdict_solid({ pct: savedPct }) };
+		return { emoji: '🚀', text: m.cashflow_verdict_chefs_kiss({ pct: savedPct }) };
 	});
 </script>
 
@@ -50,7 +52,7 @@
 	<!-- Header row -->
 	<div class="relative flex items-center justify-between">
 		<span class="text-text-primary text-[13px] font-medium">
-			{monthLabel} · pulse
+			{m.cashflow_pulse_title({ month: monthLabel })}
 		</span>
 		<span
 			class="mono text-[11px] tracking-wide tabular-nums"
@@ -86,7 +88,7 @@
 	<div class="relative mt-3 grid grid-cols-3 gap-2">
 		<div class="flex items-center gap-1.5">
 			<span class="text-[12px]" aria-hidden="true">💰</span>
-			<span class="text-text-muted text-[11.5px]">In</span>
+			<span class="text-text-muted text-[11.5px]">{m.cashflow_in()}</span>
 			<span
 				class="mono ml-auto text-[11.5px] font-medium tabular-nums"
 				style="color: var(--income-ink);">{fmt(monthlyIncome)}</span
@@ -94,7 +96,7 @@
 		</div>
 		<div class="flex items-center gap-1.5">
 			<span class="text-[12px]" aria-hidden="true">💸</span>
-			<span class="text-text-muted text-[11.5px]">Out</span>
+			<span class="text-text-muted text-[11.5px]">{m.cashflow_out()}</span>
 			<span
 				class="mono ml-auto text-[11.5px] font-medium tabular-nums"
 				style="color: var(--expense-ink);">{fmt(monthlyExpenses)}</span
@@ -102,7 +104,7 @@
 		</div>
 		<div class="flex items-center gap-1.5">
 			<span class="text-[12px]" aria-hidden="true">🏦</span>
-			<span class="text-text-muted text-[11.5px]">Net</span>
+			<span class="text-text-muted text-[11.5px]">{m.cashflow_net()}</span>
 			<span class="mono text-text-primary ml-auto text-[11.5px] font-medium tabular-nums"
 				>{fmt(net)}</span
 			>

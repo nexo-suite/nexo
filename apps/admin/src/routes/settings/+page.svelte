@@ -40,16 +40,16 @@
 		persistSettings();
 	});
 
-	const densityOptions: Array<{ value: typeof settings.logDensity; label: string }> = [
-		{ value: 'compact', label: 'Compact' },
-		{ value: 'regular', label: 'Regular' },
-		{ value: 'comfy', label: 'Comfy' }
-	];
+	const densityOptions: Array<{ value: typeof settings.logDensity; label: string }> = $derived([
+		{ value: 'compact', label: m.settings_density_compact() },
+		{ value: 'regular', label: m.settings_density_regular() },
+		{ value: 'comfy', label: m.settings_density_comfy() }
+	]);
 
-	const timeModeOptions: Array<{ value: typeof settings.timeMode; label: string }> = [
-		{ value: 'rel', label: 'Relative' },
-		{ value: 'abs', label: 'Absolute' }
-	];
+	const timeModeOptions: Array<{ value: typeof settings.timeMode; label: string }> = $derived([
+		{ value: 'rel', label: m.settings_time_relative() },
+		{ value: 'abs', label: m.settings_time_absolute() }
+	]);
 
 	const hubUrl = env.PUBLIC_LANDING_URL
 		? `${env.PUBLIC_LANDING_URL}/apps`
@@ -59,21 +59,21 @@
 
 	const currentLocale = getLocale();
 
-	const languageLabels: Record<string, string> = {
-		en: 'English',
-		de: 'Deutsch',
-		tr: 'Türkçe'
-	};
-	const themeLabels: Record<string, string> = {
-		system: 'System',
-		light: 'Light',
-		dark: 'Dark'
-	};
-	const weekStartLabels: Record<string, string> = {
-		monday: 'Monday',
-		sunday: 'Sunday',
-		saturday: 'Saturday'
-	};
+	const languageLabels: Record<string, string> = $derived({
+		en: m.settings_lang_en(),
+		de: m.settings_lang_de(),
+		tr: m.settings_lang_tr()
+	});
+	const themeLabels: Record<string, string> = $derived({
+		system: m.settings_theme_system(),
+		light: m.settings_theme_light(),
+		dark: m.settings_theme_dark()
+	});
+	const weekStartLabels: Record<string, string> = $derived({
+		monday: m.settings_week_monday(),
+		sunday: m.settings_week_sunday(),
+		saturday: m.settings_week_saturday()
+	});
 
 	// ── Notifications ──
 	let permState = $state<PermissionState>('default');
@@ -135,7 +135,7 @@
 		lastError = null;
 		try {
 			const r = await sendTest();
-			if (!r.ok) lastError = 'test send failed';
+			if (!r.ok) lastError = m.settings_test_send_failed();
 		} finally {
 			busy = false;
 		}
@@ -170,36 +170,36 @@
 					return {
 						tone: 'idle' as const,
 						icon: 'off' as const,
-						title: 'Notifications paused',
-						desc: 'Permission granted but this device is not subscribed. Re-subscribe to receive alerts.'
+						title: m.settings_status_paused_title(),
+						desc: m.settings_status_paused_desc()
 					};
 				}
 				return {
 					tone: 'ok' as const,
 					icon: 'on' as const,
-					title: 'Notifications on',
-					desc: 'You will get a push when a service goes unhealthy or recovers.'
+					title: m.settings_status_on_title(),
+					desc: m.settings_status_on_desc()
 				};
 			case 'denied':
 				return {
 					tone: 'err' as const,
 					icon: 'off' as const,
-					title: 'Notifications blocked',
-					desc: 'Browser permission is denied. Allow notifications in site settings.'
+					title: m.settings_status_blocked_title(),
+					desc: m.settings_status_blocked_desc()
 				};
 			case 'unsupported':
 				return {
 					tone: 'warn' as const,
 					icon: 'off' as const,
-					title: 'Not supported here',
-					desc: 'This browser does not support web push.'
+					title: m.settings_status_unsupported_title(),
+					desc: m.settings_status_unsupported_desc()
 				};
 			default:
 				return {
 					tone: 'idle' as const,
 					icon: 'off' as const,
-					title: 'Notifications off',
-					desc: 'Allow push to get an alert when a service breaks.'
+					title: m.settings_status_off_title(),
+					desc: m.settings_status_off_desc()
 				};
 		}
 	});
@@ -229,7 +229,7 @@
 			{hubUrl}
 			displayName={data.profile.displayName}
 			language={languageLabels[currentLocale] ?? currentLocale}
-			weekStarts={weekStartLabels[data.profile.weekStartDay] ?? 'Monday'}
+			weekStarts={weekStartLabels[data.profile.weekStartDay] ?? m.settings_week_monday()}
 			theme={themeLabels[data.profile.theme] ?? data.profile.theme}
 		/>
 	{/if}
@@ -237,20 +237,18 @@
 	<!-- Notifications section -->
 	<section class="section">
 		{#if data.devices.length > 0}
-			<SectionLabel title="Notifications" right={String(data.devices.length)} />
+			<SectionLabel title={m.settings_section_notifications()} right={String(data.devices.length)} />
 		{:else}
-			<SectionLabel title="Notifications" />
+			<SectionLabel title={m.settings_section_notifications()} />
 		{/if}
 
 		{#if !standalone && permState !== 'unsupported'}
 			<div class="ios-note">
 				{#if isIOS}
-					<strong>On iPhone:</strong> tap <span class="kbd">Share</span> →
-					<span class="kbd">Add to Home Screen</span>, then open Admin from the home-screen icon to
-					enable notifications.
+					<strong>{m.settings_ios_intro()}</strong> tap <span class="kbd">{m.settings_ios_share()}</span> →
+					<span class="kbd">{m.settings_ios_add()}</span>{m.settings_ios_outro()}
 				{:else}
-					Push only works after installing this app from the address-bar Install button or browser
-					menu.
+					{m.settings_install_hint()}
 				{/if}
 			</div>
 		{/if}
@@ -275,7 +273,9 @@
 			</div>
 
 			{#if showEnableCta}
-				<button type="button" class="hero-cta" onclick={onEnable} disabled={busy}>Turn on</button>
+				<button type="button" class="hero-cta" onclick={onEnable} disabled={busy}
+					>{m.settings_turn_on()}</button
+				>
 			{:else if showActiveActions}
 				<div class="hero-actions">
 					<button
@@ -283,7 +283,7 @@
 						class="hero-icon-btn"
 						onclick={onTest}
 						disabled={busy}
-						title="Send test"
+						title={m.settings_send_test()}
 					>
 						<Send size={16} strokeWidth={1.8} />
 					</button>
@@ -292,7 +292,7 @@
 						class="hero-icon-btn"
 						onclick={onDisable}
 						disabled={busy}
-						title="Turn off"
+						title={m.settings_turn_off()}
 					>
 						<BellOff size={16} strokeWidth={1.8} />
 					</button>
@@ -301,7 +301,11 @@
 		</div>
 
 		{#if lastError}
-			<ErrorBanner label="Push error" message={lastError} onDismiss={() => (lastError = null)} />
+			<ErrorBanner
+				label={m.settings_push_error()}
+				message={lastError}
+				onDismiss={() => (lastError = null)}
+			/>
 		{/if}
 
 		{#if data.devices.length > 0}
@@ -319,7 +323,7 @@
 								type="button"
 								class="icon-btn"
 								onclick={() => startRename(dev.id, dev.label)}
-								aria-label="Rename"
+								aria-label={m.settings_rename_aria()}
 							>
 								<Pencil size={14} strokeWidth={1.8} />
 							</button>
@@ -327,7 +331,7 @@
 								type="button"
 								class="icon-btn icon-btn-danger"
 								onclick={() => startRemove(dev.id, dev.label ?? defaultLabelFromUA(dev.userAgent))}
-								aria-label="Remove"
+								aria-label={m.settings_remove_aria()}
 							>
 								<Trash2 size={14} strokeWidth={1.8} />
 							</button>
@@ -340,13 +344,13 @@
 
 	<!-- Logs section -->
 	<section class="section">
-		<h2 class="section-title">Logs</h2>
+		<h2 class="section-title">{m.settings_section_logs()}</h2>
 
 		<div class="card">
 			<label class="row toggle-row">
 				<div class="row-text">
-					<span class="row-label">Dark log panel</span>
-					<span class="row-sub">High-contrast background for log viewer</span>
+					<span class="row-label">{m.settings_log_dark_label()}</span>
+					<span class="row-sub">{m.settings_log_dark_sub()}</span>
 				</div>
 				<button
 					type="button"
@@ -354,7 +358,7 @@
 					class:on={settings.logDark}
 					role="switch"
 					aria-checked={settings.logDark}
-					aria-label="Dark log panel"
+					aria-label={m.settings_log_dark_label()}
 					onclick={() => (settings.logDark = !settings.logDark)}
 				></button>
 			</label>
@@ -363,8 +367,8 @@
 
 			<label class="row toggle-row">
 				<div class="row-text">
-					<span class="row-label">Wrap long lines</span>
-					<span class="row-sub">Wrap instead of horizontal scroll</span>
+					<span class="row-label">{m.settings_log_wrap_label()}</span>
+					<span class="row-sub">{m.settings_log_wrap_sub()}</span>
 				</div>
 				<button
 					type="button"
@@ -372,7 +376,7 @@
 					class:on={settings.logWrap}
 					role="switch"
 					aria-checked={settings.logWrap}
-					aria-label="Wrap long lines"
+					aria-label={m.settings_log_wrap_label()}
 					onclick={() => (settings.logWrap = !settings.logWrap)}
 				></button>
 			</label>
@@ -381,10 +385,10 @@
 
 			<div class="row segment-row">
 				<div class="row-text">
-					<span class="row-label">Density</span>
-					<span class="row-sub">Spacing between log lines</span>
+					<span class="row-label">{m.settings_density_label()}</span>
+					<span class="row-sub">{m.settings_density_sub()}</span>
 				</div>
-				<div class="segment" role="group" aria-label="Density">
+				<div class="segment" role="group" aria-label={m.settings_density_label()}>
 					{#each densityOptions as opt (opt.value)}
 						<button
 							type="button"
@@ -402,10 +406,10 @@
 
 			<div class="row segment-row">
 				<div class="row-text">
-					<span class="row-label">Timestamps</span>
-					<span class="row-sub">How times are displayed in logs</span>
+					<span class="row-label">{m.settings_time_label()}</span>
+					<span class="row-sub">{m.settings_time_sub()}</span>
 				</div>
-				<div class="segment" role="group" aria-label="Timestamps">
+				<div class="segment" role="group" aria-label={m.settings_time_label()}>
 					{#each timeModeOptions as opt (opt.value)}
 						<button
 							type="button"
@@ -423,7 +427,7 @@
 
 	<!-- About section -->
 	<AboutDiagnostics
-		appName="Nexo Admin"
+		appName={m.settings_app_name()}
 		appKey="admin"
 		version={data.appMeta.version}
 		commit={data.appMeta.commit}
@@ -436,8 +440,8 @@
 
 <BottomSheet
 	bind:open={renameSheetOpen}
-	title="Rename device"
-	subtitle="Give this device a recognizable name."
+	title={m.settings_rename_title()}
+	subtitle={m.settings_rename_subtitle()}
 >
 	<form
 		method="POST"
@@ -451,29 +455,29 @@
 	>
 		<input type="hidden" name="id" value={renamingId ?? ''} />
 		<label class="field">
-			<span class="field-label">Label</span>
+			<span class="field-label">{m.settings_rename_label()}</span>
 			<input
 				type="text"
 				name="label"
 				bind:value={renameLabel}
 				maxlength="64"
-				placeholder="iPhone 15"
+				placeholder={m.settings_rename_placeholder()}
 				use:focusOnMount
 			/>
 		</label>
 		<div class="sheet-actions sheet-actions-row">
 			<button type="button" class="sheet-cancel" onclick={() => (renameSheetOpen = false)}>
-				Cancel
+				{m.common_cancel()}
 			</button>
-			<button type="submit" class="sheet-done">Save</button>
+			<button type="submit" class="sheet-done">{m.common_save()}</button>
 		</div>
 	</form>
 </BottomSheet>
 
 <BottomSheet
 	bind:open={removeSheetOpen}
-	title="Remove device?"
-	subtitle="{removingLabel} will stop receiving notifications until it re-subscribes."
+	title={m.settings_remove_title()}
+	subtitle={m.settings_remove_subtitle({ label: removingLabel })}
 >
 	<form
 		method="POST"
@@ -488,9 +492,9 @@
 		<input type="hidden" name="id" value={removingId ?? ''} />
 		<div class="sheet-actions sheet-actions-row">
 			<button type="button" class="sheet-cancel" onclick={() => (removeSheetOpen = false)}>
-				Cancel
+				{m.common_cancel()}
 			</button>
-			<button type="submit" class="sheet-done sheet-done-danger">Remove</button>
+			<button type="submit" class="sheet-done sheet-done-danger">{m.common_remove()}</button>
 		</div>
 	</form>
 </BottomSheet>

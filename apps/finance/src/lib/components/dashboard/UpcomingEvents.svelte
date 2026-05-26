@@ -2,6 +2,7 @@
 	import type { UpcomingEvent } from '$lib/types';
 	import { ArrowDownLeft, ArrowUpRight, Users } from '@lucide/svelte';
 	import { formatCurrency, getIntlLocale } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let { events }: { events: UpcomingEvent[] } = $props();
 
@@ -19,7 +20,7 @@
 
 {#if events.length > 0}
 	<section>
-		<p class="text-text-subtle mb-2 text-xs font-semibold tracking-widest uppercase">Upcoming</p>
+		<p class="text-text-subtle mb-2 text-xs font-semibold tracking-widest uppercase">{m.upcoming_section_title()}</p>
 		<div class="border-border-default bg-surface-1 overflow-hidden rounded-2xl border shadow-sm">
 			<ul>
 				{#each events as event, i (event.date + event.label)}
@@ -48,11 +49,11 @@
 	</section>
 {:else}
 	<section>
-		<p class="text-text-subtle mb-2 text-xs font-semibold tracking-widest uppercase">Upcoming</p>
+		<p class="text-text-subtle mb-2 text-xs font-semibold tracking-widest uppercase">{m.upcoming_section_title()}</p>
 		<div
 			class="border-border-default bg-surface-1 flex items-center gap-3 rounded-2xl border px-4 py-3.5 shadow-sm"
 		>
-			<p class="text-text-subtle text-sm">Nothing due in the next 30 days.</p>
+			<p class="text-text-subtle text-sm">{m.upcoming_empty()}</p>
 		</div>
 	</section>
 {/if}

@@ -7,6 +7,7 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';
+	import { m } from '$lib/paraglide/messages.js';
 
 	import type { Debt } from '$lib/types';
 	import { getIntlLocale } from '$lib/utils';
@@ -103,12 +104,12 @@
 </script>
 
 <div class="page">
-	<PageHeader title="Debt" subtitle="Money in motion between friends.">
+	<PageHeader title={m.debt_title()} subtitle={m.debt_subtitle()}>
 		{#snippet actions()}
 			<button
 				type="button"
 				onclick={openNew}
-				aria-label="Add debt"
+				aria-label={m.debt_add_aria()}
 				class="bg-debt flex h-[38px] w-[38px] items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-95"
 			>
 				<Plus size={18} stroke-width={2.5} />
@@ -123,7 +124,7 @@
 			class="rounded-[var(--radius-lg)] border px-4 py-3"
 			style="background: var(--debt-soft); border-color: color-mix(in oklab, var(--color-debt) 25%, var(--color-border-default));"
 		>
-			<p class="t-label" style="color: var(--debt-ink);">I owe</p>
+			<p class="t-label" style="color: var(--debt-ink);">{m.debt_i_owe()}</p>
 			<p
 				class="mono mt-1.5 text-[22px] leading-tight font-semibold"
 				style="color: var(--debt-ink);"
@@ -135,7 +136,7 @@
 			class="rounded-[var(--radius-lg)] border px-4 py-3"
 			style="background: var(--income-soft); border-color: color-mix(in oklab, var(--color-income) 25%, var(--color-border-default));"
 		>
-			<p class="t-label" style="color: var(--income-ink);">Owed to me</p>
+			<p class="t-label" style="color: var(--income-ink);">{m.debt_owed_to_me()}</p>
 			<p
 				class="mono mt-1.5 text-[22px] leading-tight font-semibold"
 				style="color: var(--income-ink);"
@@ -147,7 +148,7 @@
 
 	<!-- I owe section -->
 	{#if iOwe.length > 0}
-		<p class="t-label mb-1" style="color: var(--debt-ink);">I owe</p>
+		<p class="t-label mb-1" style="color: var(--debt-ink);">{m.debt_i_owe()}</p>
 		{#each iOwe as debt (debt.id)}
 			<div
 				class="border-border-default bg-surface-1 mt-[10px] rounded-[var(--radius-lg)] border px-4 py-[14px]"
@@ -205,7 +206,7 @@
 							type="submit"
 							class="bg-text-primary text-bg-0 rounded-[var(--radius-sm)] px-3 py-1.5 text-[12px] font-medium"
 						>
-							Mark settled
+							{m.debt_mark_settled()}
 						</button>
 					</form>
 					<button
@@ -213,7 +214,7 @@
 						onclick={() => openEdit(debt)}
 						class="border-border-default text-text-muted rounded-[var(--radius-sm)] border px-3 py-1.5 text-[12px] font-medium"
 					>
-						Edit
+						{m.common_edit()}
 					</button>
 				</div>
 			</div>
@@ -223,7 +224,7 @@
 	<!-- Owed to me section -->
 	{#if owedToMe.length > 0}
 		<p class="t-label mb-1 {iOwe.length > 0 ? 'mt-6' : ''}" style="color: var(--income-ink);">
-			Owed to me
+			{m.debt_owed_to_me()}
 		</p>
 		{#each owedToMe as debt (debt.id)}
 			<div
@@ -282,7 +283,7 @@
 							type="submit"
 							class="bg-text-primary text-bg-0 rounded-[var(--radius-sm)] px-3 py-1.5 text-[12px] font-medium"
 						>
-							Mark settled
+							{m.debt_mark_settled()}
 						</button>
 					</form>
 					<button
@@ -290,7 +291,7 @@
 						onclick={() => openEdit(debt)}
 						class="border-border-default text-text-muted rounded-[var(--radius-sm)] border px-3 py-1.5 text-[12px] font-medium"
 					>
-						Edit
+						{m.common_edit()}
 					</button>
 				</div>
 			</div>
@@ -301,10 +302,10 @@
 	{#if data.debts.length === 0}
 		<EmptyState
 			emoji="🤝"
-			title="No debts tracked yet"
-			sub="IOUs and side-money between friends. Tap + to add one."
+			title={m.debt_empty_title()}
+			sub={m.debt_empty_sub()}
 			tone="debt"
-			cta={{ label: 'Add a debt', onclick: openNew }}
+			cta={{ label: m.debt_empty_cta(), onclick: openNew }}
 		/>
 	{/if}
 
@@ -315,7 +316,7 @@
 				class="text-text-subtle flex cursor-pointer list-none items-center gap-1.5 text-[12px] font-medium [&::-webkit-details-marker]:hidden"
 			>
 				<ChevronRight size={14} class="transition-transform duration-200 [[open]>&]:rotate-90" />
-				Settled &middot; {settled.length}
+				{m.debt_settled_count({ count: settled.length })}
 			</summary>
 			<div class="mt-3 space-y-0">
 				{#each settled as debt (debt.id)}
@@ -325,7 +326,7 @@
 							<span class="text-text-muted text-[13px] font-medium">{debt.counterparty}</span>
 						</div>
 						<span class="mono text-text-faint text-[12px]">
-							{#if debt.dueDate}Settled {fmtDate(debt.dueDate)} &middot;
+							{#if debt.dueDate}{m.debt_settled_with_date({ date: fmtDate(debt.dueDate) })} &middot;
 							{/if}{fmt(debt.amount)}
 						</span>
 					</div>
@@ -338,7 +339,7 @@
 					style="color: var(--expense-ink);"
 					onclick={() => (confirmClear = true)}
 				>
-					Clear all settled
+					{m.debt_clear_all_settled()}
 				</button>
 			</div>
 		</details>
@@ -349,16 +350,16 @@
 {#if showForm}
 	<BottomSheet
 		bind:open={showForm}
-		title={editing ? 'Edit debt' : 'New debt 🤝'}
-		subtitle="Track what you owe or what's owed to you."
+		title={editing ? m.debt_form_edit_title() : m.debt_form_new_emoji_title()}
+		subtitle={m.debt_form_subtitle()}
 	>
 		{#if confirmDelete}
 			<div class="space-y-4 py-2">
 				<div class="bg-bg-1 rounded-[var(--radius-md)] px-4 py-4 text-center">
 					<p class="text-text-primary text-[14px] font-medium">
-						Delete debt with "{editing?.counterparty}"?
+						{m.debt_form_delete_confirm({ name: editing?.counterparty ?? '' })}
 					</p>
-					<p class="text-text-subtle mt-1 text-[12px]">This can't be undone.</p>
+					<p class="text-text-subtle mt-1 text-[12px]">{m.common_undone_warning()}</p>
 				</div>
 				<form
 					method="POST"
@@ -376,11 +377,11 @@
 						class="btn-primary w-full"
 						style="background: var(--color-expense);"
 					>
-						Yes, delete
+						{m.common_yes_delete()}
 					</button>
 				</form>
 				<button type="button" onclick={() => (confirmDelete = false)} class="btn-secondary w-full">
-					Cancel
+					{m.common_cancel()}
 				</button>
 			</div>
 		{:else}
@@ -408,14 +409,14 @@
 						class:active={form.direction === 'owe'}
 						onclick={() => (form.direction = 'owe')}
 					>
-						<span aria-hidden="true">📤</span> I owe
+						<span aria-hidden="true">📤</span> {m.debt_i_owe()}
 					</button>
 					<button
 						type="button"
 						class:active={form.direction === 'owed'}
 						onclick={() => (form.direction = 'owed')}
 					>
-						<span aria-hidden="true">📥</span> Owed to me
+						<span aria-hidden="true">📥</span> {m.debt_owed_to_me()}
 					</button>
 				</div>
 
@@ -430,20 +431,20 @@
 
 				<!-- Counterparty -->
 				<div class="field">
-					<label for="dbt-counterparty">Counterparty</label>
+					<label for="dbt-counterparty">{m.debt_form_label_counterparty()}</label>
 					<input
 						id="dbt-counterparty"
 						name="counterparty"
 						bind:value={form.counterparty}
 						class="input"
-						placeholder="e.g. Eli K."
+						placeholder={m.debt_form_counterparty_placeholder()}
 					/>
 				</div>
 
 				<!-- Due date + Account -->
 				<div class="field-row">
 					<div class="field">
-						<label for="dbt-due">Due date</label>
+						<label for="dbt-due">{m.debt_form_label_due()}</label>
 						<input
 							id="dbt-due"
 							name="due_date"
@@ -454,9 +455,9 @@
 					</div>
 					{#if data.accounts.length > 0}
 						<div class="field">
-							<label for="dbt-account">Account</label>
+							<label for="dbt-account">{m.debt_form_label_account()}</label>
 							<select id="dbt-account" bind:value={form.account_id} class="input">
-								<option value="">None</option>
+								<option value="">{m.common_none()}</option>
 								{#each data.accounts as a (a.id)}
 									<option value={a.id}>{a.emoji ?? '💳'} {a.name}</option>
 								{/each}
@@ -467,38 +468,38 @@
 
 				<!-- Notes -->
 				<div class="field">
-					<label for="dbt-notes">Notes</label>
+					<label for="dbt-notes">{m.debt_form_label_notes()}</label>
 					<input
 						id="dbt-notes"
 						name="notes"
 						bind:value={form.notes}
 						class="input"
-						placeholder="e.g. Paid for me at the pub"
+						placeholder={m.debt_form_notes_placeholder()}
 					/>
 				</div>
 
 				<!-- Mark paid toggle -->
 				<ToggleRow
 					bind:checked={form.paid}
-					label="Mark paid"
-					description="Moves to settled, drops from forecast."
+					label={m.debt_form_mark_paid_label()}
+					description={m.debt_form_mark_paid_desc()}
 					id="dbt-paid"
 				/>
 
 				<!-- Actions -->
 				<div class="actions">
 					<button type="button" class="btn-secondary" onclick={() => (showForm = false)}
-						>Cancel</button
+						>{m.common_cancel()}</button
 					>
 					<button type="submit" class="btn-primary">
-						<span>Save debt</span>
+						<span>{m.debt_form_save()}</span>
 						<span aria-hidden="true">→</span>
 					</button>
 				</div>
 
 				{#if editing}
 					<button type="button" onclick={() => (confirmDelete = true)} class="btn-delete">
-						Delete this debt
+						{m.debt_form_delete()}
 					</button>
 				{/if}
 			</form>
@@ -508,8 +509,8 @@
 
 <BottomSheet
 	bind:open={confirmClear}
-	title="Clear settled debts?"
-	subtitle="This permanently removes all debts you've marked as paid."
+	title={m.debt_clear_settled_title()}
+	subtitle={m.debt_clear_settled_subtitle()}
 >
 	<div class="space-y-3 py-2">
 		<form
@@ -523,11 +524,11 @@
 			}}
 		>
 			<button type="submit" class="btn-primary w-full" style="background: var(--color-expense);">
-				Yes, clear settled
+				{m.debt_clear_settled_confirm()}
 			</button>
 		</form>
 		<button type="button" onclick={() => (confirmClear = false)} class="btn-secondary w-full">
-			Cancel
+			{m.common_cancel()}
 		</button>
 	</div>
 </BottomSheet>

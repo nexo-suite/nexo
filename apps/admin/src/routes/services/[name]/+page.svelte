@@ -9,13 +9,13 @@
 	import { fmtRelative } from '$lib/utils';
 	import {
 		ctnState,
-		ctnStateLabel,
 		ctnComposeProfile,
 		type CtnState,
 		type HealthzSnapshot
 	} from '$lib/utils/containers';
 	import { grafanaConfigured, grafanaContainerUrl, grafanaLogsUrl } from '$lib/utils/grafana';
 	import type { ContainerInfo } from '$lib/server/docker';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let { data, form } = $props();
 	const container = $derived(data.container);
@@ -66,6 +66,18 @@
 	}
 
 	const serviceState: CtnState = $derived(ctnState(containerLike));
+	const serviceStateLabel = $derived.by(() => {
+		switch (serviceState) {
+			case 'down':
+				return m.pill_down();
+			case 'pending':
+				return m.pill_pending();
+			case 'degraded':
+				return m.pill_degraded();
+			case 'ok':
+				return m.pill_ok();
+		}
+	});
 	const isPreview = $derived(ctnComposeProfile(containerLike) === 'preview');
 	const grafanaOn = $derived(grafanaConfigured());
 
@@ -93,27 +105,30 @@
 		confirmOpen = true;
 	}
 
-	const verbCopy: Record<ActionVerb, { title: string; body: string; cta: string }> = {
+	const verbCopy: Record<ActionVerb, { title: string; body: string; cta: string }> = $derived({
 		start: {
-			title: 'Start container?',
-			body: 'Boots the container with its existing config.',
-			cta: 'Start'
+			title: m.services_confirm_start_title(),
+			body: m.services_confirm_start_body(),
+			cta: m.services_btn_start()
 		},
 		stop: {
-			title: 'Stop container?',
-			body: '10 seconds for a graceful shutdown, then SIGKILL.',
-			cta: 'Stop'
+			title: m.services_confirm_stop_title(),
+			body: m.services_confirm_stop_body(),
+			cta: m.services_btn_stop()
 		},
 		restart: {
-			title: 'Restart container?',
-			body: 'Stops gracefully (10s timeout), then starts again.',
-			cta: 'Restart'
+			title: m.services_confirm_restart_title(),
+			body: m.services_confirm_restart_body(),
+			cta: m.services_btn_restart()
 		}
-	};
+	});
 
 	function uptime(startedAt: string): string {
 		if (!startedAt || startedAt.startsWith('0001')) return '—';
-		const ms = Date.now() - new Date(startedAt).getTime();
+		const t = new Date(startedAt).getTime();
+		if (!Number.isFinite(t)) return '—';
+		const ms = Date.now() - t;
+		if (ms < 0) return '—';
 		const s = Math.floor(ms / 1000);
 		if (s < 60) return `${s}s`;
 		const m = Math.floor(s / 60);
@@ -142,16 +157,20 @@
 
 	{#if form?.error === 'DOCKER_ERROR'}
 		<div class="banner err">
-			Failed to {form.verb} — check Grafana logs (correlation id: {form.correlationId}).
+			{m.services_action_failed({ verb: form.verb, correlationId: form.correlationId })}
 		</div>
 	{/if}
 
 	<!-- ─── Header card: state + preview chip + uptime ─── -->
 	<div class="hero">
 		<div class="hero-row">
-			<StatusPill state={serviceState}>{ctnStateLabel(serviceState)}</StatusPill>
-			{#if isPreview}<span class="preview-chip">preview</span>{/if}
-			<span class="uptime">up {uptime(container.State.StartedAt)}</span>
+			<StatusPill state={serviceState}>{serviceStateLabel}</StatusPill>
+			{#if isPreview}<span class="preview-chip">{m.preview_chip()}</span>{/if}
+			{#if container.State.Running}
+				<span class="uptime"
+					>{m.services_uptime_prefix({ uptime: uptime(container.State.StartedAt) })}</span
+				>
+			{/if}
 		</div>
 		<div class="hero-image">{imageShort}</div>
 	</div>
@@ -159,7 +178,7 @@
 	<!-- ─── Health summary ─── -->
 	<section class="card">
 		<header class="card-head">
-			<h2>Health</h2>
+			<h2>{m.services_section_health()}</h2>
 			<form
 				method="POST"
 				action="?/recheck"
@@ -172,15 +191,25 @@
 					};
 				}}
 			>
-				<button type="submit" class="icon-btn" disabled={recheckBusy} aria-label="Recheck health">
+				<button
+					type="submit"
+					class="icon-btn"
+					disabled={recheckBusy}
+					aria-label={m.services_recheck_aria()}
+				>
 					<RotateCw size={14} strokeWidth={1.8} class={recheckBusy ? 'spin' : ''} />
 				</button>
 			</form>
 		</header>
 		{#if healthz?.body}
 			<div class="health-line">
-				<span class="health-count">{passing} / {total} checks passing</span>
-				<span class="health-meta">· {fmtRelative(lastChecked)} · {healthz.latency_ms}ms</span>
+				<span class="health-count">{m.services_checks_passing({ passing, total })}</span>
+				<span class="health-meta"
+					>{m.services_checks_meta({
+						when: fmtRelative(lastChecked),
+						latency: healthz.latency_ms ?? 0
+					})}</span
+				>
 			</div>
 			{#if healthz.body.version}
 				<div class="health-build">
@@ -203,44 +232,44 @@
 			{/if}
 		{:else if healthz?.error}
 			<div class="health-line">
-				<span class="health-count fail">unreachable</span>
+				<span class="health-count fail">{m.services_unreachable()}</span>
 				<span class="health-meta">— {healthz.error}</span>
 			</div>
 		{:else}
-			<div class="health-line muted">No /healthz response yet</div>
+			<div class="health-line muted">{m.services_no_healthz()}</div>
 		{/if}
 	</section>
 
 	<!-- ─── 24h uptime sparkline ─── -->
 	{#if data.history && data.history.length > 0}
 		<section class="card">
-			<header class="card-head"><h2>Last 24h</h2></header>
+			<header class="card-head"><h2>{m.services_section_last_24h()}</h2></header>
 			<UptimeSparkline history={data.history} />
 		</section>
 	{/if}
 
 	<!-- ─── Container metadata ─── -->
 	<section class="card">
-		<header class="card-head"><h2>Container</h2></header>
+		<header class="card-head"><h2>{m.services_section_container()}</h2></header>
 		<dl class="meta">
-			<dt>Image</dt>
+			<dt>{m.services_meta_image()}</dt>
 			<dd class="mono">{container.Config.Image}</dd>
-			<dt>ID</dt>
+			<dt>{m.services_meta_id()}</dt>
 			<dd class="mono">{container.Id.slice(0, 12)}</dd>
-			<dt>Started</dt>
+			<dt>{m.services_meta_started()}</dt>
 			<dd>{formatDate(container.State.StartedAt)}</dd>
-			<dt>Restart count</dt>
+			<dt>{m.services_meta_restart_count()}</dt>
 			<dd>{container.RestartCount ?? 0}</dd>
-			<dt>Restart policy</dt>
-			<dd class="mono">{restartPolicy || 'no'}</dd>
-			<dt>Networks</dt>
-			<dd class="mono">{networks.join(', ') || '—'}</dd>
+			<dt>{m.services_meta_restart_policy()}</dt>
+			<dd class="mono">{restartPolicy || m.services_meta_no_policy()}</dd>
+			<dt>{m.services_meta_networks()}</dt>
+			<dd class="mono">{networks.join(', ') || m.common_dash()}</dd>
 		</dl>
 	</section>
 
 	<!-- ─── Actions ─── -->
 	<section class="card">
-		<header class="card-head"><h2>Actions</h2></header>
+		<header class="card-head"><h2>{m.services_section_actions()}</h2></header>
 		<div class="actions">
 			{#if container.State.Running}
 				<button
@@ -249,7 +278,7 @@
 					disabled={busyVerb !== null}
 					onclick={() => ask('restart')}
 				>
-					{busyVerb === 'restart' ? '…' : 'Restart'}
+					{busyVerb === 'restart' ? '…' : m.services_btn_restart()}
 				</button>
 				<button
 					type="button"
@@ -257,7 +286,7 @@
 					disabled={busyVerb !== null}
 					onclick={() => ask('stop')}
 				>
-					{busyVerb === 'stop' ? '…' : 'Stop'}
+					{busyVerb === 'stop' ? '…' : m.services_btn_stop()}
 				</button>
 			{:else}
 				<button
@@ -266,7 +295,7 @@
 					disabled={busyVerb !== null}
 					onclick={() => ask('start')}
 				>
-					{busyVerb === 'start' ? '…' : 'Start'}
+					{busyVerb === 'start' ? '…' : m.services_btn_start()}
 				</button>
 			{/if}
 		</div>
@@ -276,7 +305,7 @@
 	{#if grafanaOn}
 		{@const cleanName = (container.Name ?? '').replace(/^\//, '')}
 		<section class="card">
-			<header class="card-head"><h2>Open in Grafana</h2></header>
+			<header class="card-head"><h2>{m.services_section_grafana()}</h2></header>
 			<div class="actions">
 				<a
 					class="btn btn-ghost"
@@ -284,7 +313,7 @@
 					target="_blank"
 					rel="noreferrer"
 				>
-					Logs <ExternalLink size={13} strokeWidth={1.8} />
+					{m.services_grafana_logs()} <ExternalLink size={13} strokeWidth={1.8} />
 				</a>
 				<a
 					class="btn btn-ghost"
@@ -292,7 +321,7 @@
 					target="_blank"
 					rel="noreferrer"
 				>
-					Metrics <ExternalLink size={13} strokeWidth={1.8} />
+					{m.services_grafana_metrics()} <ExternalLink size={13} strokeWidth={1.8} />
 				</a>
 			</div>
 		</section>
@@ -307,10 +336,10 @@
 		use:enhance={() => {
 			const verb = confirmVerb;
 			busyVerb = verb;
-			confirmOpen = false;
 			return async ({ update }) => {
 				await update();
 				busyVerb = null;
+				confirmOpen = false;
 			};
 		}}
 	>
@@ -321,7 +350,7 @@
 				onclick={() => (confirmOpen = false)}
 				disabled={busyVerb !== null}
 			>
-				Cancel
+				{m.common_cancel()}
 			</button>
 			<button
 				type="submit"
@@ -330,7 +359,7 @@
 				class:btn-danger={confirmVerb !== 'start'}
 				disabled={busyVerb !== null}
 			>
-				{verbCopy[confirmVerb].cta}
+				{busyVerb !== null ? '…' : verbCopy[confirmVerb].cta}
 			</button>
 		</div>
 	</form>

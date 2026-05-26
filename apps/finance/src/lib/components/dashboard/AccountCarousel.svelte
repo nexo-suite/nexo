@@ -2,6 +2,7 @@
 	import { Plus } from '@lucide/svelte';
 	import type { Account } from '$lib/types';
 	import { getIntlLocale } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let {
 		accounts,
@@ -84,7 +85,7 @@
 		<div class="bg-bg-2 text-text-faint flex h-9 w-9 items-center justify-center rounded-full">
 			<Plus size={18} stroke-width={1.5} />
 		</div>
-		<span class="text-text-faint mt-1.5 text-[11px]">Add</span>
+		<span class="text-text-faint mt-1.5 text-[11px]">{m.account_carousel_add()}</span>
 	</a>
 </div>
 

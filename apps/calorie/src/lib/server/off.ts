@@ -1,20 +1,55 @@
-import { OpenFoodFacts } from '@openfoodfacts/openfoodfacts-nodejs';
-import { withUser, foodsCache } from '@nexo/db';
-import { eq } from 'drizzle-orm';
+import { withUser, foodsCache, entries as entriesTable } from '@nexo/db';
+import { and, eq } from 'drizzle-orm';
+import { env } from '$env/dynamic/private';
 import { logger } from './logger';
+import { cleanBrand, cleanName } from './off-cleaners';
 
-const TTL_MS = 30 * 24 * 60 * 60 * 1000;
+/**
+ * OFF (Open Food Facts) integration. Direct fetch — no SDK.
+ *
+ * The official @openfoodfacts/openfoodfacts-nodejs SDK forces its own User-Agent and
+ * doesn't expose free-text search, so we use raw fetch instead. This gives us:
+ *  - A compliant User-Agent per https://openfoodfacts.github.io/openfoodfacts-server/api/
+ *    (`AppName/Version (ContactEmail)`) — required to avoid being flagged as a bot.
+ *  - Free-text search via search-a-licious + cgi/search.pl fallback.
+ *  - Locale-aware lookups via the `lc` query param and language-specific subdomains.
+ *
+ * Rate limits are 15 req/min/IP for product reads and 10 req/min/IP for search; the
+ * surrounding code (search endpoint + foods_search_cache) is responsible for staying
+ * well under those.
+ *
+ * Environment selection (OFF_ENV):
+ *  - `prod` (default) — hits production at *.openfoodfacts.org. Counts toward real
+ *    rate limits and pollutes production telemetry.
+ *  - `staging` — hits the OFF mirror at *.openfoodfacts.net with basic auth `off:off`.
+ *    Recommended for dev. Mirror is read-only and may lag prod by hours.
+ */
+
+const USER_AGENT = 'Nexo-Calorie/1.0 (mail@krieger2501.de)';
 const FETCH_TIMEOUT_MS = 4500;
+const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-let _client: OpenFoodFacts | null = null;
-function client(): OpenFoodFacts {
-	if (_client) return _client;
-	_client = new OpenFoodFacts(globalThis.fetch.bind(globalThis), {
-		// User-Agent format required by OFF — identifies the integrating app
-		// SDK appends its own version; we override with our app identity instead
-	});
-	return _client;
-}
+const OFF_ENV = (env.OFF_ENV ?? 'prod') as 'prod' | 'staging';
+const HOST_DOMAIN = OFF_ENV === 'staging' ? 'openfoodfacts.net' : 'openfoodfacts.org';
+const SEARCH_HOST = OFF_ENV === 'staging' ? 'search.openfoodfacts.net' : 'search.openfoodfacts.org';
+const BASIC_AUTH = OFF_ENV === 'staging' ? `Basic ${btoa('off:off')}` : null;
+
+export type Locale = 'en' | 'de' | 'tr';
+
+const FIELDS: ReadonlyArray<string> = [
+	'code',
+	'product_name',
+	'product_name_de',
+	'product_name_en',
+	'product_name_tr',
+	'brands',
+	'quantity',
+	'serving_size',
+	'serving_quantity',
+	'image_front_small_url',
+	'nutriments',
+	'nutriscore_grade'
+];
 
 export type CachedFood = {
 	source: 'cache' | 'off' | 'stale';
@@ -34,6 +69,20 @@ export type CachedFood = {
 	fetchedAt: string;
 };
 
+/** Picks the best name for the user's locale, falling back gracefully. */
+export function pickName(
+	row: {
+		nameDe: string | null;
+		nameEn: string | null;
+		nameTr: string | null;
+		nameGeneric: string | null;
+	},
+	locale: Locale
+): string {
+	const byLocale = { en: row.nameEn, de: row.nameDe, tr: row.nameTr };
+	return byLocale[locale] ?? row.nameEn ?? row.nameDe ?? row.nameGeneric ?? 'Unknown';
+}
+
 function num(v: unknown): number | null {
 	if (typeof v === 'number' && Number.isFinite(v)) return v;
 	if (typeof v === 'string') {
@@ -43,14 +92,20 @@ function num(v: unknown): number | null {
 	return null;
 }
 
+function numStr(v: unknown): string | null {
+	const n = num(v);
+	return n == null ? null : String(n);
+}
+
 function toRow(barcode: string, p: Record<string, unknown>) {
 	const n = (p.nutriments ?? {}) as Record<string, unknown>;
 	return {
 		barcode,
-		nameDe: (p.product_name_de as string | null) ?? null,
-		nameEn: (p.product_name_en as string | null) ?? null,
-		nameGeneric: (p.product_name as string | null) ?? null,
-		brand: (p.brands as string | null) ?? null,
+		nameDe: cleanName(p.product_name_de) ?? null,
+		nameTr: cleanName(p.product_name_tr) ?? null,
+		nameEn: cleanName(p.product_name_en) ?? null,
+		nameGeneric: cleanName(p.product_name) ?? null,
+		brand: cleanBrand(p.brands) ?? null,
 		kcal100g: numStr(n['energy-kcal_100g']),
 		protein100g: numStr(n.proteins_100g),
 		carbs100g: numStr(n.carbohydrates_100g),
@@ -65,16 +120,15 @@ function toRow(barcode: string, p: Record<string, unknown>) {
 	};
 }
 
-function numStr(v: unknown): string | null {
-	const n = num(v);
-	return n == null ? null : String(n);
-}
-
-function rowToFood(source: CachedFood['source'], row: typeof foodsCache.$inferSelect): CachedFood {
+function rowToFood(
+	source: CachedFood['source'],
+	row: typeof foodsCache.$inferSelect,
+	locale: Locale
+): CachedFood {
 	return {
 		source,
 		barcode: row.barcode,
-		name: row.nameDe ?? row.nameEn ?? row.nameGeneric ?? 'Unknown',
+		name: pickName(row, locale),
 		brand: row.brand,
 		kcal100g: row.kcal100g != null ? Number(row.kcal100g) : null,
 		protein100g: row.protein100g != null ? Number(row.protein100g) : null,
@@ -90,26 +144,38 @@ function rowToFood(source: CachedFood['source'], row: typeof foodsCache.$inferSe
 	};
 }
 
-const FIELDS: ReadonlyArray<string> = [
-	'code',
-	'product_name',
-	'product_name_de',
-	'product_name_en',
-	'brands',
-	'quantity',
-	'serving_size',
-	'serving_quantity',
-	'image_front_small_url',
-	'nutriments',
-	'nutriscore_grade'
-];
+/** Fetches with our User-Agent + abort timeout. Throws on non-2xx (caller decides recovery). */
+async function offFetch(url: string): Promise<unknown> {
+	const ctrl = new AbortController();
+	const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+	try {
+		const headers: Record<string, string> = {
+			'User-Agent': USER_AGENT,
+			Accept: 'application/json'
+		};
+		if (BASIC_AUTH) headers.Authorization = BASIC_AUTH;
+		const res = await fetch(url, { headers, signal: ctrl.signal });
+		if (!res.ok) throw new Error(`OFF ${res.status} for ${url}`);
+		return await res.json();
+	} finally {
+		clearTimeout(timer);
+	}
+}
 
 /**
  * Look up a product by barcode. Cache-first, then OFF, with stale-on-error fallback.
- * Per-user scoping is enforced by the caller — this function only deals with the shared
- * barcode cache.
+ *
+ * Cache rule:
+ *  - Cache hit AND user has logged this barcode in `entries` → return immediately, never refetch.
+ *    Once a user consciously logged a food, refetching costs latency + rate budget for ~zero value.
+ *  - Cache hit, no entries for this user → respect 30-day TTL.
+ *  - Cache miss → fetch OFF.
  */
-export async function lookupBarcode(userId: string, barcode: string): Promise<CachedFood | null> {
+export async function lookupBarcode(
+	userId: string,
+	barcode: string,
+	locale: Locale
+): Promise<CachedFood | null> {
 	if (!/^\d{8,14}$/.test(barcode)) {
 		throw new Error('INVALID_BARCODE');
 	}
@@ -120,35 +186,39 @@ export async function lookupBarcode(userId: string, barcode: string): Promise<Ca
 
 	if (cached) {
 		const fresh = Date.now() - cached.fetchedAt.getTime() < TTL_MS;
-		if (fresh) {
-			// Bump last_accessed so we know which barcodes are actively used
+		if (!fresh) {
+			// Logged-forever rule: skip TTL refetch if the user has ever logged this barcode.
+			const [logged] = await withUser(userId, (tx) =>
+				tx
+					.select({ id: entriesTable.id })
+					.from(entriesTable)
+					.where(and(eq(entriesTable.userId, userId), eq(entriesTable.foodBarcode, barcode)))
+					.limit(1)
+			);
+			if (logged) {
+				return rowToFood('cache', cached, locale);
+			}
+		} else {
 			await withUser(userId, (tx) =>
 				tx
 					.update(foodsCache)
 					.set({ lastAccessedAt: new Date() })
 					.where(eq(foodsCache.barcode, barcode))
 			);
-			return rowToFood('cache', cached);
+			return rowToFood('cache', cached, locale);
 		}
 	}
 
 	try {
-		const ctrl = new AbortController();
-		const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
-		// The SDK's getProductV3 is heavily generic over `fields`; bypass the strict literal
-		// inference by treating the call as untyped here — we re-narrow on the response shape below.
-		const callable = client().getProductV3 as unknown as (
-			barcode: string,
-			query: { fields: readonly string[] }
-		) => Promise<unknown>;
-		const res = await callable(barcode, { fields: FIELDS });
-		clearTimeout(timer);
-
-		const product = (res as { product?: Record<string, unknown>; status?: number }).product;
-		const status = (res as { status?: number }).status;
+		const url =
+			`https://${locale}.${HOST_DOMAIN}/api/v3/product/${barcode}.json` +
+			`?lc=${locale}&fields=${FIELDS.join(',')}`;
+		const res = (await offFetch(url)) as { product?: Record<string, unknown>; status?: number };
+		const product = res.product;
+		const status = res.status;
 
 		if (!product || status !== 1) {
-			if (cached) return rowToFood('stale', cached);
+			if (cached) return rowToFood('stale', cached, locale);
 			return null;
 		}
 
@@ -164,10 +234,119 @@ export async function lookupBarcode(userId: string, barcode: string): Promise<Ca
 				.returning();
 			return r;
 		});
-		return rowToFood('off', inserted);
+		return rowToFood('off', inserted, locale);
 	} catch (e) {
 		logger.warn('off_fetch_failed', { barcode, error: String(e) });
-		if (cached) return rowToFood('stale', cached);
+		if (cached) return rowToFood('stale', cached, locale);
 		throw e;
 	}
+}
+
+/** Result row shape returned by `searchOff` — pre-cache, locale-resolved name not yet picked. */
+export type OffSearchHit = ReturnType<typeof toRow>;
+
+/**
+ * Free-text search against OFF.
+ *
+ * Primary uses search-a-licious (beta as of 2026-05) at search.openfoodfacts.org.
+ * Fallback to legacy cgi/search.pl on 5xx/timeout is intentional — search-a-licious
+ * has cleaner langs support but isn't 1.0 yet, so we keep the older path warm.
+ *
+ * Throws when both primary AND fallback fail (network/timeout/5xx) — caller decides
+ * how to surface the outage. Returns an empty array when OFF responded successfully
+ * but had nothing to say. The two cases are different UX states ("retry" vs "no
+ * matches, create your own?"), so don't conflate them.
+ */
+export async function searchOff(query: string, locale: Locale): Promise<OffSearchHit[]> {
+	const q = query.trim();
+	if (q.length < 3) return [];
+
+	try {
+		return await searchViaSearchALicious(q, locale);
+	} catch (e) {
+		logger.warn('off_search_alicious_failed', {
+			error: String(e),
+			locale,
+			query: q
+		});
+		try {
+			return await searchViaCgi(q, locale);
+		} catch (e2) {
+			logger.warn('off_search_failed', { error: String(e2), locale, query: q });
+			throw e2;
+		}
+	}
+}
+
+async function searchViaSearchALicious(q: string, locale: Locale): Promise<OffSearchHit[]> {
+	const fields = [
+		'code',
+		'product_name',
+		'product_name_en',
+		'product_name_de',
+		'product_name_tr',
+		'brands',
+		'nutriments',
+		'serving_quantity',
+		'image_front_small_url'
+	].join(',');
+	// `states_tags:"en:nutrition-facts-completed"` filters to products OFF moderators
+	// have confirmed have complete nutrition data — drops stub entries that have a
+	// name but no usable kcal/macro values.
+	const queryTerm = encodeURIComponent(`${q} states_tags:"en:nutrition-facts-completed"`);
+	const url =
+		`https://${SEARCH_HOST}/search?q=${queryTerm}` +
+		`&langs=${locale},en&page_size=8&fields=${fields}`;
+	const res = (await offFetch(url)) as { hits?: Array<Record<string, unknown>> };
+	const hits = res.hits ?? [];
+	return hits
+		.map((p) => {
+			const code = typeof p.code === 'string' ? p.code : null;
+			if (!code) return null;
+			return toRow(code, p);
+		})
+		.filter((r): r is OffSearchHit => r != null && hasUsableNutrition(r));
+}
+
+async function searchViaCgi(q: string, locale: Locale): Promise<OffSearchHit[]> {
+	const url =
+		`https://${locale}.${HOST_DOMAIN}/cgi/search.pl?search_terms=${encodeURIComponent(q)}` +
+		`&search_simple=1&action=process&json=1&page_size=8&fields=${FIELDS.join(',')}` +
+		`&states_tags=en:nutrition-facts-completed`;
+	const res = (await offFetch(url)) as { products?: Array<Record<string, unknown>> };
+	const products = res.products ?? [];
+	return products
+		.map((p) => {
+			const code = typeof p.code === 'string' ? p.code : null;
+			if (!code) return null;
+			return toRow(code, p);
+		})
+		.filter((r): r is OffSearchHit => r != null && hasUsableNutrition(r));
+}
+
+function hasUsableNutrition(r: OffSearchHit): boolean {
+	if (r.kcal100g == null) return false;
+	if (!r.nameEn && !r.nameDe && !r.nameTr && !r.nameGeneric) return false;
+	return true;
+}
+
+/**
+ * Upsert a fetched OFF product into foods_cache and return the row.
+ * Public so the search endpoint can persist hits returned from `searchOff`.
+ */
+export async function upsertCached(
+	userId: string,
+	row: OffSearchHit
+): Promise<typeof foodsCache.$inferSelect> {
+	const [r] = await withUser(userId, (tx) =>
+		tx
+			.insert(foodsCache)
+			.values({ ...row, fetchedAt: new Date(), lastAccessedAt: new Date() })
+			.onConflictDoUpdate({
+				target: foodsCache.barcode,
+				set: { ...row, fetchedAt: new Date(), lastAccessedAt: new Date() }
+			})
+			.returning()
+	);
+	return r!;
 }

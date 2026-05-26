@@ -26,15 +26,17 @@
 		if (open) {
 			mounted = true;
 			closing = false;
+			dragY = 0;
 		} else if (mounted && !closing) {
 			closing = true;
 			const height = sheetEl?.offsetHeight ?? 300;
 			dragY = height;
-			setTimeout(() => {
+			const timer = setTimeout(() => {
 				mounted = false;
 				closing = false;
 				dragY = 0;
 			}, 320);
+			return () => clearTimeout(timer);
 		}
 	});
 

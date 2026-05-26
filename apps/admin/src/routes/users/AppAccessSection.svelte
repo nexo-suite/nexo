@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { SvelteSet } from 'svelte/reactivity';
+	import { m } from '$lib/paraglide/messages.js';
 
 	const APP_ICONS: Record<string, string> = {
 		finance: '/icon-finance.svg',
@@ -38,7 +39,7 @@
 </script>
 
 <div class="section-h">
-	<h3>App access</h3>
+	<h3>{m.users_app_access_heading()}</h3>
 	<span class="meta-label">{[...pendingApps].length}/{knownApps.length}</span>
 </div>
 <form
@@ -71,7 +72,7 @@
 				<button
 					type="button"
 					class="toggle {granted ? 'on' : ''}"
-					aria-label="Toggle {app.label} access"
+					aria-label={m.users_app_toggle_aria({ app: app.label })}
 					aria-pressed={granted}
 					onclick={() => {
 						if (granted) pendingApps.delete(app.id);
@@ -83,9 +84,9 @@
 		{/each}
 	</div>
 	{#if accessDirty}
-		<button type="submit" class="btn btn-primary btn-block">Save access</button>
+		<button type="submit" class="btn btn-primary btn-block">{m.users_save_access()}</button>
 	{:else if accessSaved}
-		<div class="saved-label">✓ Access saved</div>
+		<div class="saved-label">{m.users_access_saved()}</div>
 	{/if}
 </form>
 

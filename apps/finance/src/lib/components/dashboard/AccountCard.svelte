@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { formatCurrency } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 
 	const TYPE_ICONS: Record<string, string> = {
 		checking: '🏦',
@@ -44,7 +45,7 @@
 	<div class="text-right">
 		<p class="text-sm font-semibold tabular-nums">{fmt(account.balance)}</p>
 		{#if !account.includeInTotal}
-			<p class="text-text-subtle text-[10px]">excluded</p>
+			<p class="text-text-subtle text-[10px]">{m.account_excluded()}</p>
 		{/if}
 	</div>
 </div>

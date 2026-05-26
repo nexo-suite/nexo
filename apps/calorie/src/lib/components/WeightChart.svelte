@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Plus, TrendingDown, TrendingUp } from '@lucide/svelte';
 	import type { WeightLog } from '$lib/types';
-	import { m } from '$lib/i18n';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let {
 		logs,

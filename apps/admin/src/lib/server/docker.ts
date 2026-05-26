@@ -1,5 +1,14 @@
 import http from 'http';
 import { env } from '$env/dynamic/private';
+import {
+	devMockEnabled,
+	isSocketUnreachable,
+	mockHealthzResult,
+	mockInspect,
+	mockListContainers,
+	mockStats,
+	warnOnceMockActive
+} from '$lib/server/dev-mocks';
 
 const SOCKET_PATH = env.DOCKER_SOCKET ?? '/var/run/docker.sock';
 
@@ -58,9 +67,64 @@ export function dockerGet<T>(path: string): Promise<T> {
 				}
 			});
 		});
-		req.on('error', reject);
+		req.on('error', (err) => {
+			if (devMockEnabled() && isSocketUnreachable(err)) {
+				const mocked = mockResponseForPath<T>(path);
+				if (mocked !== undefined) {
+					warnOnceMockActive();
+					resolve(mocked);
+					return;
+				}
+			}
+			reject(err);
+		});
 		req.end();
 	});
+}
+
+function mockResponseForPath<T>(path: string): T | undefined {
+	// /containers/json[?...]
+	if (/^\/containers\/json(\?|$)/.test(path)) {
+		return mockListContainers() as unknown as T;
+	}
+	// /containers/{idOrName}/json
+	const inspectMatch = path.match(/^\/containers\/([^/]+)\/json(?:\?|$)/);
+	if (inspectMatch) {
+		const inspect = mockInspect(decodeURIComponent(inspectMatch[1]!));
+		return (inspect ?? null) as unknown as T;
+	}
+	// /containers/{idOrName}/stats[?...]
+	const statsMatch = path.match(/^\/containers\/([^/]+)\/stats(?:\?|$)/);
+	if (statsMatch) {
+		// dockerGet returns the raw payload that fetchContainerStats parses. We
+		// short-circuit by returning a pre-shaped object that yields our mock
+		// numbers when run through the parser.
+		const stats = mockStats(decodeURIComponent(statsMatch[1]!));
+		const cpuTotal = 1_000_000_000;
+		const cpuPercent = stats.cpuPercent ?? 0;
+		// Reverse-engineer raw numbers so fetchContainerStats produces our values.
+		const onlineCpus = 1;
+		const sysDelta = 1_000_000;
+		const cpuDelta = (cpuPercent / 100) * sysDelta * onlineCpus;
+		return {
+			cpu_stats: {
+				cpu_usage: { total_usage: cpuTotal + cpuDelta },
+				system_cpu_usage: cpuTotal * 10 + sysDelta,
+				online_cpus: onlineCpus
+			},
+			precpu_stats: {
+				cpu_usage: { total_usage: cpuTotal },
+				system_cpu_usage: cpuTotal * 10,
+				online_cpus: onlineCpus
+			},
+			memory_stats: {
+				usage: stats.memoryUsedBytes ?? 0,
+				limit: stats.memoryLimitBytes ?? 0,
+				stats: { cache: 0 }
+			}
+		} as unknown as T;
+	}
+	return undefined;
 }
 
 export function dockerAction(path: string): Promise<void> {
@@ -80,7 +144,14 @@ export function dockerAction(path: string): Promise<void> {
 				reject(new Error(`Docker API ${res.statusCode}: ${data || res.statusMessage}`));
 			});
 		});
-		req.on('error', reject);
+		req.on('error', (err) => {
+			if (devMockEnabled() && isSocketUnreachable(err)) {
+				warnOnceMockActive();
+				resolve();
+				return;
+			}
+			reject(err);
+		});
 		req.end();
 	});
 }
@@ -199,6 +270,9 @@ export async function fetchHealthz(
 		}
 		return { ok: res.ok, status: res.status, body, latency_ms: latency, url };
 	} catch (e) {
+		if (devMockEnabled()) {
+			return mockHealthzResult(inspect.Name ?? inspect.Id);
+		}
 		return {
 			ok: false,
 			status: 0,

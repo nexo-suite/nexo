@@ -5,7 +5,7 @@
 	import { calculateTargets } from '$lib/calc';
 	import type { ActivityLevel, Goal, MacroTier, Sex, Targets } from '$lib/types';
 	import Stepper from '$lib/components/Stepper.svelte';
-	import { m } from '$lib/i18n';
+	import { m } from '$lib/paraglide/messages.js';
 
 	type Step = 'welcome' | 'track' | 'method' | 'body' | 'targets' | 'done';
 

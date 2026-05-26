@@ -3,6 +3,7 @@
 	import type { SvelteSet } from 'svelte/reactivity';
 	import { fmtRelative, initials, displayName, entryStatus } from '$lib/utils';
 	import AppAccessSection from './AppAccessSection.svelte';
+	import { m } from '$lib/paraglide/messages.js';
 
 	type Entry =
 		| {
@@ -38,6 +39,13 @@
 	let { entry, knownApps, pendingApps, onclose }: Props = $props();
 
 	let confirmRemove = $state(false);
+
+	const statusLabel = $derived.by(() => {
+		const s = entryStatus(entry);
+		if (s === 'active') return m.users_filter_active();
+		if (s === 'invited') return m.users_filter_pending();
+		return m.users_filter_blocked();
+	});
 </script>
 
 <div class="screen fade-in">
@@ -45,7 +53,7 @@
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
 			><path d="M15 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" /></svg
 		>
-		Users
+		{m.users_back()}
 	</button>
 
 	<div class="profile-card">
@@ -60,18 +68,18 @@
 					? 'ok'
 					: entryStatus(entry) === 'invited'
 						? 'warn'
-						: 'err'}">{entryStatus(entry)}</span
+						: 'err'}">{statusLabel}</span
 			>
 		</div>
 	</div>
 
 	<div class="row-stack">
 		<div class="kv">
-			<span class="k">Joined</span>
+			<span class="k">{m.users_kv_joined()}</span>
 			<span class="v">{fmtRelative(entry.createdAt)}</span>
 		</div>
 		<div class="kv">
-			<span class="k">Type</span>
+			<span class="k">{m.users_kv_type()}</span>
 			<span class="v">{entry.type}</span>
 		</div>
 	</div>
@@ -79,13 +87,13 @@
 	{#if entry.type === 'user'}
 		<AppAccessSection {entry} {knownApps} {pendingApps} />
 
-		<div class="section-h" style="margin-top:8px"><h3>Danger zone</h3></div>
+		<div class="section-h" style="margin-top:8px"><h3>{m.users_danger_zone()}</h3></div>
 		<div class="row-stack">
 			{#if !confirmRemove}
 				<button type="button" class="danger-row" onclick={() => (confirmRemove = true)}>
 					<div>
-						<div class="danger-title">Remove from allowlist</div>
-						<div class="danger-sub">Blocks login + revokes all app access</div>
+						<div class="danger-title">{m.users_remove_allowlist_title()}</div>
+						<div class="danger-sub">{m.users_remove_allowlist_sub()}</div>
 					</div>
 					<svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
 						><path d="M6 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" /></svg
@@ -94,7 +102,7 @@
 			{:else}
 				<div style="padding:14px">
 					<p class="confirm-text">
-						Remove <strong>{entry.email}</strong> from the allowlist? They'll be blocked on next login.
+						{m.users_confirm_remove_user({ email: entry.email })}
 					</p>
 					<div class="confirm-actions">
 						<form
@@ -107,23 +115,23 @@
 								}}
 						>
 							<input type="hidden" name="email" value={entry.email} />
-							<button type="submit" class="btn btn-danger">Remove user</button>
+							<button type="submit" class="btn btn-danger">{m.users_remove_user_button()}</button>
 						</form>
 						<button type="button" class="btn btn-ghost" onclick={() => (confirmRemove = false)}
-							>Cancel</button
+							>{m.common_cancel()}</button
 						>
 					</div>
 				</div>
 			{/if}
 		</div>
 	{:else}
-		<div class="section-h"><h3>Danger zone</h3></div>
+		<div class="section-h"><h3>{m.users_danger_zone()}</h3></div>
 		<div class="row-stack">
 			{#if !confirmRemove}
 				<button type="button" class="danger-row" onclick={() => (confirmRemove = true)}>
 					<div>
-						<div class="danger-title">Remove invite</div>
-						<div class="danger-sub">Removes email from allowlist</div>
+						<div class="danger-title">{m.users_remove_invite_title()}</div>
+						<div class="danger-sub">{m.users_remove_invite_sub()}</div>
 					</div>
 					<svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
 						><path d="M6 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" /></svg
@@ -132,7 +140,7 @@
 			{:else}
 				<div style="padding:14px">
 					<p class="confirm-text">
-						Remove <strong>{entry.email}</strong> from the allowlist?
+						{m.users_confirm_remove_invite({ email: entry.email })}
 					</p>
 					<div class="confirm-actions">
 						<form
@@ -145,10 +153,10 @@
 								}}
 						>
 							<input type="hidden" name="email" value={entry.email} />
-							<button type="submit" class="btn btn-danger">Remove</button>
+							<button type="submit" class="btn btn-danger">{m.common_remove()}</button>
 						</form>
 						<button type="button" class="btn btn-ghost" onclick={() => (confirmRemove = false)}
-							>Cancel</button
+							>{m.common_cancel()}</button
 						>
 					</div>
 				</div>

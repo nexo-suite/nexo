@@ -16,16 +16,16 @@
 	const tabs = $derived([
 		{ href: '/', label: m.nav_home(), icon: Home },
 		{ href: '/accounts', label: m.nav_accounts(), icon: CreditCard },
-		{ href: '#flows', label: 'Flows', icon: Layers, isFlows: true },
+		{ href: '#flows', label: m.nav_flows(), icon: Layers, isFlows: true },
 		{ href: '/forecast', label: m.nav_forecast(), icon: BarChart2 },
-		{ href: '/settings', label: 'Settings', icon: Settings }
+		{ href: '/settings', label: m.nav_settings(), icon: Settings }
 	]);
 
 	const flowItems = $derived([
 		{ href: '/expenses', label: m.nav_expenses(), icon: Receipt },
 		{ href: '/income', label: m.nav_income(), icon: TrendingUp },
-		{ href: '/debt', label: 'Debt', icon: Users },
-		{ href: '/commitments', label: 'Commitments', icon: Bookmark }
+		{ href: '/debt', label: m.nav_debt(), icon: Users },
+		{ href: '/commitments', label: m.nav_commitments(), icon: Bookmark }
 	]);
 
 	let popoverOpen = $state(false);

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { UpcomingEvent } from '$lib/types';
 	import { getIntlLocale } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let {
 		event,
@@ -26,13 +27,13 @@
 	const TYPE_STYLES: Record<
 		string,
 		{ ink: string; soft: string; line: string; emoji: string; label: string; sign: string }
-	> = {
+	> = $derived({
 		expense: {
 			ink: 'var(--expense-ink)',
 			soft: 'var(--expense-soft)',
 			line: 'var(--expense-line)',
 			emoji: '💸',
-			label: 'Expense',
+			label: m.spotlight_label_expense(),
 			sign: '-'
 		},
 		income: {
@@ -40,7 +41,7 @@
 			soft: 'var(--income-soft)',
 			line: 'var(--income-line)',
 			emoji: '💰',
-			label: 'Income',
+			label: m.spotlight_label_income(),
 			sign: '+'
 		},
 		debt: {
@@ -48,10 +49,10 @@
 			soft: 'var(--debt-soft)',
 			line: 'var(--debt-line)',
 			emoji: '🤝',
-			label: 'Debt',
+			label: m.spotlight_label_debt(),
 			sign: ''
 		}
-	};
+	});
 
 	const style = $derived(
 		event ? (TYPE_STYLES[event.type] ?? TYPE_STYLES['expense']) : TYPE_STYLES['expense']
@@ -79,7 +80,7 @@
 				class="mono text-[10px] font-semibold tracking-[0.14em] uppercase"
 				style="color: {style.ink};"
 			>
-				Hits today · {style.label}
+				{m.spotlight_hits_today({ label: style.label })}
 			</span>
 		</div>
 

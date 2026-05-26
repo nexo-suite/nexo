@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { MealSlot } from '$lib/types';
-	import { m } from '$lib/i18n';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let { slot, size = 'md' }: { slot: MealSlot; size?: 'sm' | 'md' } = $props();
 

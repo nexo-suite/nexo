@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Search } from '@lucide/svelte';
 	import { grafanaConfigured, grafanaLogsUrl } from '$lib/utils/grafana';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let value = $state('');
 	const enabled = $derived(grafanaConfigured());
@@ -21,8 +22,8 @@
 	<input
 		type="text"
 		bind:value
-		placeholder="paste correlation id"
-		aria-label="Search Grafana by correlation ID"
+		placeholder={m.correlation_search_placeholder()}
+		aria-label={m.correlation_search_aria()}
 		spellcheck="false"
 		autocapitalize="off"
 		autocomplete="off"

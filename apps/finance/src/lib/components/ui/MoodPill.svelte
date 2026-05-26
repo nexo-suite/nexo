@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getIntlLocale } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 
 	type Tone = 'good' | 'steady' | 'watch' | 'tight' | 'alert';
 
@@ -24,13 +25,13 @@
 		const ratio = liquidBalance > 0 ? lowestValue / liquidBalance : lowestValue >= 0 ? 1 : -1;
 
 		if (lowestValue < 0) {
-			if (delta < -liquidBalance * 0.25) return { emoji: '🌪️', label: 'Cashflow alert', tone: 'alert' };
-			return { emoji: '⛈️', label: 'Tight ahead', tone: 'tight' };
+			if (delta < -liquidBalance * 0.25) return { emoji: '🌪️', label: m.mood_alert(), tone: 'alert' };
+			return { emoji: '⛈️', label: m.mood_tight(), tone: 'tight' };
 		}
-		if (ratio < 0.25) return { emoji: '⛅', label: 'Watch payday', tone: 'watch' };
-		if (delta < 0) return { emoji: '🌤️', label: 'Trickling down', tone: 'watch' };
-		if (delta < liquidBalance * 0.05) return { emoji: '☀️', label: 'Steady', tone: 'steady' };
-		return { emoji: '🌞', label: 'Comfortable', tone: 'good' };
+		if (ratio < 0.25) return { emoji: '⛅', label: m.mood_watch(), tone: 'watch' };
+		if (delta < 0) return { emoji: '🌤️', label: m.mood_trickling(), tone: 'watch' };
+		if (delta < liquidBalance * 0.05) return { emoji: '☀️', label: m.mood_steady(), tone: 'steady' };
+		return { emoji: '🌞', label: m.mood_good(), tone: 'good' };
 	});
 
 	const TONE_STYLE: Record<Tone, { bg: string; ink: string; line: string }> = {
@@ -69,15 +70,17 @@
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 		const days = Math.round((date.getTime() - today.getTime()) / 86400000);
-		if (days <= 0) return 'today';
-		if (days === 1) return 'tomorrow';
-		if (days < 14) return `in ${days} days`;
-		return `on ${date.toLocaleDateString(getIntlLocale(), { day: 'numeric', month: 'short' })}`;
+		if (days <= 0) return m.mood_lowest_today();
+		if (days === 1) return m.mood_lowest_tomorrow();
+		if (days < 14) return m.mood_lowest_in_days({ count: days });
+		return m.mood_lowest_on({
+			date: date.toLocaleDateString(getIntlLocale(), { day: 'numeric', month: 'short' })
+		});
 	}
 
 	const subtext = $derived(
 		mood.tone === 'tight' || mood.tone === 'alert' || mood.tone === 'watch'
-			? `lowest ${fmtTrough(lowestDate)}`
+			? m.mood_subtext_lowest({ when: fmtTrough(lowestDate) })
 			: ''
 	);
 </script>

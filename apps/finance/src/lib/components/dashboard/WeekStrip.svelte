@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { UpcomingEvent } from '$lib/types';
 	import { SvelteDate } from 'svelte/reactivity';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let {
 		events,
@@ -10,8 +11,24 @@
 		weekStartDay?: string;
 	} = $props();
 
-	const DOW_LABELS_MON = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-	const DOW_LABELS_SUN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	const DOW_LABELS_MON = $derived([
+		m.week_dow_mon(),
+		m.week_dow_tue(),
+		m.week_dow_wed(),
+		m.week_dow_thu(),
+		m.week_dow_fri(),
+		m.week_dow_sat(),
+		m.week_dow_sun()
+	]);
+	const DOW_LABELS_SUN = $derived([
+		m.week_dow_sun(),
+		m.week_dow_mon(),
+		m.week_dow_tue(),
+		m.week_dow_wed(),
+		m.week_dow_thu(),
+		m.week_dow_fri(),
+		m.week_dow_sat()
+	]);
 
 	const TYPE_COLORS: Record<string, string> = {
 		income: 'var(--color-income)',

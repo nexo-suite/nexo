@@ -7,9 +7,10 @@
 	import DateStrip from '$lib/components/DateStrip.svelte';
 	import AddEntrySheet from '$lib/components/AddEntrySheet.svelte';
 	import EditEntrySheet from '$lib/components/EditEntrySheet.svelte';
+	import InlineAddPanel from '$lib/components/InlineAddPanel.svelte';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import type { Entry, MealSlot, Moment } from '$lib/types';
-	import { m } from '$lib/i18n';
+	import { m } from '$lib/paraglide/messages.js';
 	import type { PageData } from './$types';
 	import { slotTargets as computeSlotTargets, tierShowsFiber, tierShowsSugar } from '$lib/calc';
 
@@ -26,6 +27,8 @@
 	let editOpen = $state(false);
 	let editingEntry = $state<Entry | null>(null);
 	let showEmpty = $state(false);
+	// Slot whose inline add panel is currently expanded; null when no panel is open.
+	let openSlot = $state<MealSlot | null>(null);
 
 	const consumed = $derived.by(() => {
 		if (showEmpty) return { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 };
@@ -110,6 +113,22 @@
 
 	function openAdd(slot?: MealSlot) {
 		preselectedSlot = slot ?? null;
+		addOpen = true;
+	}
+
+	function toggleSlotPanel(slot: MealSlot) {
+		// Single panel at a time; tapping the same slot twice closes it.
+		openSlot = openSlot === slot ? null : slot;
+	}
+
+	function closeSlotPanel() {
+		openSlot = null;
+	}
+
+	function buildMealForSlot(slot: MealSlot) {
+		// "Build a meal here →" path — collapse inline panel, open the modal builder.
+		openSlot = null;
+		preselectedSlot = slot;
 		addOpen = true;
 	}
 
@@ -244,9 +263,21 @@
 					entries={entriesBySlot[slot]}
 					moments={momentsBySlot[slot]}
 					target={slotTargetsMap[slot]}
-					onAdd={openAdd}
+					panelOpen={openSlot === slot}
+					onAdd={toggleSlotPanel}
 					onEntryTap={openEdit}
-				/>
+				>
+					{#snippet addPanel()}
+						<InlineAddPanel
+							mealSlot={slot}
+							foods={data.foods}
+							favoriteIds={data.favoriteIds}
+							recentIds={data.recentFoodIds}
+							onClose={closeSlotPanel}
+							onBuildMeal={buildMealForSlot}
+						/>
+					{/snippet}
+				</MealSection>
 			{/each}
 		</section>
 	{/if}

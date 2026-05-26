@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
+
 	interface HistoryRow {
 		checkedAt: Date | string;
 		ok: boolean;
@@ -13,7 +15,7 @@
 
 	let { history, buckets = 48, windowMs = 24 * 60 * 60 * 1000 }: Props = $props();
 
-	type BucketState = 'ok' | 'warn' | 'err' | 'empty';
+	type BucketState = 'ok' | 'warn' | 'err' | 'empty' | 'pre';
 	interface Bucket {
 		state: BucketState;
 		total: number;
@@ -25,25 +27,30 @@
 		const start = now - windowMs;
 		const bucketMs = windowMs / buckets;
 		const arr: Bucket[] = Array.from({ length: buckets }, () => ({
-			state: 'empty',
+			state: 'empty' as BucketState,
 			total: 0,
 			passing: 0
 		}));
 		for (const row of history) {
 			const t = new Date(row.checkedAt).getTime();
-			if (t < start || t > now) continue;
+			if (!Number.isFinite(t) || t < start || t > now) continue;
 			const idx = Math.min(buckets - 1, Math.max(0, Math.floor((t - start) / bucketMs)));
 			arr[idx]!.total += 1;
 			if (row.ok) arr[idx]!.passing += 1;
 		}
-		for (const b of arr) {
-			if (b.total === 0) b.state = 'empty';
-			else if (b.passing === b.total) b.state = 'ok';
+		const firstWithData = arr.findIndex((b) => b.total > 0);
+		for (let i = 0; i < arr.length; i++) {
+			const b = arr[i]!;
+			if (b.total === 0) {
+				b.state = firstWithData === -1 || i < firstWithData ? 'pre' : 'empty';
+			} else if (b.passing === b.total) b.state = 'ok';
 			else if (b.passing === 0) b.state = 'err';
 			else b.state = 'warn';
 		}
 		return arr;
 	});
+
+	const trackingStartIdx = $derived(bucketed.findIndex((b) => b.state !== 'pre'));
 
 	const totals = $derived.by(() => {
 		const start = Date.now() - windowMs;
@@ -76,8 +83,8 @@
 		if (ageMs > windowMs - 30 * 60 * 1000) return null;
 		const hours = Math.floor(ageMs / (60 * 60 * 1000));
 		const mins = Math.floor((ageMs % (60 * 60 * 1000)) / (60 * 1000));
-		if (hours === 0) return `tracking since ${mins}m ago`;
-		return `tracking since ${hours}h ${mins}m ago`;
+		if (hours === 0) return m.services_uptime_tracking_minutes({ minutes: mins });
+		return m.services_uptime_tracking_hours({ hours, minutes: mins });
 	});
 
 	const fmtBucketTitle = (i: number, b: Bucket) => {
@@ -85,39 +92,46 @@
 		const bucketMs = windowMs / buckets;
 		const t0 = new Date(start + i * bucketMs);
 		const label = t0.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-		if (b.total === 0) return `${label} · no checks`;
-		return `${label} · ${b.passing}/${b.total} passing`;
+		if (b.state === 'pre') return `${label} · before tracking`;
+		if (b.total === 0) return m.services_uptime_bucket_no_checks({ label });
+		return m.services_uptime_bucket_passing({ label, passing: b.passing, total: b.total });
 	};
 </script>
 
 <div class="uptime">
 	<div class="uptime-h">
-		<div class="uptime-label">24h uptime</div>
+		<div class="uptime-label">{m.services_uptime_label_24h()}</div>
 		{#if totals.total > 0}
-			<div class="uptime-checks">{totals.passing} / {totals.total} checks</div>
+			<div class="uptime-checks">
+				{m.services_uptime_checks({ passing: totals.passing, total: totals.total })}
+			</div>
 		{/if}
 	</div>
 
 	{#if uptimePct === null}
 		<div class="uptime-empty">
 			<div class="uptime-empty-em">▁</div>
-			<div class="uptime-empty-msg">No checks recorded yet</div>
-			<div class="uptime-empty-hint">Recheck above to start tracking</div>
+			<div class="uptime-empty-msg">{m.services_uptime_empty_msg()}</div>
+			<div class="uptime-empty-hint">{m.services_uptime_empty_hint()}</div>
 		</div>
 	{:else}
 		<div class="uptime-pct {tone}">
 			{uptimePct}<span class="uptime-pct-unit">%</span>
 		</div>
 
-		<div class="uptime-bars" role="img" aria-label="24-hour uptime sparkline">
+		<div class="uptime-bars" role="img" aria-label={m.services_uptime_aria()}>
 			{#each bucketed as b, i (i)}
-				<span class="bar {b.state}" title={fmtBucketTitle(i, b)}></span>
+				<span
+					class="bar {b.state}"
+					class:tracking-start={i === trackingStartIdx && trackingStartIdx > 0}
+					title={fmtBucketTitle(i, b)}
+				></span>
 			{/each}
 		</div>
 		<div class="uptime-axis">
-			<span>24h ago</span>
-			<span class="uptime-axis-mid">12h</span>
-			<span>now</span>
+			<span>{m.services_uptime_axis_24h()}</span>
+			<span class="uptime-axis-mid">{m.services_uptime_axis_12h()}</span>
+			<span>{m.services_uptime_axis_now()}</span>
 		</div>
 
 		{#if coverageHint}
@@ -189,6 +203,7 @@
 		align-items: stretch;
 		min-width: 0;
 		width: 100%;
+		position: relative;
 	}
 	.bar {
 		flex: 1 1 0;
@@ -204,6 +219,18 @@
 			color-mix(in oklab, var(--color-border-default) 80%, transparent) 13px,
 			transparent 13px
 		);
+		position: relative;
+	}
+	.bar.pre {
+		background: transparent;
+		background-image: none;
+		border-radius: 0;
+		/* thin baseline so the timeline still reads as continuous */
+		box-shadow: inset 0 -1px 0 var(--color-border-subtle);
+	}
+	.bar.tracking-start {
+		/* a subtle 'tracking begins here' tick on the first real bucket */
+		box-shadow: inset 1px 0 0 color-mix(in oklab, var(--color-accent) 60%, transparent);
 	}
 	.bar.ok {
 		background: var(--accent-ink);

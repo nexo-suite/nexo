@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ChevronRight } from '@lucide/svelte';
 	import { formatCurrency, getIntlLocale, normalizeToMonthly } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Expense } from '$lib/types';
 
 	const CATEGORY_ICONS: Record<string, string> = {
@@ -13,13 +14,13 @@
 		other: '📌'
 	};
 
-	const BREAKDOWN_LABEL: Record<string, string> = {
-		weekly: '× 52 weeks ÷ 12',
-		biweekly: '× 26 fortnights ÷ 12',
-		quarterly: '÷ 3 months',
-		'half-yearly': '÷ 6 months',
-		yearly: '÷ 12 months'
-	};
+	const BREAKDOWN_LABEL: Record<string, string> = $derived({
+		weekly: m.expense_breakdown_weekly(),
+		biweekly: m.expense_breakdown_biweekly(),
+		quarterly: m.expense_breakdown_quarterly(),
+		'half-yearly': m.expense_breakdown_half_yearly(),
+		yearly: m.expense_breakdown_yearly()
+	});
 
 	let {
 		expense,
@@ -63,17 +64,19 @@
 			<p class="text-text-subtle text-[11px] capitalize">
 				{#if once}
 					{#if expense.dueDate}
-						due {new Date(expense.dueDate).toLocaleDateString(getIntlLocale(), {
-							day: 'numeric',
-							month: 'short'
+						{m.expenses_due_on({
+							date: new Date(expense.dueDate).toLocaleDateString(getIntlLocale(), {
+								day: 'numeric',
+								month: 'short'
+							})
 						})}
 					{:else}
-						one-time
+						{m.expense_row_one_time()}
 					{/if}
-					{#if isPaid}<span class="text-income"> · paid</span>{/if}
+					{#if isPaid}<span class="text-income">{m.expense_row_paid_dot()}</span>{/if}
 				{:else}
 					{expense.category} · {expense.recurrence}
-					{#if !expense.active}<span> · paused</span>{/if}
+					{#if !expense.active}<span>{m.expense_row_paused_dot()}</span>{/if}
 				{/if}
 			</p>
 		</div>
@@ -89,7 +92,7 @@
 					onclick={() => (breakdownOpen = !breakdownOpen)}
 					class="text-text-subtle hover:text-expense text-[10px] tabular-nums transition-colors"
 				>
-					{fmt(monthlyEquiv)}/mo
+					{m.expense_row_per_month({ value: fmt(monthlyEquiv) })}
 				</button>
 			{/if}
 		</div>
@@ -102,13 +105,13 @@
 {#if breakdownOpen}
 	<div class="border-border-default bg-bg-1 mx-1 -mt-1 rounded-b-lg border border-t-0 px-4 py-3">
 		<p class="text-text-subtle mb-2 text-[11px] font-semibold tracking-wider uppercase">
-			Monthly breakdown
+			{m.expense_row_monthly_breakdown()}
 		</p>
 		<div class="flex items-center justify-between text-xs">
 			<span class="text-text-subtle"
 				>{fmt(expense.amount)} {BREAKDOWN_LABEL[expense.recurrence]}</span
 			>
-			<span class="text-expense font-semibold tabular-nums">= {fmt(monthlyEquiv)}/mo</span>
+			<span class="text-expense font-semibold tabular-nums">= {m.expense_row_per_month({ value: fmt(monthlyEquiv) })}</span>
 		</div>
 	</div>
 {/if}

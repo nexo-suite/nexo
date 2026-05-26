@@ -5,7 +5,7 @@
 	import WeightChart from '$lib/components/WeightChart.svelte';
 	import CalendarHeatmap from '$lib/components/CalendarHeatmap.svelte';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
-	import { m } from '$lib/i18n';
+	import { m } from '$lib/paraglide/messages.js';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();

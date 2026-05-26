@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { UpcomingEvent } from '$lib/types';
 	import { getIntlLocale } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let {
 		events,
@@ -71,7 +72,7 @@
 				<div class="min-w-0 flex-1">
 					<p class="text-text-primary truncate text-[14px] font-medium">{event.label}</p>
 					<p class="text-text-faint text-[11px]">
-						recurring {event.type} · monthly
+						{m.upcoming_recurring_monthly({ type: event.type })}
 					</p>
 				</div>
 

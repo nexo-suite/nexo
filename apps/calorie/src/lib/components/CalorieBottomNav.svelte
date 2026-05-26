@@ -2,7 +2,7 @@
 	import { CalendarRange, House, User } from '@lucide/svelte';
 	import { BottomNav } from '@nexo/ui';
 	import { page } from '$app/state';
-	import { m } from '$lib/i18n';
+	import { m } from '$lib/paraglide/messages.js';
 
 	const tabs = $derived([
 		{ href: '/', label: m.nav_today(), icon: House, exact: true },

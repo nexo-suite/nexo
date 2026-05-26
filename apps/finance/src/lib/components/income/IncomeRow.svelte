@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ChevronRight, CheckCircle } from '@lucide/svelte';
 	import { formatCurrency, getIntlLocale } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Income } from '$lib/types';
 
 	let {
@@ -40,20 +41,24 @@
 		<p class="text-text-subtle text-[11px] capitalize">
 			{#if once}
 				{#if income.expectedDate}
-					due {new Date(income.expectedDate).toLocaleDateString(getIntlLocale(), {
-						day: 'numeric',
-						month: 'short'
+					{m.income_row_due_on({
+						date: new Date(income.expectedDate).toLocaleDateString(getIntlLocale(), {
+							day: 'numeric',
+							month: 'short'
+						})
 					})}
 				{:else}
-					one-time
+					{m.income_row_one_time()}
 				{/if}
-				{#if income.received}<span class="text-income"> · received</span>{/if}
+				{#if income.received}<span class="text-income">{m.income_row_received_dot()}</span>{/if}
 			{:else}
 				{income.recurrence}
 				{#if income.expectedDate}
-					· due {new Date(income.expectedDate).toLocaleDateString(getIntlLocale(), {
-						day: 'numeric',
-						month: 'short'
+					· {m.income_row_due_on({
+						date: new Date(income.expectedDate).toLocaleDateString(getIntlLocale(), {
+							day: 'numeric',
+							month: 'short'
+						})
 					})}{/if}
 			{/if}
 		</p>

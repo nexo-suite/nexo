@@ -10,6 +10,7 @@
 	import { PageHeader } from '@nexo/ui';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { TrendingUp, TrendingDown, AlertTriangle } from '@lucide/svelte';
+	import { m } from '$lib/paraglide/messages.js';
 
 	import { SvelteDate } from 'svelte/reactivity';
 
@@ -233,7 +234,7 @@
 </script>
 
 <div class="page">
-	<PageHeader title="Forecast" subtitle="{DAYS}-day cashflow trajectory.">
+	<PageHeader title={m.nav_forecast()} subtitle={m.forecast_subtitle()}>
 		{#snippet avatar()}<UserAvatarMenu />{/snippet}
 	</PageHeader>
 
@@ -273,7 +274,7 @@
 			></div>
 
 			<div class="relative flex items-center justify-between">
-				<div class="t-label text-text-subtle">Trajectory</div>
+				<div class="t-label text-text-subtle">{m.forecast_trajectory()}</div>
 				<div class="text-text-faint mono text-[10px] tabular-nums">
 					{fmtShort(forecast[0].date)} → {fmtShort(forecast[forecast.length - 1].date)}
 				</div>
@@ -284,7 +285,7 @@
 				<span class="text-text-primary text-[34px] leading-none font-semibold tracking-tight tabular-nums">
 					{fmt(endBalance)}
 				</span>
-				<span class="text-text-faint text-[11.5px]">in {DAYS}d</span>
+				<span class="text-text-faint text-[11.5px]">{m.forecast_in_days_short({ days: DAYS })}</span>
 			</div>
 
 			<!-- Sparkline -->
@@ -333,7 +334,7 @@
 
 			<div class="relative mt-3 grid grid-cols-3 gap-2">
 				<div>
-					<div class="t-label text-text-faint">Today</div>
+					<div class="t-label text-text-faint">{m.forecast_today()}</div>
 					<div
 						class="mt-0.5 font-mono text-[13px] font-semibold"
 						style="font-variant-numeric: tabular-nums;"
@@ -342,7 +343,7 @@
 					</div>
 				</div>
 				<div>
-					<div class="t-label text-text-faint">Lowest</div>
+					<div class="t-label text-text-faint">{m.forecast_lowest()}</div>
 					<div
 						class="mt-0.5 font-mono text-[13px] font-semibold tabular-nums"
 						style="color: {minBalance < 0
@@ -356,7 +357,7 @@
 					{/if}
 				</div>
 				<div>
-					<div class="t-label text-text-faint">In {DAYS}d</div>
+					<div class="t-label text-text-faint">{m.forecast_label_in_days_short({ days: DAYS })}</div>
 					<div
 						class="mt-0.5 font-mono text-[13px] font-semibold tabular-nums"
 						style="color: {endBalance >= currentBalance
@@ -383,9 +384,12 @@
 		>
 			<AlertTriangle size={15} style="color: var(--expense-ink);" />
 			<p class="text-[12px] font-medium" style="color: var(--expense-ink);">
-				⛈️ Balance dips below 0{firstNegativeDate ? ` on ${fmtDate(firstNegativeDate)}` : ''}. Lowest: {fmt(
-					minBalance
-				)}
+				{firstNegativeDate
+					? m.forecast_warning_with_date({
+							date: fmtDate(firstNegativeDate),
+							amount: fmt(minBalance)
+						})
+					: m.forecast_warning_no_date({ amount: fmt(minBalance) })}
 			</p>
 		</div>
 	{/if}
@@ -393,7 +397,7 @@
 	<!-- Week summary carousel -->
 	{#if weekSummaries.length > 0}
 		<div class="mb-3.5">
-			<div class="t-label text-text-subtle mb-2 px-0.5">Weekly outlook</div>
+			<div class="t-label text-text-subtle mb-2 px-0.5">{m.forecast_weekly_outlook()}</div>
 			<div
 				class="flex gap-2.5 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden"
 				style="scroll-snap-type: x mandatory;"
@@ -437,7 +441,7 @@
 	{/if}
 
 	<!-- Day-by-day event cards -->
-	<div class="t-label text-text-subtle mb-2 px-0.5">Events</div>
+	<div class="t-label text-text-subtle mb-2 px-0.5">{m.forecast_events()}</div>
 
 	{#if eventsOnly.length > 0}
 		<div
@@ -482,8 +486,8 @@
 	{:else}
 		<EmptyState
 			emoji="🌤️"
-			title="Calm seas in the next {DAYS} days"
-			sub="Add expenses, income, or debts with due dates and they'll appear here."
+			title={m.forecast_calm_title({ days: DAYS })}
+			sub={m.forecast_calm_sub()}
 		/>
 	{/if}
 </div>

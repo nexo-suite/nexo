@@ -108,6 +108,25 @@
 			"automergeStrategy": "rebase"
 		},
 		{
+			"description": "Dockerfile base images — keep digest-pinned",
+			"matchManagers": ["dockerfile"],
+			"pinDigests": true
+		},
+		{
+			"description": "Node Docker image — single PR across all 8 Dockerfiles",
+			"matchManagers": ["dockerfile"],
+			"matchPackageNames": ["node"],
+			"groupName": "node Docker image"
+		},
+		{
+			"description": "Dockerfile digest-only bumps (upstream rebuilds) — automerge",
+			"matchManagers": ["dockerfile"],
+			"matchUpdateTypes": ["digest"],
+			"automerge": true,
+			"automergeType": "pr",
+			"automergeStrategy": "rebase"
+		},
+		{
 			"description": "Automerge non-major devDependencies after release-age window",
 			"matchDepTypes": ["devDependencies"],
 			"matchUpdateTypes": ["minor", "patch"],

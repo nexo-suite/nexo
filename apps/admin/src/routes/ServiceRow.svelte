@@ -8,6 +8,7 @@
 		type HealthzSnapshot
 	} from '$lib/utils/containers';
 	import StatusPill from '$lib/components/StatusPill.svelte';
+	import { m } from '$lib/paraglide/messages.js';
 
 	interface Props {
 		container: ContainerInfo & {
@@ -29,7 +30,7 @@
 		<div class="meta">{ctnUptimeLabel(c)}</div>
 	</div>
 	{#if isPreview}
-		<span class="preview-chip">preview</span>
+		<span class="preview-chip">{m.preview_chip()}</span>
 	{/if}
 	<svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"
 		><path d="M6 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" /></svg

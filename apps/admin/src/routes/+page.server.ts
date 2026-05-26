@@ -4,6 +4,7 @@ import { dockerGet } from '$lib/server/docker';
 import type { ContainerInfo } from '$lib/server/docker';
 import { ctnComposeProfile, ctnHasHealthzLabel } from '$lib/utils/containers';
 import type { HealthzSnapshot } from '$lib/utils/containers';
+import { devMockEnabled, mockHealthSnapshots } from '$lib/server/dev-mocks';
 import { logger } from '$lib/server/logger';
 import type { PageServerLoad } from './$types';
 
@@ -61,6 +62,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 				error: r.error,
 				latencyMs: r.latencyMs
 			});
+		}
+	}
+
+	// Dev fallback: any probed container without a real snapshot gets a mock one
+	// so the home page reflects realistic state when Postgres is offline locally.
+	if (devMockEnabled()) {
+		const mocks = mockHealthSnapshots();
+		for (const target of targetNames) {
+			if (!latestByTarget.has(target)) {
+				const snap = mocks.get(target);
+				if (snap) latestByTarget.set(target, snap);
+			}
 		}
 	}
 

@@ -10,6 +10,7 @@
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { Search, X } from '@lucide/svelte';
 	import { getIntlLocale } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let { data } = $props();
 
@@ -61,7 +62,7 @@
 				class="border-border-default bg-surface-1 text-text-muted active:bg-bg-1 active:text-text-primary grid size-[38px] place-items-center rounded-full border transition-colors"
 				class:!border-accent={searchOpen}
 				class:!text-accent={searchOpen}
-				aria-label="Search"
+				aria-label={m.dashboard_search_aria()}
 				onclick={() => {
 					searchOpen = !searchOpen;
 					if (!searchOpen) searchQuery = '';
@@ -83,7 +84,7 @@
 			<input
 				type="text"
 				bind:value={searchQuery}
-				placeholder="Filter accounts & events..."
+				placeholder={m.dashboard_search_placeholder()}
 				class="border-border-subtle bg-bg-1 text-text-primary h-10 w-full rounded-[var(--radius-md)] border px-3.5 text-[14px] outline-none focus:border-[var(--color-accent)]"
 				autofocus
 			/>
@@ -109,14 +110,19 @@
 	<!-- Account carousel -->
 	<SectionLabel
 		variant="title"
-		title="Accounts"
-		action="All {data.accounts.length} →"
+		title={m.dashboard_section_accounts()}
+		action={m.dashboard_section_accounts_action({ count: data.accounts.length })}
 		href="/accounts"
 	/>
 	<AccountCarousel accounts={filteredAccounts} currency={data.settings?.currency ?? 'EUR'} />
 
 	<!-- This week -->
-	<SectionLabel variant="title" title="This week" action="Next 30 →" href="/forecast" />
+	<SectionLabel
+		variant="title"
+		title={m.dashboard_section_this_week()}
+		action={m.dashboard_section_this_week_action()}
+		href="/forecast"
+	/>
 	<WeekStrip events={filteredUpcoming} weekStartDay={data.settings?.weekStartDay ?? 'monday'} />
 
 	<!-- Today spotlight -->
@@ -132,18 +138,23 @@
 
 	<!-- Coming up -->
 	{#if filteredUpcoming.length > 0}
-		<SectionLabel variant="title" title="Coming up" action="All →" href="/forecast" />
+		<SectionLabel
+			variant="title"
+			title={m.dashboard_section_coming_up()}
+			action={m.dashboard_section_coming_up_action()}
+			href="/forecast"
+		/>
 		<UpcomingCompact
 			events={filteredUpcoming}
 			currency={data.settings?.currency ?? 'EUR'}
 			hideCents={data.settings?.hideCents}
 		/>
 	{:else if !q}
-		<SectionLabel variant="title" title="Coming up" />
+		<SectionLabel variant="title" title={m.dashboard_section_coming_up()} />
 		<EmptyState
 			emoji="🪺"
-			title="Quiet skies for the next 30 days"
-			sub="No bills, paychecks, or debts on the horizon. Cozy."
+			title={m.dashboard_coming_up_empty_title()}
+			sub={m.dashboard_coming_up_empty_sub()}
 		/>
 	{/if}
 </div>

@@ -6,6 +6,7 @@
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import CorrelationIdSearch from '$lib/components/CorrelationIdSearch.svelte';
 	import ServiceRow from './ServiceRow.svelte';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let { data } = $props();
 
@@ -41,11 +42,11 @@
 	const sections: Section[] = $derived(
 		(
 			[
-				{ key: 'down', label: 'Down', state: 'down' },
-				{ key: 'degraded', label: 'Degraded', state: 'degraded' },
-				{ key: 'pending', label: 'Pending', state: 'pending' },
-				{ key: 'apps-ok', label: 'Apps', state: 'ok' },
-				{ key: 'infra', label: 'Infra', state: 'ok' }
+				{ key: 'down', label: m.pill_down(), state: 'down' },
+				{ key: 'degraded', label: m.pill_degraded(), state: 'degraded' },
+				{ key: 'pending', label: m.pill_pending(), state: 'pending' },
+				{ key: 'apps-ok', label: m.section_apps(), state: 'ok' },
+				{ key: 'infra', label: m.section_infra(), state: 'ok' }
 			] as Array<Pick<Section, 'key' | 'label' | 'state'>>
 		)
 			.map((s) => ({ ...s, containers: grouped[s.key] }))
@@ -55,11 +56,13 @@
 	const downCount = $derived(grouped.down.length);
 	const degradedCount = $derived(grouped.degraded.length);
 	const allGood = $derived(downCount + degradedCount === 0);
-	const headlineText = $derived(
-		allGood
-			? 'All systems go'
-			: `${downCount + degradedCount} ${downCount + degradedCount === 1 ? 'service' : 'services'} need attention`
-	);
+	const headlineText = $derived.by(() => {
+		if (allGood) return m.dashboard_all_good_headline();
+		const total = downCount + degradedCount;
+		return total === 1
+			? m.dashboard_attention_headline_one({ count: total })
+			: m.dashboard_attention_headline_other({ count: total });
+	});
 
 	// Auto-expand infra when something there is non-OK; otherwise collapsed.
 	let infraOpen = $state(false);
@@ -69,12 +72,12 @@
 	});
 </script>
 
-<PageHeader title="Ops">
-	{#snippet avatar()}<UserAvatarMenu />{/snippet}
-	{#snippet actions()}<CorrelationIdSearch />{/snippet}
-</PageHeader>
-
 <div class="page">
+	<PageHeader title={m.page_title_ops()}>
+		{#snippet avatar()}<UserAvatarMenu />{/snippet}
+		{#snippet actions()}<CorrelationIdSearch />{/snippet}
+	</PageHeader>
+
 	<div class="banner" class:ok={allGood} class:bad={!allGood}>
 		{#if allGood}
 			<CircleCheck size={20} strokeWidth={2} />
@@ -85,11 +88,11 @@
 			<div class="banner-headline">{headlineText}</div>
 			<div class="banner-sub">
 				{#if allGood}
-					{data.containers.length} containers running
+					{m.dashboard_running_count({ count: data.containers.length })}
 				{:else}
-					{#if downCount > 0}{downCount} down{/if}{#if downCount > 0 && degradedCount > 0}
+					{#if downCount > 0}{m.dashboard_down_label({ count: downCount })}{/if}{#if downCount > 0 && degradedCount > 0}
 						·
-					{/if}{#if degradedCount > 0}{degradedCount} degraded{/if}
+					{/if}{#if degradedCount > 0}{m.dashboard_degraded_label({ count: degradedCount })}{/if}
 				{/if}
 			</div>
 		</div>

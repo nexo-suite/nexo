@@ -1,15 +1,16 @@
 # syntax=docker/dockerfile:1.7
 #
-# Thin migration runner. Build context is produced by `nexo prepare-contexts`,
-# which runs `pnpm --prod deploy @nexo/db`. The deployed context
-# contains dist/src/migrate.js and dist/migrations/*.sql (copied during the
-# package's build step).
+# Slim migration runner. tsdown bundles drizzle-orm + postgres inline into
+# dist/migrate.js (see tsdown.config.ts), so the build context is just
+# dist/ (which contains migrate.js + migrations/*.sql). No package.json,
+# no node_modules, no pnpm deploy. Context is produced by `nexo
+# prepare-contexts` with strategy='bundle'.
 
-FROM node:24-alpine
+FROM node:24.15.0-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f
 WORKDIR /app
 
-COPY . .
+COPY dist ./dist
 
 ENV NODE_ENV=production
 
-CMD ["node", "dist/src/migrate.js"]
+CMD ["node", "dist/migrate.js"]

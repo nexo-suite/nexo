@@ -4,6 +4,7 @@
 	import { Plus, ChevronRight, ArrowUpRight, ArrowDownLeft } from '@lucide/svelte';
 	import { enhance } from '$app/forms';
 	import { formatCurrency, getIntlLocale } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Account, Expense, Debt } from '$lib/types';
 
 	let { data } = $props();
@@ -119,7 +120,7 @@
 </script>
 
 <div class="page">
-	<PageHeader title="Commitments" subtitle="Money earmarked for the future.">
+	<PageHeader title={m.commitments_title()} subtitle={m.commitments_subtitle()}>
 		{#snippet avatar()}<UserAvatarMenu />{/snippet}
 	</PageHeader>
 
@@ -129,7 +130,7 @@
 			class="mb-3.5 rounded-[var(--radius-lg)] p-3.5"
 			style="background: var(--expense-soft); border: 1px solid color-mix(in oklab, var(--color-expense) 25%, var(--color-border-default));"
 		>
-			<div class="t-label" style="color: var(--expense-ink);">Total committed</div>
+			<div class="t-label" style="color: var(--expense-ink);">{m.commitments_total_committed()}</div>
 			<div
 				class="mt-1.5 font-mono text-[22px] font-semibold tracking-tight"
 				style="color: var(--expense-ink); font-variant-numeric: tabular-nums;"
@@ -142,7 +143,7 @@
 	<!-- Fund allocation per account -->
 	{#if data.accounts.length > 0}
 		<div class="mb-4">
-			<div class="t-label text-text-subtle mb-2 px-0.5">Fund allocation</div>
+			<div class="t-label text-text-subtle mb-2 px-0.5">{m.commitments_fund_allocation()}</div>
 			<div
 				class="border-border-default bg-surface-1 overflow-hidden rounded-[var(--radius-xl)] border"
 			>
@@ -168,7 +169,7 @@
 						{#if em.earmarked > 0}
 							<div class="mt-2.5 pl-[38px]">
 								<div class="flex justify-between text-[12px]">
-									<span class="text-text-subtle">Earmarked</span>
+									<span class="text-text-subtle">{m.commitments_earmarked()}</span>
 									<span
 										class="font-mono font-medium"
 										style="color: var(--expense-ink); font-variant-numeric: tabular-nums;"
@@ -177,7 +178,7 @@
 									</span>
 								</div>
 								<div class="mt-0.5 flex justify-between text-[12px]">
-									<span class="text-text-subtle">Available</span>
+									<span class="text-text-subtle">{m.commitments_available()}</span>
 									<span
 										class="font-mono font-semibold"
 										style="color: {em.available < 0
@@ -200,7 +201,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="text-text-faint mt-1 pl-[38px] text-[11px]">Nothing earmarked</div>
+							<div class="text-text-faint mt-1 pl-[38px] text-[11px]">{m.commitments_nothing_earmarked()}</div>
 						{/if}
 					</div>
 				{/each}
@@ -211,12 +212,12 @@
 	<!-- Upcoming Expenses -->
 	<div class="mb-4">
 		<div class="mb-2 flex items-center justify-between px-0.5">
-			<div class="t-label text-text-subtle">Upcoming expenses</div>
+			<div class="t-label text-text-subtle">{m.commitments_upcoming_expenses()}</div>
 			<button
 				type="button"
 				onclick={openNewExpense}
 				class="border-border-default bg-surface-1 text-text-muted active:bg-bg-1 grid size-[30px] place-items-center rounded-full border transition-colors"
-				aria-label="Add expense"
+				aria-label={m.commitments_add_expense_aria()}
 			>
 				<Plus size={14} strokeWidth={1.8} />
 			</button>
@@ -226,7 +227,7 @@
 			<div
 				class="border-border-default bg-surface-1 text-text-subtle rounded-[var(--radius-xl)] border border-dashed p-7 text-center text-[13.5px]"
 			>
-				No upcoming one-time expenses.
+				{m.commitments_no_upcoming_expenses()}
 			</div>
 		{:else}
 			<div
@@ -251,12 +252,9 @@
 							<div class="text-text-primary truncate text-[14px] font-medium">{expense.name}</div>
 							<div class="text-text-subtle mt-0.5 text-[11px]">
 								{#if expense.dueDate}
-									Due {new Date(expense.dueDate).toLocaleDateString(getIntlLocale(), {
-										day: 'numeric',
-										month: 'short'
-									})}
+									{m.commitments_due_label({ date: new Date(expense.dueDate).toLocaleDateString(getIntlLocale(), { day: 'numeric', month: 'short' }) })}
 								{:else}
-									No due date
+									{m.commitments_no_due_date()}
 								{/if}
 								{#if acc}
 									· <span class="font-medium">{acc.name}</span>
@@ -277,8 +275,9 @@
 			</div>
 			{#if unallocatedExpenses.length > 0}
 				<p class="text-text-faint mt-1.5 px-0.5 text-[11px]">
-					{unallocatedExpenses.length} expense{unallocatedExpenses.length === 1 ? '' : 's'} not linked
-					to an account
+					{unallocatedExpenses.length === 1
+						? m.commitments_unallocated_expenses_one({ count: unallocatedExpenses.length })
+						: m.commitments_unallocated_expenses_other({ count: unallocatedExpenses.length })}
 				</p>
 			{/if}
 		{/if}
@@ -287,12 +286,12 @@
 	<!-- Open Debts -->
 	<div class="mb-4">
 		<div class="mb-2 flex items-center justify-between px-0.5">
-			<div class="t-label text-text-subtle">Open debts</div>
+			<div class="t-label text-text-subtle">{m.commitments_open_debts()}</div>
 			<button
 				type="button"
 				onclick={openNewDebt}
 				class="border-border-default bg-surface-1 text-text-muted active:bg-bg-1 grid size-[30px] place-items-center rounded-full border transition-colors"
-				aria-label="Add debt"
+				aria-label={m.commitments_add_debt_aria()}
 			>
 				<Plus size={14} strokeWidth={1.8} />
 			</button>
@@ -302,7 +301,7 @@
 			<div
 				class="border-border-default bg-surface-1 text-text-subtle rounded-[var(--radius-xl)] border border-dashed p-7 text-center text-[13.5px]"
 			>
-				No open debts.
+				{m.commitments_no_open_debts()}
 			</div>
 		{:else}
 			<div
@@ -333,12 +332,9 @@
 								{debt.counterparty}
 							</div>
 							<div class="text-text-subtle mt-0.5 text-[11px]">
-								{debt.direction === 'owe' ? 'I owe' : 'Owed to me'}
+								{debt.direction === 'owe' ? m.debt_i_owe() : m.debt_owed_to_me()}
 								{#if debt.dueDate}
-									· due {new Date(debt.dueDate).toLocaleDateString(getIntlLocale(), {
-										day: 'numeric',
-										month: 'short'
-									})}
+									· {m.expenses_due_on({ date: new Date(debt.dueDate).toLocaleDateString(getIntlLocale(), { day: 'numeric', month: 'short' }) })}
 								{/if}
 								{#if acc}
 									· <span class="font-medium">{acc.name}</span>
@@ -359,7 +355,9 @@
 			</div>
 			{#if unallocatedDebts.length > 0}
 				<p class="text-text-faint mt-1.5 px-0.5 text-[11px]">
-					{unallocatedDebts.length} debt{unallocatedDebts.length === 1 ? '' : 's'} not linked to an account
+					{unallocatedDebts.length === 1
+						? m.commitments_unallocated_debts_one({ count: unallocatedDebts.length })
+						: m.commitments_unallocated_debts_other({ count: unallocatedDebts.length })}
 				</p>
 			{/if}
 		{/if}
@@ -368,12 +366,12 @@
 
 <!-- Expense form sheet -->
 {#if showExpenseForm}
-	<BottomSheet bind:open={showExpenseForm} title={editingExpense ? 'Edit Expense' : 'New Expense'}>
+	<BottomSheet bind:open={showExpenseForm} title={editingExpense ? m.commitments_expense_form_edit() : m.commitments_expense_form_new()}>
 		{#if confirmDeleteExpense}
 			<div class="space-y-4 py-2">
 				<div class="bg-bg-1 rounded-[var(--radius-lg)] px-4 py-4 text-center">
-					<p class="text-text-primary text-[14px] font-medium">Delete "{editingExpense?.name}"?</p>
-					<p class="text-text-subtle mt-1 text-[12px]">This can't be undone.</p>
+					<p class="text-text-primary text-[14px] font-medium">{m.commitments_delete_expense_confirm({ name: editingExpense?.name ?? '' })}</p>
+					<p class="text-text-subtle mt-1 text-[12px]">{m.common_undone_warning()}</p>
 				</div>
 				<form
 					method="POST"
@@ -391,7 +389,7 @@
 						class="w-full rounded-[var(--radius-md)] py-3 text-[14px] font-semibold text-white"
 						style="background: var(--color-expense);"
 					>
-						Yes, delete
+						{m.common_yes_delete()}
 					</button>
 				</form>
 				<button
@@ -399,7 +397,7 @@
 					onclick={() => (confirmDeleteExpense = false)}
 					class="text-text-subtle w-full rounded-[var(--radius-md)] py-3 text-[14px] font-semibold"
 				>
-					Cancel
+					{m.common_cancel()}
 				</button>
 			</div>
 		{:else}
@@ -418,17 +416,17 @@
 				{/if}
 				<div class="space-y-3">
 					<div>
-						<label for="exp-name" class="t-label text-text-subtle mb-1 block">Name</label>
+						<label for="exp-name" class="t-label text-text-subtle mb-1 block">{m.commitments_form_label_name()}</label>
 						<input
 							id="exp-name"
 							name="name"
 							bind:value={expenseForm.name}
 							class="input"
-							placeholder="e.g. New laptop"
+							placeholder={m.commitments_form_name_placeholder()}
 						/>
 					</div>
 					<div>
-						<label for="exp-amount" class="t-label text-text-subtle mb-1 block">Amount</label>
+						<label for="exp-amount" class="t-label text-text-subtle mb-1 block">{m.commitments_form_label_amount()}</label>
 						<input
 							id="exp-amount"
 							name="amount"
@@ -441,7 +439,7 @@
 					</div>
 					<div>
 						<label for="exp-due" class="t-label text-text-subtle mb-1 block"
-							>Due date (optional)</label
+							>{m.commitments_form_label_due()}</label
 						>
 						<input
 							id="exp-due"
@@ -453,7 +451,7 @@
 					</div>
 					<div>
 						<label for="exp-account" class="t-label text-text-subtle mb-1 block"
-							>Account (optional)</label
+							>{m.commitments_form_label_account()}</label
 						>
 						<select
 							id="exp-account"
@@ -461,7 +459,7 @@
 							bind:value={expenseForm.account_id}
 							class="input"
 						>
-							<option value="">— unallocated —</option>
+							<option value="">{m.common_unallocated()}</option>
 							{#each data.accounts as acc (acc.id)}
 								<option value={acc.id}>{acc.name}</option>
 							{/each}
@@ -469,14 +467,14 @@
 					</div>
 					<div>
 						<label for="exp-notes" class="t-label text-text-subtle mb-1 block"
-							>Notes (optional)</label
+							>{m.commitments_form_label_notes()}</label
 						>
 						<input
 							id="exp-notes"
 							name="notes"
 							bind:value={expenseForm.notes}
 							class="input"
-							placeholder="e.g. birthday gift"
+							placeholder={m.commitments_form_notes_placeholder_expense()}
 						/>
 					</div>
 				</div>
@@ -484,7 +482,7 @@
 					type="submit"
 					class="bg-text-primary text-bg-0 mt-5 h-12 w-full rounded-[var(--radius-md)] text-[14px] font-semibold"
 				>
-					{editingExpense ? 'Save Changes' : 'Create Expense'}
+					{editingExpense ? m.commitments_form_save_expense() : m.commitments_form_create_expense()}
 				</button>
 				{#if editingExpense}
 					<button
@@ -493,7 +491,7 @@
 						class="mt-2 w-full rounded-[var(--radius-md)] py-3 text-[14px] font-semibold"
 						style="color: var(--expense-ink);"
 					>
-						Delete Expense
+						{m.commitments_form_delete_expense()}
 					</button>
 				{/if}
 			</form>
@@ -503,14 +501,14 @@
 
 <!-- Debt form sheet -->
 {#if showDebtForm}
-	<BottomSheet bind:open={showDebtForm} title={editingDebt ? 'Edit Debt' : 'New Debt'}>
+	<BottomSheet bind:open={showDebtForm} title={editingDebt ? m.commitments_debt_form_edit() : m.commitments_debt_form_new()}>
 		{#if confirmDeleteDebt}
 			<div class="space-y-4 py-2">
 				<div class="bg-bg-1 rounded-[var(--radius-lg)] px-4 py-4 text-center">
 					<p class="text-text-primary text-[14px] font-medium">
-						Delete debt with "{editingDebt?.counterparty}"?
+						{m.commitments_delete_debt_confirm({ name: editingDebt?.counterparty ?? '' })}
 					</p>
-					<p class="text-text-subtle mt-1 text-[12px]">This can't be undone.</p>
+					<p class="text-text-subtle mt-1 text-[12px]">{m.common_undone_warning()}</p>
 				</div>
 				<form
 					method="POST"
@@ -528,7 +526,7 @@
 						class="w-full rounded-[var(--radius-md)] py-3 text-[14px] font-semibold text-white"
 						style="background: var(--color-debt);"
 					>
-						Yes, delete
+						{m.common_yes_delete()}
 					</button>
 				</form>
 				<button
@@ -536,7 +534,7 @@
 					onclick={() => (confirmDeleteDebt = false)}
 					class="text-text-subtle w-full rounded-[var(--radius-md)] py-3 text-[14px] font-semibold"
 				>
-					Cancel
+					{m.common_cancel()}
 				</button>
 			</div>
 		{:else}
@@ -555,31 +553,31 @@
 				{/if}
 				<div class="space-y-3">
 					<div>
-						<label for="dbt-direction" class="t-label text-text-subtle mb-1 block">Direction</label>
+						<label for="dbt-direction" class="t-label text-text-subtle mb-1 block">{m.commitments_form_label_direction()}</label>
 						<select
 							id="dbt-direction"
 							name="direction"
 							bind:value={debtForm.direction}
 							class="input"
 						>
-							<option value="owe">I owe them</option>
-							<option value="owed">They owe me</option>
+							<option value="owe">{m.commitments_form_direction_owe()}</option>
+							<option value="owed">{m.commitments_form_direction_owed()}</option>
 						</select>
 					</div>
 					<div>
 						<label for="dbt-counterparty" class="t-label text-text-subtle mb-1 block"
-							>Person / entity</label
+							>{m.commitments_form_label_counterparty()}</label
 						>
 						<input
 							id="dbt-counterparty"
 							name="counterparty"
 							bind:value={debtForm.counterparty}
 							class="input"
-							placeholder="e.g. Alex"
+							placeholder={m.commitments_form_counterparty_placeholder()}
 						/>
 					</div>
 					<div>
-						<label for="dbt-amount" class="t-label text-text-subtle mb-1 block">Amount</label>
+						<label for="dbt-amount" class="t-label text-text-subtle mb-1 block">{m.commitments_form_label_amount()}</label>
 						<input
 							id="dbt-amount"
 							name="amount"
@@ -592,7 +590,7 @@
 					</div>
 					<div>
 						<label for="dbt-due" class="t-label text-text-subtle mb-1 block"
-							>Due date (optional)</label
+							>{m.commitments_form_label_due()}</label
 						>
 						<input
 							id="dbt-due"
@@ -604,7 +602,7 @@
 					</div>
 					<div>
 						<label for="dbt-account" class="t-label text-text-subtle mb-1 block"
-							>Account (optional)</label
+							>{m.commitments_form_label_account()}</label
 						>
 						<select
 							id="dbt-account"
@@ -612,7 +610,7 @@
 							bind:value={debtForm.account_id}
 							class="input"
 						>
-							<option value="">— unallocated —</option>
+							<option value="">{m.common_unallocated()}</option>
 							{#each data.accounts as acc (acc.id)}
 								<option value={acc.id}>{acc.name}</option>
 							{/each}
@@ -620,14 +618,14 @@
 					</div>
 					<div>
 						<label for="dbt-notes" class="t-label text-text-subtle mb-1 block"
-							>Notes (optional)</label
+							>{m.commitments_form_label_notes()}</label
 						>
 						<input
 							id="dbt-notes"
 							name="notes"
 							bind:value={debtForm.notes}
 							class="input"
-							placeholder="e.g. dinner split"
+							placeholder={m.commitments_form_notes_placeholder_debt()}
 						/>
 					</div>
 				</div>
@@ -635,7 +633,7 @@
 					type="submit"
 					class="bg-text-primary text-bg-0 mt-5 h-12 w-full rounded-[var(--radius-md)] text-[14px] font-semibold"
 				>
-					{editingDebt ? 'Save Changes' : 'Create Debt'}
+					{editingDebt ? m.commitments_form_save_debt() : m.commitments_form_create_debt()}
 				</button>
 				{#if editingDebt}
 					<div class="mt-2 grid grid-cols-2 gap-2">
@@ -645,7 +643,7 @@
 							class="h-12 rounded-[var(--radius-md)] text-[14px] font-semibold text-white"
 							style="background: var(--color-income);"
 						>
-							Mark Paid
+							{m.commitments_form_mark_paid()}
 						</button>
 						<button
 							type="button"
@@ -653,7 +651,7 @@
 							class="h-12 rounded-[var(--radius-md)] text-[14px] font-semibold"
 							style="color: var(--expense-ink);"
 						>
-							Delete
+							{m.common_delete()}
 						</button>
 					</div>
 				{/if}

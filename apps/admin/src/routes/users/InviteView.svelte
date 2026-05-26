@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { userMessage } from '@nexo/errors';
+	import { m } from '$lib/paraglide/messages.js';
 
 	interface Props {
 		inviteEmail: string;
@@ -27,9 +28,9 @@
 					><path d="M3 8l3.5 3.5L13 5" stroke-linecap="round" stroke-linejoin="round" /></svg
 				>
 			</div>
-			<div class="success-title">Sent to {inviteEmail}</div>
+			<div class="success-title">{m.invite_success_title({ email: inviteEmail })}</div>
 			<div class="success-sub">
-				They'll get a magic link to sign in. Their email is now on the allowlist.
+				{m.invite_success_sub()}
 			</div>
 			<button
 				type="button"
@@ -37,7 +38,7 @@
 				style="margin-top:20px"
 				onclick={onclose}
 			>
-				Done
+				{m.common_done()}
 			</button>
 			<button
 				type="button"
@@ -48,7 +49,7 @@
 					inviteEmail = '';
 				}}
 			>
-				Invite another
+				{m.invite_another()}
 			</button>
 		</div>
 	</div>
@@ -58,12 +59,12 @@
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
 				><path d="M15 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" /></svg
 			>
-			Users
+			{m.users_back()}
 		</button>
 		<div>
-			<div class="label-eyebrow">Email allowlist</div>
-			<h1 class="screen-title">Add a friend.</h1>
-			<div class="screen-sub">One-tap magic link. OAuth checks the allowlist on callback.</div>
+			<div class="label-eyebrow">{m.invite_eyebrow()}</div>
+			<h1 class="screen-title">{m.invite_screen_title()}</h1>
+			<div class="screen-sub">{m.invite_screen_sub()}</div>
 		</div>
 
 		<form
@@ -77,7 +78,7 @@
 				}}
 		>
 			<div class="form-field">
-				<label class="label-eyebrow field-label" for="invite-email">Email</label>
+				<label class="label-eyebrow field-label" for="invite-email">{m.invite_email_label()}</label>
 				<input
 					id="invite-email"
 					name="email"
@@ -86,7 +87,7 @@
 					autocapitalize="off"
 					autocorrect="off"
 					class="input"
-					placeholder="friend@example.com"
+					placeholder={m.invite_email_placeholder()}
 					bind:value={inviteEmail}
 				/>
 			</div>
@@ -101,12 +102,12 @@
 				disabled={!inviteEmailValid}
 				style="opacity:{inviteEmailValid ? 1 : 0.5}"
 			>
-				Send invite
+				{m.invite_send()}
 			</button>
 		</form>
 
 		<div class="invite-note">
-			You can change access any time from their profile. They'll see only the apps you add for them.
+			{m.invite_note()}
 		</div>
 	</div>
 {/if}

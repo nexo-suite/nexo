@@ -5,6 +5,7 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';
+	import { m } from '$lib/paraglide/messages.js';
 
 	import type { Account } from '$lib/types';
 	import { getIntlLocale } from '$lib/utils';
@@ -32,13 +33,13 @@
 		include_in_total: true
 	});
 
-	const TYPE_CHIPS: { id: string; emoji: string; label: string }[] = [
-		{ id: 'checking', emoji: '🏦', label: 'Checking' },
-		{ id: 'savings', emoji: '💰', label: 'Savings' },
-		{ id: 'investment', emoji: '📈', label: 'Investment' },
-		{ id: 'crypto', emoji: '₿', label: 'Crypto' },
-		{ id: 'cash', emoji: '💵', label: 'Cash' }
-	];
+	const TYPE_CHIPS: { id: string; emoji: string; label: string }[] = $derived([
+		{ id: 'checking', emoji: '🏦', label: m.accounts_type_checking() },
+		{ id: 'savings', emoji: '💰', label: m.accounts_type_savings() },
+		{ id: 'investment', emoji: '📈', label: m.accounts_type_investment() },
+		{ id: 'crypto', emoji: '₿', label: m.accounts_type_crypto() },
+		{ id: 'cash', emoji: '💵', label: m.accounts_type_cash() }
+	]);
 
 	const defaultEmoji: Record<string, string> = {
 		checking: '🏦',
@@ -65,7 +66,9 @@
 	);
 	const includedCount = $derived(data.accounts.filter((a: Account) => a.includeInTotal).length);
 	const headerSubtitle = $derived(
-		`${data.accounts.length} account${data.accounts.length !== 1 ? 's' : ''} · ${includedCount} included`
+		data.accounts.length === 1
+			? m.accounts_subtitle_one({ count: data.accounts.length, included: includedCount })
+			: m.accounts_subtitle_other({ count: data.accounts.length, included: includedCount })
 	);
 
 	function getEmoji(account: Account): string {
@@ -113,12 +116,12 @@
 </script>
 
 <div class="page">
-	<PageHeader title="Accounts" subtitle={headerSubtitle}>
+	<PageHeader title={m.nav_accounts()} subtitle={headerSubtitle}>
 		{#snippet actions()}
 			<button
 				type="button"
 				onclick={openNew}
-				aria-label="Add account"
+				aria-label={m.accounts_add_aria()}
 				class="border-border-default bg-surface-1 text-text-muted active:bg-bg-1 active:text-text-primary grid size-[38px] place-items-center rounded-full border transition-colors"
 			>
 				<Plus size={18} strokeWidth={1.6} />
@@ -134,7 +137,7 @@
 			class="rounded-[var(--radius-lg)] border px-4 py-3"
 			style="background: var(--accent-soft); border-color: var(--accent-line);"
 		>
-			<span class="t-label" style="color: var(--accent-ink);">Liquid</span>
+			<span class="t-label" style="color: var(--accent-ink);">{m.accounts_liquid()}</span>
 			<p
 				class="mt-1 font-mono text-[22px] leading-tight font-semibold tabular-nums"
 				style="color: var(--accent-ink);"
@@ -144,7 +147,7 @@
 		</div>
 		<!-- Total -->
 		<div class="border-border-default bg-surface-1 rounded-[var(--radius-lg)] border px-4 py-3">
-			<span class="t-label">Total</span>
+			<span class="t-label">{m.accounts_total()}</span>
 			<p
 				class="text-text-primary mt-1 font-mono text-[22px] leading-tight font-semibold tabular-nums"
 			>
@@ -195,27 +198,29 @@
 		<div
 			class="border-border-default mt-3.5 rounded-[var(--radius-xl)] border border-dashed p-8 text-center"
 		>
-			<p class="text-text-subtle text-sm">No accounts yet. Tap the + button to create one.</p>
+			<p class="text-text-subtle text-sm">{m.accounts_empty()}</p>
 		</div>
 	{/if}
 
 	<!-- Quick note -->
 	<p class="text-text-faint mt-4 text-center text-[11px]">
-		Tap an account to edit. "Liquid" sums only included accounts.
+		{m.accounts_quick_note()}
 	</p>
 </div>
 
 {#if showForm}
 	<BottomSheet
 		bind:open={showForm}
-		title={editing ? 'Edit account' : 'New account'}
-		subtitle="Pick a type — emoji is just for looks."
+		title={editing ? m.accounts_form_edit_title() : m.accounts_form_new_title()}
+		subtitle={m.accounts_form_subtitle()}
 	>
 		{#if confirmDelete}
 			<div class="space-y-4 py-2">
 				<div class="bg-bg-1 rounded-[var(--radius-md)] px-4 py-4 text-center">
-					<p class="text-text-primary text-[14px] font-medium">Delete "{editing?.name}"?</p>
-					<p class="text-text-subtle mt-1 text-[12px]">This can't be undone.</p>
+					<p class="text-text-primary text-[14px] font-medium">
+						{m.accounts_form_delete_confirm({ name: editing?.name ?? '' })}
+					</p>
+					<p class="text-text-subtle mt-1 text-[12px]">{m.common_undone_warning()}</p>
 				</div>
 				<form
 					method="POST"
@@ -233,11 +238,11 @@
 						class="btn-primary w-full"
 						style="background: var(--color-expense);"
 					>
-						Yes, delete
+						{m.common_yes_delete()}
 					</button>
 				</form>
 				<button type="button" onclick={() => (confirmDelete = false)} class="btn-secondary w-full">
-					Cancel
+					{m.common_cancel()}
 				</button>
 			</div>
 		{:else}
@@ -259,7 +264,7 @@
 
 				<!-- Balance -->
 				<div class="field">
-					<label for="acc-balance">Balance</label>
+					<label for="acc-balance">{m.accounts_form_label_balance()}</label>
 					<input
 						id="acc-balance"
 						name="balance"
@@ -273,20 +278,20 @@
 
 				<!-- Name -->
 				<div class="field">
-					<label for="acc-name">Name</label>
+					<label for="acc-name">{m.accounts_form_label_name()}</label>
 					<input
 						id="acc-name"
 						name="name"
 						bind:value={form.name}
 						class="input"
-						placeholder="e.g. Sparkasse Checking"
+						placeholder={m.accounts_form_name_placeholder()}
 					/>
 				</div>
 
 				<!-- Type chips -->
 				<div class="field">
-					<span class="field-label">Type</span>
-					<div class="cats" role="group" aria-label="Account type">
+					<span class="field-label">{m.accounts_form_label_type()}</span>
+					<div class="cats" role="group" aria-label={m.accounts_form_type_aria()}>
 						{#each TYPE_CHIPS as chip (chip.id)}
 							<button
 								type="button"
@@ -303,13 +308,13 @@
 
 				<!-- Emoji override -->
 				<div class="field">
-					<label for="acc-emoji">Custom emoji</label>
+					<label for="acc-emoji">{m.accounts_form_label_emoji()}</label>
 					<input
 						id="acc-emoji"
 						name="emoji"
 						bind:value={form.emoji}
 						class="input"
-						placeholder="e.g. 🏦 (optional)"
+						placeholder={m.accounts_form_emoji_placeholder()}
 						maxlength="4"
 						oninput={(e) => {
 							const val = e.currentTarget.value;
@@ -324,22 +329,22 @@
 				<!-- Include in liquid toggle -->
 				<ToggleRow
 					bind:checked={form.include_in_total}
-					label="Include in liquid total"
-					description="Used by forecast & dashboard hero."
+					label={m.accounts_form_include_label()}
+					description={m.accounts_form_include_desc()}
 					id="acc-liquid"
 				/>
 
 				<!-- Actions -->
 				<div class="actions">
 					<button type="button" class="btn-secondary" onclick={() => (showForm = false)}
-						>Cancel</button
+						>{m.common_cancel()}</button
 					>
-					<button type="submit" class="btn-primary">Save account</button>
+					<button type="submit" class="btn-primary">{m.accounts_form_save()}</button>
 				</div>
 
 				{#if editing}
 					<button type="button" onclick={() => (confirmDelete = true)} class="btn-delete">
-						Delete this account
+						{m.accounts_form_delete()}
 					</button>
 				{/if}
 			</form>

@@ -5,7 +5,7 @@
 	import UnitStepper from './UnitStepper.svelte';
 	import MealSlotChip from './MealSlotChip.svelte';
 	import type { Entry, Food, FoodUnit, MealSlot } from '$lib/types';
-	import { m } from '$lib/i18n';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let {
 		open = $bindable(false),

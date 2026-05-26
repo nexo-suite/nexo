@@ -2,6 +2,7 @@
 	import { TrendingUp } from '@lucide/svelte';
 	import { getIntlLocale } from '$lib/utils';
 	import MoodPill from '$lib/components/ui/MoodPill.svelte';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let {
 		liquidBalance,
@@ -177,7 +178,7 @@
 			style="animation: pulse-dot 2s ease-in-out infinite;"
 		></span>
 		<span class="mono text-text-subtle text-[10px] tracking-[0.12em] uppercase">
-			Liquid · Today
+			{m.trajectory_liquid_today()}
 		</span>
 	</div>
 	<div class="relative mt-1 flex items-baseline gap-1">
@@ -208,7 +209,7 @@
 			</span>
 		{/if}
 		<span class="text-text-faint text-[11.5px]">
-			projected to {fmt(endValue)} by {fmtDate(endDate)}
+			{m.trajectory_projected_to({ value: fmt(endValue), date: fmtDate(endDate) })}
 		</span>
 	</div>
 
@@ -257,19 +258,19 @@
 	<!-- Footer 3-column -->
 	<div class="relative mt-3 grid grid-cols-3 gap-2">
 		<div>
-			<p class="mono text-text-faint text-[9px] tracking-[0.12em] uppercase">Today</p>
+			<p class="mono text-text-faint text-[9px] tracking-[0.12em] uppercase">{m.trajectory_label_today()}</p>
 			<p class="text-text-primary mt-0.5 text-[14px] font-semibold">{fmt(liquidBalance)}</p>
 			<p class="text-text-subtle text-[10.5px]">{fmtDate(new Date().toISOString())}</p>
 		</div>
 		<div class="text-center">
-			<p class="mono text-text-faint text-[9px] tracking-[0.12em] uppercase">Lowest</p>
+			<p class="mono text-text-faint text-[9px] tracking-[0.12em] uppercase">{m.trajectory_label_lowest()}</p>
 			<p class="mt-0.5 text-[14px] font-semibold" style="color: var(--expense-ink);">
 				{fmt(lowestValue)}
 			</p>
 			<p class="text-text-subtle text-[10.5px]">{fmtDate(lowestDate)}</p>
 		</div>
 		<div class="text-right">
-			<p class="mono text-text-faint text-[9px] tracking-[0.12em] uppercase">In {rangeLabel}</p>
+			<p class="mono text-text-faint text-[9px] tracking-[0.12em] uppercase">{m.trajectory_label_in_range({ range: rangeLabel })}</p>
 			<p class="mt-0.5 text-[14px] font-semibold" style="color: var(--accent-ink);">
 				{fmt(endValue)}
 			</p>

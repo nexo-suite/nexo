@@ -1,25 +1,30 @@
 <script lang="ts">
 	import { Plus } from '@lucide/svelte';
+	import type { Snippet } from 'svelte';
 	import type { Entry, MealSlot, Moment } from '$lib/types';
 	import TimelineRow from './TimelineRow.svelte';
 	import MealGroup from './MealGroup.svelte';
 	import MomentCard from './Moment.svelte';
-	import { m } from '$lib/i18n';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let {
 		slot,
 		entries,
 		moments = [],
 		target,
+		panelOpen = false,
 		onAdd,
-		onEntryTap
+		onEntryTap,
+		addPanel
 	}: {
 		slot: MealSlot;
 		entries: Entry[];
 		moments?: Moment[];
 		target: number;
-		onAdd?: (slot?: MealSlot) => void;
+		panelOpen?: boolean;
+		onAdd?: (slot: MealSlot) => void;
 		onEntryTap?: (entry: Entry) => void;
+		addPanel?: Snippet;
 	} = $props();
 
 	const slotMeta: Record<MealSlot, { num: string; label: () => string; colorVar: string }> = {
@@ -107,11 +112,7 @@
 		<span class="progress-fill" class:over={isOver} style:width="{pct}%"></span>
 	</div>
 
-	{#if isEmpty}
-		<button class="empty" type="button" onclick={() => onAdd?.(slot)}>
-			<span class="empty-text">Nothing yet — tap to log</span>
-		</button>
-	{:else}
+	{#if !isEmpty}
 		<div class="items">
 			{#each items as item, i (i)}
 				{#if item.kind === 'single'}
@@ -123,6 +124,20 @@
 				{/if}
 			{/each}
 		</div>
+	{/if}
+
+	{#if !panelOpen}
+		<button
+			class="add-row"
+			class:placeholder-state={isEmpty}
+			type="button"
+			onclick={() => onAdd?.(slot)}
+		>
+			<Plus size={13} strokeWidth={1.7} />
+			<span class="add-row-label">{m.add_to_slot()} {meta.label()}</span>
+		</button>
+	{:else if addPanel}
+		{@render addPanel()}
 	{/if}
 </section>
 
@@ -229,28 +244,42 @@
 		gap: 0;
 	}
 
-	.empty {
+	.add-row {
 		all: unset;
 		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 10px 4px;
+		margin-top: 2px;
+		font-size: 12px;
+		color: var(--color-text-faint);
+		transition: color 160ms;
+	}
+
+	.add-row:hover {
+		color: var(--color-ember-deep);
+	}
+
+	.add-row.placeholder-state {
 		display: grid;
-		place-items: center;
-		padding: 18px;
+		grid-template-columns: 14px 1fr;
+		justify-items: center;
+		padding: 14px 18px;
 		margin: 4px 4px 0;
 		border: 1px dashed var(--color-border-default);
 		border-radius: 12px;
-		color: var(--color-text-faint);
-		font-size: 12px;
-		transition: border-color 200ms;
-	}
-
-	.empty:hover {
-		border-color: var(--ember-line);
-		color: var(--color-text-subtle);
-	}
-
-	.empty-text {
+		justify-content: center;
 		font-style: italic;
 		font-family: var(--font-display);
 		font-variation-settings: 'opsz' 18, 'SOFT' 100, 'wght' 400, 'ital' 1;
+	}
+
+	.add-row.placeholder-state:hover {
+		border-color: var(--ember-line);
+	}
+
+	.add-row-label {
+		font-feature-settings: 'tnum' 0;
 	}
 </style>

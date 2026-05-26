@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getIntlLocale } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let {
 		value = $bindable(''),
@@ -73,14 +74,14 @@
 			spellcheck="false"
 			class="hero-input"
 			{placeholder}
-			aria-label="Amount"
+			aria-label={m.hero_amount_aria()}
 		/>
 	</div>
 	<div class="hero-helper">
 		{#if helper}
 			<span class="hero-helper-text">{helper}</span>
 		{:else}
-			<span class="hero-helper-text hero-helper-faint">Enter the amount</span>
+			<span class="hero-helper-text hero-helper-faint">{m.hero_amount_helper_default()}</span>
 		{/if}
 	</div>
 </div>

@@ -7,6 +7,7 @@
 	import { normalizeToMonthly, formatCurrency, getIntlLocale } from '$lib/utils';
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';
+	import { m } from '$lib/paraglide/messages.js';
 
 	import type { Expense } from '$lib/types';
 
@@ -67,9 +68,9 @@
 	});
 
 	const expenseTabs = $derived([
-		{ id: 'recurring', label: 'Recurring', count: tabCounts.recurring },
-		{ id: 'once', label: 'One-time', count: tabCounts.once },
-		{ id: 'past', label: 'Past', count: tabCounts.past }
+		{ id: 'recurring', label: m.expenses_tab_recurring(), count: tabCounts.recurring },
+		{ id: 'once', label: m.expenses_tab_once(), count: tabCounts.once },
+		{ id: 'past', label: m.expenses_tab_past(), count: tabCounts.past }
 	]);
 
 	const availableCategories = $derived(
@@ -78,14 +79,14 @@
 
 	// ── Monthly breakdown ─────────────────────────────────────────────────────
 	const RECURRENCE_ORDER = ['monthly', 'weekly', 'biweekly', 'quarterly', 'half-yearly', 'yearly'];
-	const RECURRENCE_LABELS: Record<string, string> = {
-		monthly: 'Monthly',
-		weekly: 'Weekly',
-		biweekly: 'Biweekly',
-		quarterly: 'Quarterly',
-		'half-yearly': 'Half-yearly',
-		yearly: 'Yearly'
-	};
+	const RECURRENCE_LABELS: Record<string, string> = $derived({
+		monthly: m.recurrence_monthly(),
+		weekly: m.recurrence_weekly(),
+		biweekly: m.recurrence_biweekly(),
+		quarterly: m.recurrence_quarterly(),
+		'half-yearly': m.recurrence_half_yearly(),
+		yearly: m.recurrence_yearly()
+	});
 
 	const monthlyBreakdown = $derived.by(() => {
 		const rows: { recurrence: string; label: string; raw: number; monthly: number }[] = [];
@@ -155,7 +156,7 @@
 			const active = rest.filter((e) => e.active);
 			groups.push({
 				recurrence: 'other',
-				label: 'Other',
+				label: m.recurrence_other(),
 				items: rest,
 				subtotal: active.reduce((s, e) => s + e.amount, 0),
 				monthlyEquiv: active.reduce((s, e) => s + normalizeToMonthly(e.amount, e.recurrence), 0),
@@ -192,15 +193,20 @@
 
 	// ── Formatting helpers ────────────────────────────────────────────────────
 	function dayLabel(expense: Expense): string {
-		if (expense.dayOfMonth === 'last_working') return 'Last working day';
-		if (expense.dayOfMonth === 'second_last_working') return '2nd-last working day';
-		if (expense.dayOfMonth) return `${expense.dayOfMonth}. of month`;
+		if (expense.dayOfMonth === 'last_working') return m.expenses_last_working_day();
+		if (expense.dayOfMonth === 'second_last_working') return m.expenses_second_last_working_day();
+		if (expense.dayOfMonth) return m.expenses_day_of_month({ day: expense.dayOfMonth });
 		return '';
 	}
 
 	function dueDateLabel(expense: Expense): string {
-		if (!expense.dueDate) return 'no due date';
-		return `due ${new Date(expense.dueDate).toLocaleDateString(getIntlLocale(), { day: 'numeric', month: 'short' })}`;
+		if (!expense.dueDate) return m.expenses_no_due_date();
+		return m.expenses_due_on({
+			date: new Date(expense.dueDate).toLocaleDateString(getIntlLocale(), {
+				day: 'numeric',
+				month: 'short'
+			})
+		});
 	}
 
 	// ── Form handlers ─────────────────────────────────────────────────────────
@@ -225,13 +231,13 @@
 </script>
 
 <div class="page flex flex-col gap-5">
-	<PageHeader title="Expenses" subtitle="Track what goes out, on cadence.">
+	<PageHeader title={m.expenses_title()} subtitle={m.expenses_subtitle()}>
 		{#snippet actions()}
 			<button
 				type="button"
 				onclick={openNew}
 				class="bg-expense flex h-[38px] w-[38px] items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-95"
-				aria-label="Add expense"
+				aria-label={m.expenses_add_aria()}
 			>
 				<Plus size={18} strokeWidth={2.5} />
 			</button>
@@ -251,7 +257,7 @@
 		>
 			<div class="flex items-center justify-between">
 				<span class="mono text-[10px] tracking-wider uppercase" style="color: var(--expense-ink);">
-					Monthly Equivalent
+					{m.expenses_monthly_equivalent()}
 				</span>
 				<span class="text-[22px] font-semibold tabular-nums" style="color: var(--expense-ink);">
 					{fmt(monthlyTotal)}
@@ -279,21 +285,21 @@
 				onclick={() => (filterStatus = 'all')}
 				class={pillClass(filterStatus === 'all')}
 			>
-				All
+				{m.expenses_filter_all()}
 			</button>
 			<button
 				type="button"
 				onclick={() => (filterStatus = 'active')}
 				class={pillClass(filterStatus === 'active')}
 			>
-				Active
+				{m.expenses_filter_active()}
 			</button>
 			<button
 				type="button"
 				onclick={() => (filterStatus = 'paused')}
 				class={pillClass(filterStatus === 'paused')}
 			>
-				Paused
+				{m.expenses_filter_paused()}
 			</button>
 			<span class="text-text-faint self-center text-[11px]">|</span>
 			<button
@@ -304,7 +310,7 @@
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'desc')}
 			>
-				Most expensive
+				{m.expenses_sort_most_expensive()}
 			</button>
 			<button
 				type="button"
@@ -314,7 +320,7 @@
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'asc')}
 			>
-				Cheapest first
+				{m.expenses_sort_cheapest()}
 			</button>
 		</div>
 
@@ -385,7 +391,7 @@
 				<div
 					class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
 				>
-					<p class="text-text-muted text-[13px]">No recurring expenses yet.</p>
+					<p class="text-text-muted text-[13px]">{m.expenses_empty_recurring()}</p>
 				</div>
 			{/if}
 		</div>
@@ -402,7 +408,7 @@
 				}}
 				class={pillClass(sortBy === 'date' && sortDir === 'asc')}
 			>
-				Soonest first
+				{m.expenses_sort_soonest()}
 			</button>
 			<button
 				type="button"
@@ -412,7 +418,7 @@
 				}}
 				class={pillClass(sortBy === 'date' && sortDir === 'desc')}
 			>
-				Latest first
+				{m.expenses_sort_latest()}
 			</button>
 			<button
 				type="button"
@@ -422,7 +428,7 @@
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'desc')}
 			>
-				Most expensive
+				{m.expenses_sort_most_expensive()}
 			</button>
 			{#if availableCategories.length > 1}
 				<span class="text-text-faint self-center text-[11px]">|</span>
@@ -475,7 +481,7 @@
 			<div
 				class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
 			>
-				<p class="text-text-muted text-[13px]">No upcoming one-time expenses.</p>
+				<p class="text-text-muted text-[13px]">{m.expenses_empty_once()}</p>
 			</div>
 		{/if}
 
@@ -491,7 +497,7 @@
 				}}
 				class={pillClass(sortBy === 'date' && sortDir === 'desc')}
 			>
-				Most recent
+				{m.expenses_sort_recent()}
 			</button>
 			<button
 				type="button"
@@ -501,7 +507,7 @@
 				}}
 				class={pillClass(sortBy === 'date' && sortDir === 'asc')}
 			>
-				Oldest first
+				{m.expenses_sort_oldest()}
 			</button>
 			<button
 				type="button"
@@ -511,7 +517,7 @@
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'desc')}
 			>
-				Highest first
+				{m.expenses_sort_highest()}
 			</button>
 			<button
 				type="button"
@@ -521,7 +527,7 @@
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'asc')}
 			>
-				Lowest first
+				{m.expenses_sort_lowest()}
 			</button>
 		</div>
 
@@ -546,7 +552,7 @@
 								{expense.name}
 							</p>
 							<p class="text-text-subtle text-[11px]">
-								{dueDateLabel(expense)} &middot; paid
+								{dueDateLabel(expense)}{m.expense_row_paid_dot()}
 							</p>
 						</div>
 						<span
@@ -562,7 +568,7 @@
 			<div
 				class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
 			>
-				<p class="text-text-muted text-[13px]">Paid expenses will appear here.</p>
+				<p class="text-text-muted text-[13px]">{m.expenses_empty_past()}</p>
 			</div>
 		{/if}
 	{/if}

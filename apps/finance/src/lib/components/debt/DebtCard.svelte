@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ChevronRight, ArrowUpRight, ArrowDownLeft } from '@lucide/svelte';
 	import { formatCurrency, getIntlLocale } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Debt } from '$lib/types';
 
 	let {
@@ -32,14 +33,16 @@
 	<div class="min-w-0 flex-1">
 		<p class="truncate text-[14px] font-medium">{debt.counterparty}</p>
 		<p class="text-text-subtle text-[11px]">
-			{debt.direction === 'owe' ? 'I owe' : 'Owed to me'}
+			{debt.direction === 'owe' ? m.debt_i_owe() : m.debt_owed_to_me()}
 			{#if debt.dueDate}
-				· due {new Date(debt.dueDate).toLocaleDateString(getIntlLocale(), {
-					day: 'numeric',
-					month: 'short'
+				· {m.expenses_due_on({
+					date: new Date(debt.dueDate).toLocaleDateString(getIntlLocale(), {
+						day: 'numeric',
+						month: 'short'
+					})
 				})}{/if}
 			{#if debt.paid}
-				· <span style="color: var(--color-income);">paid</span>{/if}
+				· <span style="color: var(--color-income);">{m.debt_paid_pill()}</span>{/if}
 		</p>
 	</div>
 	<div class="flex items-center gap-1">

@@ -4,7 +4,7 @@
 	import { BottomNav, KonamiCode, PageShell, UpdatePrompt } from '@nexo/ui';
 	import type { BottomNavTab } from '@nexo/ui';
 	import { CalendarRange, House, Settings } from '@lucide/svelte';
-	import { m } from '$lib/i18n';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let { children } = $props();
 

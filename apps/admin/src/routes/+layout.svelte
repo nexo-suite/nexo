@@ -41,24 +41,32 @@
 		{ href: '/settings', label: m.nav_settings(), icon: Settings, active: activeTab === 'settings' }
 	]);
 
-	type ActionForm = { correlationId?: string; error?: string; toast?: string } | null;
+	type ActionForm = {
+		correlationId?: string;
+		error?: string;
+		toast?: string;
+		toastType?: 'success' | 'error';
+	} | null;
 	const formResult = $derived(page.form as ActionForm);
 	const errorCode = $derived(formResult?.error ?? null);
 	const errorMsg = $derived(errorCode ? userMessage(errorCode) : null);
 	const errorId = $derived(formResult?.correlationId ?? null);
 	const errorKey = $derived(errorId ?? errorCode ?? '');
 	const toastMsg = $derived(formResult?.toast ?? null);
+	const toastType = $derived(formResult?.toastType ?? 'success');
 
 	let dismissedFor = $state<string | null>(null);
 	const showError = $derived(Boolean(errorMsg) && dismissedFor !== errorKey);
 
-	let successOpen = $state(false);
-	let successMessage = $state('');
+	let toastOpen = $state(false);
+	let toastMessage = $state('');
+	let toastTypeShown = $state<'success' | 'error'>('success');
 
 	$effect(() => {
 		if (toastMsg) {
-			successMessage = toastMsg;
-			successOpen = true;
+			toastMessage = toastMsg;
+			toastTypeShown = toastType;
+			toastOpen = true;
 		}
 	});
 </script>
@@ -67,7 +75,7 @@
 	<div class="nav-progress"></div>
 {/if}
 <svelte:head>
-	<title>Admin — Nexo</title>
+	<title>{m.layout_title()}</title>
 </svelte:head>
 <PageShell>
 	{#if showError && errorMsg}
@@ -80,7 +88,7 @@
 	{@render children()}
 </PageShell>
 <UpdatePrompt bottomOffset="calc(var(--tab-h) + var(--safe-bot) + 12px)" />
-<Toast bind:open={successOpen} type="success" message={successMessage} duration={3000} />
+<Toast bind:open={toastOpen} type={toastTypeShown} message={toastMessage} duration={3000} />
 <KonamiCode />
 <BottomNav {tabs} currentPath={page.url.pathname} />
 

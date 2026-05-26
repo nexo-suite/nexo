@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Flashlight, FlashlightOff, X } from '@lucide/svelte';
-	import { m } from '$lib/i18n';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let {
 		state = 'idle',

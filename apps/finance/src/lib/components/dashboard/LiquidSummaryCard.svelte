@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { formatCurrency } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let {
 		accounts,
@@ -33,22 +34,22 @@
 		class="pointer-events-none absolute -bottom-6 -left-4 h-28 w-28 rounded-full bg-white/5"
 	></div>
 
-	<p class="text-[11px] font-semibold tracking-widest text-white/60 uppercase">Liquid Assets</p>
+	<p class="text-[11px] font-semibold tracking-widest text-white/60 uppercase">{m.liquid_assets()}</p>
 	<p class="mt-1 text-[2.75rem] leading-none font-semibold tracking-tight text-white">
 		{fmt(totalLiquid)}
 	</p>
 
 	<div class="mt-6 grid grid-cols-3 gap-2 border-t border-white/15 pt-5">
 		<div>
-			<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">This Month In</p>
+			<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">{m.liquid_this_month_in()}</p>
 			<p class="mt-1 text-base font-semibold text-white">{fmt(monthlyIncome)}</p>
 		</div>
 		<div>
-			<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">This Month Out</p>
+			<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">{m.liquid_this_month_out()}</p>
 			<p class="mt-1 text-base font-semibold text-white">{fmt(monthlyExpenses)}</p>
 		</div>
 		<div>
-			<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">Net</p>
+			<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">{m.liquid_net()}</p>
 			<p
 				class="mt-1 text-base font-semibold {netCashflow >= 0
 					? 'text-emerald-300'
@@ -63,7 +64,7 @@
 		<div class="mt-4">
 			<div class="mb-1.5 flex items-center justify-between">
 				<p class="text-[10px] font-medium tracking-wider text-white/50 uppercase">
-					Saved this month
+					{m.liquid_saved_this_month()}
 				</p>
 				<p class="text-[10px] font-semibold text-white/70">{savingsRate.toFixed(0)}%</p>
 			</div>

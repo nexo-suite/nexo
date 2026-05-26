@@ -4,6 +4,7 @@
 	import { RECURRENCES, MONTHS } from '$lib/constants';
 	import { enhance } from '$app/forms';
 	import { normalizeToMonthly, formatCurrency } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Income } from '$lib/types';
 
 	interface Props {
@@ -22,15 +23,15 @@
 		currency = 'EUR'
 	}: Props = $props();
 
-	const RECURRENCE_LABELS: Record<string, { label: string; emoji: string }> = {
-		once: { label: 'One-time', emoji: '⚡' },
-		weekly: { label: 'Weekly', emoji: '📅' },
-		biweekly: { label: 'Biweekly', emoji: '📆' },
-		monthly: { label: 'Monthly', emoji: '🔁' },
-		quarterly: { label: 'Quarterly', emoji: '🗓️' },
-		'half-yearly': { label: 'Half-year', emoji: '🌗' },
-		yearly: { label: 'Yearly', emoji: '🎂' }
-	};
+	const RECURRENCE_LABELS: Record<string, { label: string; emoji: string }> = $derived({
+		once: { label: m.recurrence_once(), emoji: '⚡' },
+		weekly: { label: m.recurrence_weekly(), emoji: '📅' },
+		biweekly: { label: m.recurrence_biweekly(), emoji: '📆' },
+		monthly: { label: m.recurrence_monthly(), emoji: '🔁' },
+		quarterly: { label: m.recurrence_quarterly(), emoji: '🗓️' },
+		'half-yearly': { label: m.recurrence_half_yearly(), emoji: '🌗' },
+		yearly: { label: m.recurrence_yearly(), emoji: '🎂' }
+	});
 
 	let confirmDelete = $state(false);
 	let form = $state({
@@ -50,10 +51,11 @@
 	const numericAmount = $derived(parseFloat(form.amount) || 0);
 	const monthlyHelper = $derived.by(() => {
 		if (numericAmount <= 0) return '';
-		if (isOnce) return 'one-time, no monthly equivalent';
+		if (isOnce) return m.income_form_helper_one_time();
 		const eq = normalizeToMonthly(numericAmount, form.recurrence);
-		if (form.recurrence === 'monthly') return `≈ ${formatCurrency(eq, currency, true)} / month`;
-		return `≈ ${formatCurrency(eq, currency, true)} / month equivalent`;
+		if (form.recurrence === 'monthly')
+			return m.income_form_helper_monthly({ value: formatCurrency(eq, currency, true) });
+		return m.income_form_helper_monthly_equiv({ value: formatCurrency(eq, currency, true) });
 	});
 
 	$effect(() => {
@@ -88,14 +90,14 @@
 
 <BottomSheet
 	bind:open
-	title={editing ? 'Edit income' : 'New income 💰'}
-	subtitle="Track what comes in, on cadence."
+	title={editing ? m.income_form_edit_title() : m.income_form_new_emoji_title()}
+	subtitle={m.income_form_subtitle()}
 >
 	{#if confirmDelete}
 		<div class="space-y-4 py-2">
 			<div class="bg-bg-1 rounded-[var(--radius-md)] px-4 py-4 text-center">
-				<p class="text-text-primary text-[14px] font-medium">Delete "{editing?.name}"?</p>
-				<p class="text-text-subtle mt-1 text-[12px]">This can't be undone.</p>
+				<p class="text-text-primary text-[14px] font-medium">{m.income_form_delete_confirm({ name: editing?.name ?? '' })}</p>
+				<p class="text-text-subtle mt-1 text-[12px]">{m.common_undone_warning()}</p>
 			</div>
 			<form
 				method="POST"
@@ -109,11 +111,11 @@
 			>
 				<input type="hidden" name="id" value={editing?.id} />
 				<button type="submit" class="btn-primary w-full" style="background: var(--color-expense);">
-					Yes, delete
+					{m.common_yes_delete()}
 				</button>
 			</form>
 			<button type="button" onclick={() => (confirmDelete = false)} class="btn-secondary w-full">
-				Cancel
+				{m.common_cancel()}
 			</button>
 		</div>
 	{:else}
@@ -148,19 +150,19 @@
 
 			<!-- Name -->
 			<div class="field">
-				<label for="inc-name">Name</label>
+				<label for="inc-name">{m.income_form_label_name()}</label>
 				<input
 					id="inc-name"
 					name="name"
 					bind:value={form.name}
 					class="input"
-					placeholder="e.g. Salary"
+					placeholder={m.income_form_name_placeholder()}
 				/>
 			</div>
 
 			<!-- Recurrence pill row -->
 			<div class="field">
-				<span class="field-label">Cadence</span>
+				<span class="field-label">{m.income_form_label_cadence()}</span>
 				<div class="recur-row">
 					{#each RECURRENCES as r (r)}
 						{@const meta = RECURRENCE_LABELS[r] ?? { label: r, emoji: '·' }}
@@ -181,19 +183,19 @@
 			<!-- Day / date -->
 			{#if isOnce}
 				<div class="field">
-					<label for="inc-exp-date">Expected date</label>
+					<label for="inc-exp-date">{m.income_form_label_expected_date()}</label>
 					<input id="inc-exp-date" bind:value={form.expected_date} type="date" class="input" />
 				</div>
 			{:else}
 				<div class="field">
-					<label for="inc-dom">Day of month</label>
+					<label for="inc-dom">{m.income_form_label_day_of_month()}</label>
 					<select id="inc-dom" bind:value={form.day_of_month} class="input">
-						<option value="">— pick a day —</option>
+						<option value="">{m.income_form_dom_pick_day()}</option>
 						{#each Array.from({ length: 28 }, (_, i) => i + 1) as d (d)}
 							<option value={String(d)}>{d}.</option>
 						{/each}
-						<option value="last_working">Last working day</option>
-						<option value="second_last_working">2nd-last working day</option>
+						<option value="last_working">{m.expenses_last_working_day()}</option>
+						<option value="second_last_working">{m.expenses_second_last_working_day()}</option>
 					</select>
 				</div>
 			{/if}
@@ -201,11 +203,11 @@
 			<!-- Starting month -->
 			{#if needsMonth}
 				<div class="field">
-					<label for="inc-month">Starting month</label>
+					<label for="inc-month">{m.income_form_label_starting_month()}</label>
 					<select id="inc-month" bind:value={form.starting_month} class="input">
-						<option value="">— select —</option>
-						{#each MONTHS as m, i (m)}
-							<option value={String(i + 1)}>{m}</option>
+						<option value="">{m.common_select_placeholder()}</option>
+						{#each MONTHS as month, i (month)}
+							<option value={String(i + 1)}>{month}</option>
 						{/each}
 					</select>
 				</div>
@@ -214,9 +216,9 @@
 			<!-- Account selector -->
 			{#if accounts.length > 0}
 				<div class="field">
-					<label for="inc-account">Deposit to</label>
+					<label for="inc-account">{m.income_form_label_deposit_to()}</label>
 					<select id="inc-account" bind:value={form.account_id} class="input">
-						<option value="">None (manual)</option>
+						<option value="">{m.income_form_account_none()}</option>
 						{#each accounts as a (a.id)}
 							<option value={a.id}>{a.emoji ?? '💳'} {a.name}</option>
 						{/each}
@@ -228,31 +230,31 @@
 			{#if isOnce}
 				<ToggleRow
 					bind:checked={form.received}
-					label="Already received"
-					description="Won't appear in forecasts."
+					label={m.income_form_received_label()}
+					description={m.income_form_received_desc_once()}
 					id="inc-received"
 				/>
 			{:else}
 				<ToggleRow
 					bind:checked={form.received}
-					label="Already received"
-					description="Marks current cycle as received."
+					label={m.income_form_received_label()}
+					description={m.income_form_received_desc_recurring()}
 					id="inc-received"
 				/>
 			{/if}
 
 			<!-- Actions -->
 			<div class="actions">
-				<button type="button" class="btn-secondary" onclick={() => (open = false)}>Cancel</button>
+				<button type="button" class="btn-secondary" onclick={() => (open = false)}>{m.common_cancel()}</button>
 				<button type="submit" class="btn-primary">
-					<span>Save income</span>
+					<span>{m.income_form_save()}</span>
 					<span aria-hidden="true">→</span>
 				</button>
 			</div>
 
 			{#if editing}
 				<button type="button" onclick={() => (confirmDelete = true)} class="btn-delete">
-					Delete this income
+					{m.income_form_delete()}
 				</button>
 			{/if}
 		</form>

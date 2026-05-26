@@ -1,15 +1,15 @@
 # syntax=docker/dockerfile:1.7
 #
-# Thin runtime image. Build context is produced by `nexo prepare-contexts`,
-# which runs `pnpm --prod deploy` for this app. The deployed
-# context contains the compiled dist/, the bot's package.json, and a
-# node_modules with @nexo/logger resolved via its exports map.
+# Slim runtime image. tsdown bundles every runtime dep inline (see
+# tsdown.config.ts), so the build context is just dist/. No package.json,
+# no node_modules, no pnpm deploy. Context is produced by `nexo
+# prepare-contexts` with strategy='bundle'.
 
-FROM node:24-alpine
+FROM node:24.15.0-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f
 WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 
-COPY --chown=app:app . .
+COPY --chown=app:app dist ./dist
 
 USER app
 ENV NODE_ENV=production

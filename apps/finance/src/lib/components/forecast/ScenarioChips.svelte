@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
+
 	export type Scenario = 'pause-subs' | 'income-up' | 'drop-debt';
 
 	let {
@@ -7,11 +9,11 @@
 		active: Scenario[];
 	} = $props();
 
-	const CHIPS: { id: Scenario; emoji: string; label: string; tone: string }[] = [
-		{ id: 'pause-subs', emoji: '🎬', label: 'Pause subs', tone: 'expense' },
-		{ id: 'income-up', emoji: '📈', label: '+5% income', tone: 'income' },
-		{ id: 'drop-debt', emoji: '✂️', label: 'Skip debts', tone: 'debt' }
-	];
+	const CHIPS: { id: Scenario; emoji: string; label: string; tone: string }[] = $derived([
+		{ id: 'pause-subs', emoji: '🎬', label: m.scenarios_pause_subs(), tone: 'expense' },
+		{ id: 'income-up', emoji: '📈', label: m.scenarios_income_up(), tone: 'income' },
+		{ id: 'drop-debt', emoji: '✂️', label: m.scenarios_drop_debt(), tone: 'debt' }
+	]);
 
 	function toggle(id: Scenario) {
 		if (active.includes(id)) {
@@ -22,10 +24,10 @@
 	}
 </script>
 
-<div class="scenarios" role="group" aria-label="What-if scenarios">
+<div class="scenarios" role="group" aria-label={m.scenarios_aria()}>
 	<div class="scenarios-head">
-		<span class="scenarios-label">What if…</span>
-		<span class="scenarios-tag">experimental</span>
+		<span class="scenarios-label">{m.scenarios_what_if()}</span>
+		<span class="scenarios-tag">{m.scenarios_experimental()}</span>
 	</div>
 	<div class="scenarios-row">
 		{#each CHIPS as chip (chip.id)}

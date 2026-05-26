@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ChevronRight } from '@lucide/svelte';
 	import { formatCurrency } from '$lib/utils';
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Account } from '$lib/types';
 
 	const TYPE_ICONS: Record<string, string> = {
@@ -38,7 +39,7 @@
 		<p class="text-xs text-[var(--color-neutral)] capitalize">
 			{account.type}
 			{#if !account.includeInTotal}
-				· <span class="text-[var(--color-debt)]">excluded from total</span>
+				· <span class="text-[var(--color-debt)]">{m.account_excluded_from_total()}</span>
 			{/if}
 		</p>
 	</div>

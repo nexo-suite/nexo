@@ -6,6 +6,7 @@
 	import UserListView from './UserListView.svelte';
 	import UserDetailView from './UserDetailView.svelte';
 	import InviteView from './InviteView.svelte';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let { data, form } = $props();
 
@@ -64,9 +65,17 @@
 
 {#if view === 'list'}
 	<div class="page">
-		<PageHeader title="Users" subtitle="{counts.active} active · {counts.invited} invited">
+		<PageHeader
+			title={m.nav_users()}
+			subtitle={m.users_subtitle({ active: counts.active, invited: counts.invited })}
+		>
 			{#snippet actions()}
-				<button class="hdr-action" type="button" aria-label="Invite user" onclick={openInvite}>
+				<button
+					class="hdr-action"
+					type="button"
+					aria-label={m.users_invite_aria()}
+					onclick={openInvite}
+				>
 					<UserPlus size={18} strokeWidth={1.7} />
 				</button>
 			{/snippet}

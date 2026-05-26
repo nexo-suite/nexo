@@ -4,7 +4,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import ScannerReticle from '$lib/components/ScannerReticle.svelte';
 	import { makeDecoder } from '$lib/scanner/decode';
-	import { m } from '$lib/i18n';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let phase = $state<'idle' | 'searching' | 'found' | 'not-found'>('idle');
 	let torchOn = $state(false);

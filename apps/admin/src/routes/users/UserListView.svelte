@@ -2,6 +2,7 @@
 	import { fmtRelative, initials, displayName, entryStatus } from '$lib/utils';
 	import SearchInput from '$lib/components/SearchInput.svelte';
 	import FilterChips from '$lib/components/FilterChips.svelte';
+	import { m } from '$lib/paraglide/messages.js';
 
 	type Entry =
 		| {
@@ -45,15 +46,15 @@
 </script>
 
 <div class="screen fade-in">
-	<SearchInput bind:value={searchQuery} placeholder="Search by email or name…" />
+	<SearchInput bind:value={searchQuery} placeholder={m.users_search_placeholder()} />
 
 	<FilterChips
 		bind:value={filterStatus}
 		options={[
-			{ value: 'all', label: 'All', count: counts.all },
-			{ value: 'active', label: 'Active', count: counts.active },
-			{ value: 'invited', label: 'Pending', count: counts.invited },
-			{ value: 'blocked', label: 'Blocked', count: counts.blocked }
+			{ value: 'all', label: m.users_filter_all(), count: counts.all },
+			{ value: 'active', label: m.users_filter_active(), count: counts.active },
+			{ value: 'invited', label: m.users_filter_pending(), count: counts.invited },
+			{ value: 'blocked', label: m.users_filter_blocked(), count: counts.blocked }
 		]}
 	/>
 
@@ -69,14 +70,20 @@
 					<div class="user-email ellipsis">{entry.email}</div>
 					{#if status === 'active'}
 						<div class="user-meta">
-							{entry.apps.length} app{entry.apps.length === 1 ? '' : 's'} · {fmtRelative(
-								entry.createdAt
-							)}
+							{entry.apps.length === 1
+								? m.users_meta_apps_one({
+										count: entry.apps.length,
+										when: fmtRelative(entry.createdAt)
+									})
+								: m.users_meta_apps_other({
+										count: entry.apps.length,
+										when: fmtRelative(entry.createdAt)
+									})}
 						</div>
 					{:else if status === 'invited'}
-						<div class="user-meta pending">invited · awaiting first login</div>
+						<div class="user-meta pending">{m.users_meta_invited()}</div>
 					{:else}
-						<div class="user-meta blocked">blocked · no access</div>
+						<div class="user-meta blocked">{m.users_meta_blocked()}</div>
 					{/if}
 				</div>
 				<svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
@@ -87,7 +94,7 @@
 		{#if entries.length === 0}
 			<div class="empty">
 				<div class="em">○</div>
-				{searchQuery ? 'No users match.' : 'No users yet.'}
+				{searchQuery ? m.users_empty_no_match() : m.users_empty_no_users()}
 			</div>
 		{/if}
 	</div>

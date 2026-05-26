@@ -7,6 +7,7 @@
 	import { normalizeToMonthly, formatCurrency, getIntlLocale } from '$lib/utils';
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';
+	import { m } from '$lib/paraglide/messages.js';
 
 	import type { Income } from '$lib/types';
 
@@ -54,21 +55,21 @@
 	});
 
 	const incomeTabs = $derived([
-		{ id: 'recurring', label: 'Recurring', count: tabCounts.recurring },
-		{ id: 'once', label: 'One-time', count: tabCounts.once },
-		{ id: 'past', label: 'Past', count: tabCounts.past }
+		{ id: 'recurring', label: m.income_tab_recurring(), count: tabCounts.recurring },
+		{ id: 'once', label: m.income_tab_once(), count: tabCounts.once },
+		{ id: 'past', label: m.income_tab_past(), count: tabCounts.past }
 	]);
 
 	// ── Monthly breakdown ─────────────────────────────────────────────────────
 	const RECURRENCE_ORDER = ['monthly', 'weekly', 'biweekly', 'quarterly', 'half-yearly', 'yearly'];
-	const RECURRENCE_LABELS: Record<string, string> = {
-		monthly: 'Monthly',
-		weekly: 'Weekly',
-		biweekly: 'Biweekly',
-		quarterly: 'Quarterly',
-		'half-yearly': 'Half-yearly',
-		yearly: 'Yearly'
-	};
+	const RECURRENCE_LABELS: Record<string, string> = $derived({
+		monthly: m.recurrence_monthly(),
+		weekly: m.recurrence_weekly(),
+		biweekly: m.recurrence_biweekly(),
+		quarterly: m.recurrence_quarterly(),
+		'half-yearly': m.recurrence_half_yearly(),
+		yearly: m.recurrence_yearly()
+	});
 
 	const monthlyBreakdown = $derived.by(() => {
 		const rows: { recurrence: string; label: string; raw: number; monthly: number }[] = [];
@@ -129,7 +130,7 @@
 		if (rest.length > 0) {
 			groups.push({
 				recurrence: 'other',
-				label: 'Other',
+				label: m.recurrence_other(),
 				items: rest,
 				subtotal: rest.reduce((s, i) => s + i.amount, 0),
 				monthlyEquiv: rest.reduce((s, i) => s + normalizeToMonthly(i.amount, i.recurrence), 0),
@@ -169,15 +170,20 @@
 
 	// ── Formatting helpers ────────────────────────────────────────────────────
 	function dayLabel(inc: Income): string {
-		if (inc.dayOfMonth === 'last_working') return 'Last working day';
-		if (inc.dayOfMonth === 'second_last_working') return '2nd-last working day';
-		if (inc.dayOfMonth) return `${inc.dayOfMonth}. of month`;
+		if (inc.dayOfMonth === 'last_working') return m.expenses_last_working_day();
+		if (inc.dayOfMonth === 'second_last_working') return m.expenses_second_last_working_day();
+		if (inc.dayOfMonth) return m.expenses_day_of_month({ day: inc.dayOfMonth });
 		return '';
 	}
 
 	function dueDateLabel(inc: Income): string {
-		if (!inc.expectedDate) return 'no date set';
-		return `expected ${new Date(inc.expectedDate).toLocaleDateString(getIntlLocale(), { day: 'numeric', month: 'short' })}`;
+		if (!inc.expectedDate) return m.income_no_date();
+		return m.income_expected_on({
+			date: new Date(inc.expectedDate).toLocaleDateString(getIntlLocale(), {
+				day: 'numeric',
+				month: 'short'
+			})
+		});
 	}
 
 	// ── Form handlers ─────────────────────────────────────────────────────────
@@ -202,13 +208,13 @@
 </script>
 
 <div class="page flex flex-col gap-5">
-	<PageHeader title="Income" subtitle="Track what comes in, on cadence.">
+	<PageHeader title={m.income_title()} subtitle={m.income_subtitle()}>
 		{#snippet actions()}
 			<button
 				type="button"
 				onclick={openNew}
 				class="bg-income flex h-[38px] w-[38px] items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-95"
-				aria-label="Add income"
+				aria-label={m.income_add_aria()}
 			>
 				<Plus size={18} strokeWidth={2.5} />
 			</button>
@@ -228,7 +234,7 @@
 		>
 			<div class="flex items-center justify-between">
 				<span class="mono text-[10px] tracking-wider uppercase" style="color: var(--income-ink);">
-					Monthly Equivalent
+					{m.income_monthly_equivalent()}
 				</span>
 				<span class="text-[22px] font-semibold tabular-nums" style="color: var(--income-ink);">
 					{fmt(monthlyTotal)}
@@ -259,7 +265,7 @@
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'desc')}
 			>
-				Most income
+				{m.income_sort_most()}
 			</button>
 			<button
 				type="button"
@@ -269,7 +275,7 @@
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'asc')}
 			>
-				Smallest first
+				{m.income_sort_smallest()}
 			</button>
 		</div>
 
@@ -330,7 +336,7 @@
 				<div
 					class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
 				>
-					<p class="text-text-muted text-[13px]">No recurring income yet.</p>
+					<p class="text-text-muted text-[13px]">{m.income_empty_recurring()}</p>
 				</div>
 			{/if}
 		</div>
@@ -347,7 +353,7 @@
 				}}
 				class={pillClass(sortBy === 'date' && sortDir === 'asc')}
 			>
-				Soonest first
+				{m.income_sort_soonest()}
 			</button>
 			<button
 				type="button"
@@ -357,7 +363,7 @@
 				}}
 				class={pillClass(sortBy === 'date' && sortDir === 'desc')}
 			>
-				Latest first
+				{m.income_sort_latest()}
 			</button>
 			<button
 				type="button"
@@ -367,7 +373,7 @@
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'desc')}
 			>
-				Highest first
+				{m.income_sort_highest()}
 			</button>
 		</div>
 
@@ -408,7 +414,7 @@
 			<div
 				class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
 			>
-				<p class="text-text-muted text-[13px]">No upcoming one-time income.</p>
+				<p class="text-text-muted text-[13px]">{m.income_empty_once()}</p>
 			</div>
 		{/if}
 
@@ -424,7 +430,7 @@
 				}}
 				class={pillClass(sortBy === 'date' && sortDir === 'desc')}
 			>
-				Most recent
+				{m.income_sort_recent()}
 			</button>
 			<button
 				type="button"
@@ -434,7 +440,7 @@
 				}}
 				class={pillClass(sortBy === 'date' && sortDir === 'asc')}
 			>
-				Oldest first
+				{m.income_sort_oldest()}
 			</button>
 			<button
 				type="button"
@@ -444,7 +450,7 @@
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'desc')}
 			>
-				Highest first
+				{m.income_sort_highest()}
 			</button>
 			<button
 				type="button"
@@ -454,7 +460,7 @@
 				}}
 				class={pillClass(sortBy === 'amount' && sortDir === 'asc')}
 			>
-				Lowest first
+				{m.income_sort_lowest()}
 			</button>
 		</div>
 
@@ -479,7 +485,7 @@
 								{inc.name}
 							</p>
 							<p class="text-text-subtle text-[11px]">
-								{dueDateLabel(inc)} &middot; received
+								{dueDateLabel(inc)}{m.income_row_received_dot()}
 							</p>
 						</div>
 						<span
@@ -495,7 +501,7 @@
 			<div
 				class="border-border-default rounded-[var(--radius-lg)] border border-dashed p-8 text-center"
 			>
-				<p class="text-text-muted text-[13px]">Received income will appear here.</p>
+				<p class="text-text-muted text-[13px]">{m.income_empty_past()}</p>
 			</div>
 		{/if}
 	{/if}

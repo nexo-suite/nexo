@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { Plus } from '@lucide/svelte';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let open = $state(false);
 
@@ -12,29 +13,29 @@
 		desc: string;
 		href: string;
 		tone: 'expense' | 'income' | 'debt';
-	}[] = [
+	}[] = $derived([
 		{
 			emoji: '💸',
-			label: 'Expense',
-			desc: 'Bills, subs, the things that go out',
+			label: m.quickadd_expense_label(),
+			desc: m.quickadd_expense_desc(),
 			href: '/expenses?add=true',
 			tone: 'expense'
 		},
 		{
 			emoji: '💰',
-			label: 'Income',
-			desc: 'Salary, gigs, anything coming in',
+			label: m.quickadd_income_label(),
+			desc: m.quickadd_income_desc(),
 			href: '/income?add=true',
 			tone: 'income'
 		},
 		{
 			emoji: '🤝',
-			label: 'Debt',
-			desc: 'Money you owe or that’s owed to you',
+			label: m.quickadd_debt_label(),
+			desc: m.quickadd_debt_desc(),
 			href: '/debt?add=true',
 			tone: 'debt'
 		}
-	];
+	]);
 
 	// Hide on login + offline
 	const visible = $derived(
@@ -52,7 +53,7 @@
 	<button
 		type="button"
 		class="fab"
-		aria-label="Quick add"
+		aria-label={m.quickadd_fab_aria()}
 		onclick={() => (open = !open)}
 	>
 		<span class="fab-glow" aria-hidden="true"></span>
@@ -62,7 +63,7 @@
 	</button>
 {/if}
 
-<BottomSheet bind:open title="Add to Finance" subtitle="What kind of flow?">
+<BottomSheet bind:open title={m.quickadd_title()} subtitle={m.quickadd_subtitle()}>
 	<div class="chooser">
 		{#each FLOWS as flow, i (flow.label)}
 			<button
@@ -80,7 +81,7 @@
 			</button>
 		{/each}
 	</div>
-	<p class="chooser-hint">Tip — long-press the <span class="kbd">+</span> later for shortcuts.</p>
+	<p class="chooser-hint">{m.quickadd_hint_prefix()} <span class="kbd">+</span> {m.quickadd_hint_suffix()}</p>
 </BottomSheet>
 
 <style>

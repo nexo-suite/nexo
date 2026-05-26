@@ -45,6 +45,7 @@ export const profiles = calorieSchema.table('profiles', {
 export const foodsCache = calorieSchema.table('foods_cache', {
 	barcode: text('barcode').primaryKey(),
 	nameDe: text('name_de'),
+	nameTr: text('name_tr'),
 	nameEn: text('name_en'),
 	nameGeneric: text('name_generic'),
 	brand: text('brand'),
@@ -180,6 +181,20 @@ export const weightLogs = calorieSchema.table(
 	(t) => [primaryKey({ columns: [t.userId, t.date] })]
 );
 
+// Shared cache of OFF free-text search results. Key is (normalized query, locale).
+// Stores barcode array; the actual product data still lives in foods_cache.
+// 30-day TTL is enforced in the search endpoint, not via DB-side expiry.
+export const foodsSearchCache = calorieSchema.table(
+	'foods_search_cache',
+	{
+		queryNormalized: text('query_normalized').notNull(),
+		locale: text('locale').notNull(),
+		barcodes: text('barcodes').array().notNull(),
+		fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [primaryKey({ columns: [t.queryNormalized, t.locale] })]
+);
+
 export type CalorieProfile = typeof profiles.$inferSelect;
 export type CalorieFoodCache = typeof foodsCache.$inferSelect;
 export type CalorieUserFood = typeof userFoods.$inferSelect;
@@ -188,3 +203,4 @@ export type CalorieMealTemplate = typeof mealTemplates.$inferSelect;
 export type CalorieMealTemplateItem = typeof mealTemplateItems.$inferSelect;
 export type CalorieUserFavorite = typeof userFavorites.$inferSelect;
 export type CalorieWeightLog = typeof weightLogs.$inferSelect;
+export type CalorieFoodsSearchCache = typeof foodsSearchCache.$inferSelect;

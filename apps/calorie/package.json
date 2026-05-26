@@ -8,6 +8,7 @@
 		"package.json"
 	],
 	"scripts": {
+		"backfill:brand-cleanup": "dotenv -e .env.local -e ../../.env -- node scripts/backfill-brand-cleanup.mjs",
 		"build": "vite build",
 		"dev": "vite dev --port 3007",
 		"lint": "eslint \"**/*.svelte\"",
@@ -31,7 +32,6 @@
 		"@nexo/logger": "workspace:*",
 		"@nexo/security": "workspace:*",
 		"@nexo/ui": "workspace:*",
-		"@openfoodfacts/openfoodfacts-nodejs": "2.0.0-alpha.30",
 		"better-auth": "catalog:",
 		"drizzle-orm": "catalog:",
 		"zxing-wasm": "^2.2.4"
@@ -44,6 +44,7 @@
 		"@tailwindcss/vite": "catalog:",
 		"@types/node": "catalog:",
 		"@vite-pwa/sveltekit": "catalog:",
+		"dotenv-cli": "^11.0.0",
 		"happy-dom": "^20.9.0",
 		"sharp": "^0.34.5",
 		"svelte": "catalog:",

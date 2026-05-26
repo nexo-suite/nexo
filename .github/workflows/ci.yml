@@ -21,6 +21,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.0
+        env:
+          PNPM_HOME: ${{ runner.temp }}/pnpm
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.0.0
@@ -67,6 +69,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.0
+        env:
+          PNPM_HOME: ${{ runner.temp }}/pnpm
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.0.0
@@ -142,6 +146,8 @@ jobs:
       - name: Setup pnpm
         if: steps.release.outputs.releases_created == 'true'
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.0
+        env:
+          PNPM_HOME: ${{ runner.temp }}/pnpm
 
       - name: Setup Node
         if: steps.release.outputs.releases_created == 'true'
@@ -174,6 +180,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.0
+        env:
+          PNPM_HOME: ${{ runner.temp }}/pnpm
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.0.0

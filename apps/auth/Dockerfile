@@ -4,11 +4,14 @@
 # which runs `pnpm --prod deploy` for this app — so the context
 # already contains package.json, node_modules, and the build/ output.
 
-FROM node:24-alpine
+FROM node:24.15.0-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f
 WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 
-COPY --chown=app:app . .
+COPY --chown=app:app package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --chown=app:app node_modules ./node_modules
+
+COPY --chown=app:app build ./build
 
 USER app
 ENV NODE_ENV=production

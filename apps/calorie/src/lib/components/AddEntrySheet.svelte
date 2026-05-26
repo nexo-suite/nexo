@@ -9,14 +9,29 @@
 		Plus,
 		Trash2,
 		Check,
-		ChevronDown
+		ChevronDown,
+		HelpCircle
 	} from '@lucide/svelte';
 	import { BottomSheet } from '@nexo/ui';
 	import { goto, invalidateAll } from '$app/navigation';
 	import UnitStepper from './UnitStepper.svelte';
 	import { untrack } from 'svelte';
 	import type { Food, FoodUnit, Meal, MealSlot } from '$lib/types';
-	import { m } from '$lib/i18n';
+	import { m } from '$lib/paraglide/messages.js';
+
+	type SearchSource = 'user' | 'cache' | 'seed' | 'off';
+	type SearchResult = {
+		id: string;
+		source: SearchSource;
+		name: string;
+		brand: string | null;
+		kcal100g: number | null;
+		protein100g: number | null;
+		carbs100g: number | null;
+		fat100g: number | null;
+		fiber100g: number | null;
+		sugars100g: number | null;
+	};
 
 	let {
 		open = $bindable(false),
@@ -44,11 +59,27 @@
 	let mealSlot = $state<MealSlot | null>(untrack(() => initialSlot));
 	let saveAsTemplate = $state(false);
 	let slotPickerOpen = $state(false);
+	let legendOpen = $state(false);
+	let firstTipDismissed = $state<boolean>(
+		untrack(() => {
+			if (typeof localStorage === 'undefined') return true;
+			return localStorage.getItem('calorie:search-legend-seen') === '1';
+		})
+	);
 
 	// In-flight food being configured (replaces the row inline, not a takeover)
 	let pendingFoodId = $state<string | null>(null);
 	let pendingGrams = $state(100);
 	let saving = $state(false);
+
+	// Server search state
+	let serverResults = $state<SearchResult[] | null>(null);
+	let searching = $state(false);
+	let globalError = $state(false);
+	let hasMore = $state(false);
+	let globalSearched = $state(false);
+	let aborter: AbortController | null = null;
+	let debounceHandle: ReturnType<typeof setTimeout> | null = null;
 
 	// Sync slot when sheet opens
 	$effect(() => {
@@ -57,15 +88,111 @@
 		}
 	});
 
-	const matches = $derived(
-		query.trim()
-			? foods.filter(
-					(f) =>
-						f.name.toLowerCase().includes(query.toLowerCase()) ||
-						f.brand?.toLowerCase().includes(query.toLowerCase())
-				)
-			: foods.slice(0, 8)
-	);
+	// Debounced fetch of the search endpoint when query length >= 3.
+	// Local fallback (in-memory `foods`) shows instantly while server result is pending.
+	$effect(() => {
+		const q = query.trim();
+		if (debounceHandle) clearTimeout(debounceHandle);
+		if (aborter) {
+			aborter.abort();
+			aborter = null;
+		}
+		if (q.length < 3) {
+			serverResults = null;
+			searching = false;
+			globalError = false;
+			hasMore = false;
+			globalSearched = false;
+			return;
+		}
+		debounceHandle = setTimeout(() => {
+			runSearch(q, false);
+		}, 450);
+		return () => {
+			if (debounceHandle) clearTimeout(debounceHandle);
+		};
+	});
+
+	async function runSearch(q: string, global: boolean) {
+		const ac = new AbortController();
+		aborter = ac;
+		searching = true;
+		globalError = false;
+		try {
+			const url = `/api/foods/search?q=${encodeURIComponent(q)}${global ? '&global=1' : ''}`;
+			const res = await fetch(url, { signal: ac.signal });
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const body = (await res.json()) as {
+				results: SearchResult[];
+				hasMore: boolean;
+				globalError: boolean;
+			};
+			if (ac.signal.aborted) return;
+			serverResults = body.results;
+			hasMore = body.hasMore;
+			globalError = body.globalError;
+			if (global) globalSearched = true;
+		} catch (e) {
+			if ((e as Error).name === 'AbortError') return;
+			console.error('search failed', e);
+			globalError = true;
+		} finally {
+			if (aborter === ac) {
+				aborter = null;
+				searching = false;
+			}
+		}
+	}
+
+	function expandGlobal() {
+		const q = query.trim();
+		if (q.length < 3) return;
+		runSearch(q, true);
+	}
+
+	function dismissFirstTip() {
+		firstTipDismissed = true;
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('calorie:search-legend-seen', '1');
+		}
+	}
+
+	// Synchronous local fallback while server result is pending (instant feedback per keystroke).
+	const localFallback = $derived.by(() => {
+		const q = query.trim().toLowerCase();
+		if (!q) return foods.slice(0, 8);
+		return foods.filter(
+			(f) => f.name.toLowerCase().includes(q) || f.brand?.toLowerCase().includes(q)
+		);
+	});
+
+	// Convert server result row → Food shape for the existing pending/expand UX.
+	function resultToFood(r: SearchResult): Food {
+		return {
+			id: r.id,
+			name: r.name,
+			brand: r.brand ?? undefined,
+			per100: {
+				kcal: r.kcal100g ?? 0,
+				protein_g: r.protein100g ?? 0,
+				carbs_g: r.carbs100g ?? 0,
+				fat_g: r.fat100g ?? 0,
+				fiber_g: r.fiber100g ?? undefined,
+				sugar_g: r.sugars100g ?? undefined
+			}
+		};
+	}
+
+	type DisplayRow = { food: Food; source: SearchSource };
+	const searchRows = $derived.by<DisplayRow[]>(() => {
+		if (serverResults) {
+			return serverResults.map((r) => ({ food: resultToFood(r), source: r.source }));
+		}
+		return localFallback.map((f) => ({
+			food: f,
+			source: /^\d{8,14}$/.test(f.id) ? ('cache' as const) : ('user' as const)
+		}));
+	});
 
 	const recents = $derived(
 		recentIds.map((id) => foods.find((f) => f.id === id)).filter((x): x is Food => x != null)
@@ -90,7 +217,13 @@
 		)
 	);
 
-	const pendingFood = $derived(pendingFoodId ? foods.find((f) => f.id === pendingFoodId) : null);
+	const pendingFood = $derived.by(() => {
+		if (!pendingFoodId) return null;
+		const fromFoods = foods.find((f) => f.id === pendingFoodId);
+		if (fromFoods) return fromFoods;
+		const fromSearch = searchRows.find((r) => r.food.id === pendingFoodId);
+		return fromSearch?.food ?? null;
+	});
 
 	const pendingPreview = $derived.by(() => {
 		if (!pendingFood) return { kcal: 0, p: 0, c: 0, f: 0 };
@@ -105,7 +238,6 @@
 
 	function startPending(f: Food) {
 		pendingFoodId = f.id;
-		// Pick the food's default unit and set grams to ~1 of that unit (or 100g if just g).
 		const defaultUnit = f.units?.find((u) => u.default) ?? f.units?.[0];
 		if (defaultUnit && defaultUnit.id !== 'g') {
 			pendingGrams = Math.round(defaultUnit.gramsPerUnit);
@@ -158,6 +290,10 @@
 		saveAsTemplate = false;
 		pendingFoodId = null;
 		query = '';
+		serverResults = null;
+		hasMore = false;
+		globalSearched = false;
+		globalError = false;
 		tab = 'search';
 	}
 
@@ -169,9 +305,10 @@
 			const f = it.food;
 			const g = it.grams;
 			const isBarcode = /^\d{8,14}$/.test(f.id);
+			const isSeed = f.id.startsWith('seed-');
 			return {
 				foodBarcode: isBarcode ? f.id : null,
-				foodUserId: isBarcode ? null : f.id,
+				foodUserId: !isBarcode && !isSeed ? f.id : null,
 				foodName: f.name,
 				grams: g,
 				unit: 'g',
@@ -220,6 +357,13 @@
 		snack: m.meal_snack
 	};
 
+	const sourceLabel: Record<SearchSource, () => string> = {
+		user: m.source_own,
+		cache: m.source_recent,
+		seed: m.source_common,
+		off: m.source_off
+	};
+
 	function mealKcalPreview(meal: Meal): number {
 		return meal.items.reduce((sum, mi) => {
 			const f = foods.find((x) => x.id === mi.foodId);
@@ -230,6 +374,9 @@
 	const sheetTitle = $derived(stack.length > 1 ? m.meal_builder_heading() : m.action_log_food());
 	const slotChipLabel = $derived(mealSlot ? slotLabels[mealSlot]() : m.add_meal_slot_none());
 	const showNameField = $derived(stack.length > 1);
+	const showFirstTip = $derived(
+		!firstTipDismissed && tab === 'search' && query.trim().length >= 3 && serverResults != null
+	);
 </script>
 
 <BottomSheet bind:open title={sheetTitle}>
@@ -369,7 +516,7 @@
 
 	<!-- Search bar (only on search tab) -->
 	{#if tab === 'search'}
-		<div class="search-wrap">
+		<div class="search-wrap" class:searching>
 			<Search size={16} strokeWidth={1.7} class="search-icon" />
 			<input
 				class="search-input"
@@ -382,13 +529,67 @@
 					<X size={13} strokeWidth={2} />
 				</button>
 			{/if}
+			<button
+				class="legend-btn"
+				type="button"
+				onclick={() => (legendOpen = !legendOpen)}
+				aria-expanded={legendOpen}
+				aria-label={m.search_legend_title()}
+			>
+				<HelpCircle size={14} strokeWidth={1.7} />
+			</button>
+		</div>
+
+		{#if legendOpen}
+			<div class="legend-pop" role="dialog" aria-label={m.search_legend_title()}>
+				<div class="legend-title">{m.search_legend_title()}</div>
+				<ul class="legend-list">
+					<li><span class="badge own">{m.source_own()}</span> {m.search_legend_own()}</li>
+					<li>
+						<span class="badge recent">{m.source_recent()}</span>
+						{m.search_legend_recent()}
+					</li>
+					<li>
+						<span class="badge common">{m.source_common()}</span>
+						{m.search_legend_common()}
+					</li>
+					<li><span class="badge off">{m.source_off()}</span> {m.search_legend_off()}</li>
+				</ul>
+			</div>
+		{/if}
+	{/if}
+
+	<!-- First-time legend tip — shows once on the first real search -->
+	{#if showFirstTip}
+		<div class="first-tip" role="note">
+			<div class="ft-head">
+				<span class="ft-title">{m.first_search_tip_title()}</span>
+				<button
+					class="ft-dismiss"
+					type="button"
+					onclick={dismissFirstTip}
+					aria-label={m.first_search_tip_dismiss()}
+				>
+					<X size={13} strokeWidth={1.8} />
+				</button>
+			</div>
+			<ul class="ft-list">
+				<li><span class="badge own">{m.source_own()}</span> {m.search_legend_own()}</li>
+				<li><span class="badge recent">{m.source_recent()}</span> {m.search_legend_recent()}</li>
+				<li><span class="badge common">{m.source_common()}</span> {m.search_legend_common()}</li>
+				<li><span class="badge off">{m.source_off()}</span> {m.search_legend_off()}</li>
+			</ul>
+			<button class="ft-ack" type="button" onclick={dismissFirstTip}>
+				{m.first_search_tip_dismiss()}
+			</button>
 		</div>
 	{/if}
 
 	<!-- Results -->
 	<div class="results">
 		{#if tab === 'search'}
-			{#each matches as f (f.id)}
+			{#each searchRows as r (r.food.id)}
+				{@const f = r.food}
 				{#if pendingFoodId === f.id && pendingFood}
 					<!-- Inline-expanded row -->
 					<div class="expand">
@@ -441,7 +642,16 @@
 				{:else}
 					<button class="row" type="button" onclick={() => startPending(f)}>
 						<div class="r-text">
-							<div class="r-name">{f.name}</div>
+							<div class="r-name">
+								<span>{f.name}</span>
+								<span class="badge {r.source === 'user'
+									? 'own'
+									: r.source === 'cache'
+										? 'recent'
+										: r.source === 'seed'
+											? 'common'
+											: 'off'}">{sourceLabel[r.source]()}</span>
+							</div>
 							<div class="r-sub">
 								{#if f.brand}<span class="brand">{f.brand}</span><span class="dot">·</span>{/if}
 								<span class="per"><span class="num">{f.per100.kcal}</span> kcal/100g</span>
@@ -453,7 +663,26 @@
 					</button>
 				{/if}
 			{/each}
-			{#if !matches.length}
+
+			{#if searching && (!serverResults || serverResults.length === 0)}
+				<div class="off-loading">{m.search_loading_off()}</div>
+			{/if}
+
+			{#if globalError}
+				<button class="off-error" type="button" onclick={expandGlobal}>
+					<span class="oe-msg">{m.search_error()}</span>
+					<span class="oe-cta">{m.search_global_retry()}</span>
+				</button>
+			{/if}
+
+			{#if hasMore && !globalSearched && !searching}
+				<button class="off-cta" type="button" onclick={expandGlobal}>
+					<Search size={13} strokeWidth={1.7} />
+					<span>{m.search_global_cta()}</span>
+				</button>
+			{/if}
+
+			{#if !searching && searchRows.length === 0 && query.trim().length >= 3}
 				<div class="empty">{m.add_no_results()}</div>
 			{/if}
 		{:else if tab === 'recents'}
@@ -945,8 +1174,9 @@
 	}
 
 	.search-input {
-		flex: 1;
 		all: unset;
+		flex: 1;
+		min-width: 0;
 		font-size: 14.5px;
 		color: var(--color-text-primary);
 	}
@@ -995,7 +1225,8 @@
 		font-weight: 500;
 		display: inline-flex;
 		align-items: center;
-		gap: 6px;
+		gap: 8px;
+		flex-wrap: wrap;
 	}
 
 	:global(.star-icon) {
@@ -1047,6 +1278,228 @@
 		font-size: 13px;
 		color: var(--color-text-subtle);
 		line-height: 1.5;
+	}
+
+	/* ── Source badges ── */
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		font-size: 9.5px;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		padding: 1px 6px;
+		border-radius: 999px;
+		font-weight: 500;
+		white-space: nowrap;
+	}
+	.badge.own {
+		background: var(--color-bg-2);
+		color: var(--color-text-muted);
+	}
+	.badge.recent {
+		background: color-mix(in oklab, var(--color-ember) 12%, transparent);
+		color: var(--color-ember-deep);
+	}
+	.badge.common {
+		background: color-mix(in oklab, oklch(70% 0.12 145) 14%, transparent);
+		color: oklch(45% 0.1 145);
+	}
+	.badge.off {
+		background: transparent;
+		color: var(--color-text-muted);
+		border: 1px solid var(--color-border-strong);
+	}
+
+	/* ── Legend popover (next to search bar) ── */
+	.legend-btn {
+		all: unset;
+		cursor: pointer;
+		display: grid;
+		place-items: center;
+		width: 22px;
+		height: 22px;
+		border-radius: 999px;
+		color: var(--color-text-subtle);
+		flex-shrink: 0;
+	}
+	.legend-pop {
+		padding: 12px 14px;
+		margin: 4px 0 6px;
+		background: var(--color-surface-1);
+		border: 1px solid var(--color-border-default);
+		border-radius: 12px;
+		animation: expand-in 200ms cubic-bezier(0.32, 0.72, 0, 1);
+	}
+	.legend-title {
+		font-size: 11px;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--color-text-subtle);
+		margin-bottom: 8px;
+	}
+	.legend-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		font-size: 12.5px;
+		color: var(--color-text-muted);
+		line-height: 1.4;
+	}
+	.legend-list li {
+		display: grid;
+		grid-template-columns: 60px 1fr;
+		gap: 10px;
+		align-items: baseline;
+	}
+	.legend-list li .badge {
+		justify-self: start;
+	}
+
+	/* ── First-time tip banner ── */
+	.first-tip {
+		padding: 14px 14px 12px;
+		margin: 4px 0 10px;
+		background: color-mix(in oklab, var(--color-ember) 5%, var(--color-surface-1));
+		border: 1px solid color-mix(in oklab, var(--color-ember) 22%, var(--color-border-default));
+		border-radius: 14px;
+		animation: expand-in 220ms cubic-bezier(0.32, 0.72, 0, 1);
+	}
+	.ft-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 8px;
+	}
+	.ft-title {
+		font-family: var(--font-display);
+		font-variation-settings:
+			'opsz' 36,
+			'SOFT' 70,
+			'wght' 470;
+		font-size: 14.5px;
+		letter-spacing: -0.01em;
+		color: var(--color-text-primary);
+	}
+	.ft-dismiss {
+		all: unset;
+		cursor: pointer;
+		display: grid;
+		place-items: center;
+		width: 22px;
+		height: 22px;
+		border-radius: 999px;
+		color: var(--color-text-subtle);
+	}
+	.ft-list {
+		list-style: none;
+		margin: 0 0 10px;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+		font-size: 12px;
+		color: var(--color-text-muted);
+		line-height: 1.4;
+	}
+	.ft-list li {
+		display: grid;
+		grid-template-columns: 60px 1fr;
+		gap: 10px;
+		align-items: baseline;
+	}
+	.ft-list li .badge {
+		justify-self: start;
+	}
+	.ft-ack {
+		all: unset;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		padding: 7px 14px;
+		background: var(--color-text-primary);
+		color: var(--color-bg-0);
+		border-radius: 999px;
+		font-size: 12px;
+		font-weight: 500;
+	}
+
+	/* ── OFF loading / global CTA / error ── */
+	.off-loading {
+		padding: 12px 4px;
+		font-size: 12px;
+		color: var(--color-text-subtle);
+		font-style: italic;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.off-loading::before {
+		content: '';
+		width: 10px;
+		height: 10px;
+		border-radius: 999px;
+		border: 1.5px solid var(--color-border-strong);
+		border-top-color: var(--color-ember);
+		animation: off-spin 700ms linear infinite;
+	}
+	@keyframes off-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+	.off-cta {
+		all: unset;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 14px;
+		margin: 8px 0 4px;
+		background: var(--color-bg-1);
+		color: var(--color-text-muted);
+		border-radius: 12px;
+		font-size: 13px;
+		font-weight: 500;
+		align-self: flex-start;
+		transition: background 140ms;
+	}
+	.off-cta:active {
+		background: var(--color-bg-2);
+	}
+	.off-error {
+		all: unset;
+		cursor: pointer;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 10px 12px;
+		margin: 6px 0;
+		background: color-mix(in oklab, var(--color-overtarget) 6%, var(--color-surface-1));
+		border: 1px solid color-mix(in oklab, var(--color-overtarget) 22%, transparent);
+		border-radius: 12px;
+		font-size: 12.5px;
+	}
+	.oe-msg {
+		color: var(--color-text-muted);
+	}
+	.oe-cta {
+		font-weight: 500;
+		color: var(--color-overtarget);
+	}
+
+	.search-wrap.searching .search-icon {
+		animation: search-pulse 1200ms ease-in-out infinite;
+	}
+	@keyframes search-pulse {
+		0%, 100% {
+			opacity: 0.5;
+		}
+		50% {
+			opacity: 1;
+		}
 	}
 
 	/* ── Inline expand (pending food) ── */

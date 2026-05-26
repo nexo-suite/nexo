@@ -4,6 +4,7 @@ import { error, fail } from '@sveltejs/kit';
 import { logger } from '$lib/server/logger';
 import { requireOwner } from '$lib/server/auth';
 import { recordHealth } from '$lib/server/health-poller';
+import { devMockEnabled, mockHealthHistory } from '$lib/server/dev-mocks';
 import { db, healthCheckRun } from '@nexo/db';
 import { and, eq, gte, asc } from 'drizzle-orm';
 import type { PageServerLoad, Actions } from './$types';
@@ -39,9 +40,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.from(healthCheckRun)
 		.where(and(eq(healthCheckRun.target, target), gte(healthCheckRun.checkedAt, since)))
 		.orderBy(asc(healthCheckRun.checkedAt))
-		.catch(() => []);
+		.catch(() => [] as Array<{ checkedAt: Date; ok: boolean; latencyMs: number | null }>);
 
-	return { container, healthz, stats, history };
+	const finalHistory =
+		history.length === 0 && devMockEnabled() ? mockHealthHistory(target) : history;
+
+	return { container, healthz, stats, history: finalHistory };
 };
 
 type Verb = 'start' | 'stop' | 'restart';
@@ -140,7 +144,8 @@ export const actions: Actions = {
 			success: true as const,
 			verb: 'recheck' as const,
 			healthz,
-			toast: healthz.ok ? 'Healthcheck passed' : 'Healthcheck failed'
+			toast: healthz.ok ? 'Healthcheck passed' : 'Healthcheck failed',
+			toastType: (healthz.ok ? 'success' : 'error') as 'success' | 'error'
 		};
 	}
 };

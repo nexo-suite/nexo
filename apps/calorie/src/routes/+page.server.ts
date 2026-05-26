@@ -9,9 +9,11 @@ import {
 	mealTemplateItems,
 	userFavorites
 } from '@nexo/db';
-import { and, eq, gte, lt, desc, sql } from 'drizzle-orm';
+import { and, eq, gte, lt, desc, inArray } from 'drizzle-orm';
 import { logger } from '$lib/server/logger';
 import { calculateTargets } from '$lib/calc';
+import { pickName, type Locale } from '$lib/server/off';
+import { getLocale } from '$lib/paraglide/runtime.js';
 import type { PageServerLoad, Actions } from './$types';
 import type { MacroTier, MealSlot, Sex, Goal, ActivityLevel } from '$lib/types';
 
@@ -29,6 +31,7 @@ function defaultTier(): MacroTier {
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const userId = locals.user!.id;
+	const locale = getLocale() as Locale;
 	const dateParam = url.searchParams.get('date');
 	const targetDay = dateParam ? new Date(dateParam) : new Date();
 	const { start, end } = dayBounds(targetDay);
@@ -82,7 +85,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			? await tx
 					.select()
 					.from(foodsCache)
-					.where(sql`${foodsCache.barcode} = ANY(${Array.from(seenBarcodes)})`)
+					.where(inArray(foodsCache.barcode, Array.from(seenBarcodes)))
 			: [];
 
 		return { profileRow, todayRows, recentRows, ownFoods, favorites, templates, cacheRows };
@@ -145,7 +148,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		targets,
 		todayEntries,
 		// Foods catalog assembled for AddEntrySheet — only the user's own data, no cross-user bleed
-		foods: assembleFoodsCatalog(data.ownFoods, data.cacheRows),
+		foods: assembleFoodsCatalog(data.ownFoods, data.cacheRows, locale),
 		recentFoodIds: deriveRecents(data.recentRows),
 		favoriteIds: deriveFavoriteIds(data.favorites),
 		savedMeals: data.templates.map((t) => ({
@@ -161,7 +164,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 function assembleFoodsCatalog(
 	own: Array<typeof userFoods.$inferSelect>,
-	cached: Array<typeof foodsCache.$inferSelect>
+	cached: Array<typeof foodsCache.$inferSelect>,
+	locale: Locale
 ) {
 	const fromOwn = own.map((f) => ({
 		id: f.id,
@@ -184,7 +188,7 @@ function assembleFoodsCatalog(
 	}));
 	const fromCache = cached.map((c) => ({
 		id: c.barcode,
-		name: c.nameDe ?? c.nameEn ?? c.nameGeneric ?? 'Unknown',
+		name: pickName(c, locale),
 		brand: c.brand ?? undefined,
 		per100: {
 			kcal: c.kcal100g ? Number(c.kcal100g) : 0,
