@@ -215,13 +215,16 @@
 	});
 
 	const pendingPreview = $derived.by(() => {
-		if (!pendingFood) return { kcal: 0, p: 0, c: 0, f: 0 };
+		if (!pendingFood) return { kcal: 0, p: 0, c: 0, f: 0, fiber: null, sugar: null };
 		const g = pendingGrams;
+		const scale = (n: number | undefined) => Math.round(((n ?? 0) * g) / 100 * 10) / 10;
 		return {
 			kcal: Math.round((pendingFood.per100.kcal * g) / 100),
 			p: Math.round(((pendingFood.per100.protein_g * g) / 100) * 10) / 10,
 			c: Math.round(((pendingFood.per100.carbs_g * g) / 100) * 10) / 10,
-			f: Math.round(((pendingFood.per100.fat_g * g) / 100) * 10) / 10
+			f: Math.round(((pendingFood.per100.fat_g * g) / 100) * 10) / 10,
+			fiber: pendingFood.per100.fiber_g != null ? scale(pendingFood.per100.fiber_g) : null,
+			sugar: pendingFood.per100.sugar_g != null ? scale(pendingFood.per100.sugar_g) : null
 		};
 	});
 
@@ -549,6 +552,20 @@
 			<span class="emm" style="--c:var(--color-fat)"
 				><span class="emm-l">F</span><span class="emm-v">{pendingPreview.f}g</span></span
 			>
+			{#if pendingPreview.fiber != null}
+				<span class="emm" style="--c:var(--color-fiber, var(--color-text-muted))"
+					><span class="emm-l">{m.macro_fiber()}</span><span class="emm-v"
+						>{pendingPreview.fiber}g</span
+					></span
+				>
+			{/if}
+			{#if pendingPreview.sugar != null}
+				<span class="emm" style="--c:var(--color-sugar, var(--color-text-muted))"
+					><span class="emm-l">{m.macro_sugar()}</span><span class="emm-v"
+						>{pendingPreview.sugar}g</span
+					></span
+				>
+			{/if}
 		</div>
 		<button class="ex-add" type="button" onclick={commitPending} disabled={saving}>
 			<Check size={14} strokeWidth={2.2} />

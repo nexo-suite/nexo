@@ -72,14 +72,20 @@
 
 	// Live kcal estimate from macros (4·P + 4·C + 9·F). Helps the user notice when
 	// they typed a macro but forgot kcal — and teaches the math along the way.
+	// Atwater factors: 4 kcal/g for protein and carbs, 9 kcal/g for fat,
+	// 2 kcal/g for fiber. Sugar is intentionally NOT added — it's a subset
+	// of total carbs in standard nutrition labeling, so including it
+	// would double-count.
 	const macroKcal = $derived.by(() => {
 		const pn = Number(p);
 		const cn = Number(c);
 		const fn = Number(f);
+		const fibern = Number(fiber);
 		const total =
 			(Number.isFinite(pn) ? pn * 4 : 0) +
 			(Number.isFinite(cn) ? cn * 4 : 0) +
-			(Number.isFinite(fn) ? fn * 9 : 0);
+			(Number.isFinite(fn) ? fn * 9 : 0) +
+			(Number.isFinite(fibern) ? fibern * 2 : 0);
 		return Math.round(total);
 	});
 
