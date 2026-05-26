@@ -72,19 +72,6 @@ export function ctnState(c: CtnWithHealthz): CtnState {
 	return 'ok';
 }
 
-export function ctnStateLabel(state: CtnState): string {
-	switch (state) {
-		case 'down':
-			return 'Down';
-		case 'pending':
-			return 'Pending';
-		case 'degraded':
-			return 'Degraded';
-		case 'ok':
-			return 'OK';
-	}
-}
-
 export function ctnUptimeLabel(c: ContainerInfo): string {
 	if (c.State.toLowerCase() !== 'running') return 'stopped';
 	// Strip trailing health annotation: "Up 2 hours (healthy)" → "up 2 hours"
