@@ -13,7 +13,7 @@
 	const isFullBleed = $derived(isOnboarding || isScan);
 
 	const tabs = $derived<BottomNavTab[]>([
-		{ href: '/', label: m.nav_today(), icon: House, exact: true },
+		{ href: '/', label: m.nav_log(), icon: House, exact: true },
 		{ href: '/weight', label: m.nav_weight(), icon: Scale },
 		{ href: '/history', label: m.nav_history(), icon: CalendarRange },
 		{ href: '/settings', label: m.nav_settings(), icon: Settings }

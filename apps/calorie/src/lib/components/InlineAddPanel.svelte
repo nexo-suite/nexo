@@ -3,7 +3,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import UnitStepper from './UnitStepper.svelte';
 	import CreateFoodSheet from './CreateFoodSheet.svelte';
-	import type { Food, FoodUnit, MacroTier, MealSlot } from '$lib/types';
+	import type { Food, FoodUnit, MacroTier, Meal, MealSlot } from '$lib/types';
 	import { m } from '$lib/paraglide/messages.js';
 
 	type SearchSource = 'user' | 'cache' | 'seed' | 'off';
@@ -27,6 +27,7 @@
 		foods = [],
 		favoriteIds = [],
 		recentIds = [],
+		savedMeals = [],
 		tier = 'extended',
 		onClose,
 		onBuildMeal
@@ -35,6 +36,7 @@
 		foods?: Food[];
 		favoriteIds?: string[];
 		recentIds?: string[];
+		savedMeals?: Meal[];
 		tier?: MacroTier;
 		onClose: () => void;
 		onBuildMeal: (slot: MealSlot) => void;
@@ -103,7 +105,7 @@
 			globalSearched = false;
 			return;
 		}
-		debounceHandle = setTimeout(() => runSearch(q, false), 450);
+		debounceHandle = setTimeout(() => runSearch(q, false), 300);
 		return () => {
 			if (debounceHandle) clearTimeout(debounceHandle);
 		};
@@ -153,6 +155,30 @@
 		favoriteIds.map((id) => foods.find((f) => f.id === id)).filter((x): x is Food => x != null)
 	);
 
+	type SavedMealRow = {
+		meal: Meal;
+		resolved: Array<{ food: Food; grams: number }>;
+		kcal: number;
+		missing: number;
+	};
+
+	const savedMealRows = $derived.by<SavedMealRow[]>(() =>
+		savedMeals.map((meal) => {
+			const resolved: Array<{ food: Food; grams: number }> = [];
+			let missing = 0;
+			for (const it of meal.items) {
+				const food = foods.find((f) => f.id === it.foodId);
+				if (food) resolved.push({ food, grams: it.grams });
+				else missing++;
+			}
+			const kcal = resolved.reduce(
+				(acc, r) => acc + Math.round((r.food.per100.kcal * r.grams) / 100),
+				0
+			);
+			return { meal, resolved, kcal, missing };
+		})
+	);
+
 	function resultToFood(r: SearchResult): Food {
 		return {
 			id: r.id,
@@ -176,14 +202,38 @@
 		servingSizeG: number | null;
 	};
 
+	// Immediately filter local foods (user, seed, cached barcodes) — no debounce.
+	const localSearchRows = $derived.by<DisplayRow[]>(() => {
+		const q = query.trim().toLowerCase();
+		if (q.length < 3) return [];
+		return foods
+			.filter(
+				(f) =>
+					f.name.toLowerCase().includes(q) || (f.brand?.toLowerCase().includes(q) ?? false)
+			)
+			.slice(0, 10)
+			.map((f) => ({
+				food: f,
+				source: (f.id.startsWith('seed-')
+					? 'seed'
+					: /^\d{8,14}$/.test(f.id)
+						? 'cache'
+						: 'user') as SearchSource,
+				nutriScoreGrade: null,
+				servingSizeG: null
+			}));
+	});
+
 	const searchRows = $derived.by<DisplayRow[]>(() => {
-		if (!serverResults) return [];
-		return serverResults.map((r) => ({
-			food: resultToFood(r),
-			source: r.source,
-			nutriScoreGrade: r.nutriScoreGrade,
-			servingSizeG: r.servingSizeG
-		}));
+		if (serverResults != null) {
+			return serverResults.map((r) => ({
+				food: resultToFood(r),
+				source: r.source,
+				nutriScoreGrade: r.nutriScoreGrade,
+				servingSizeG: r.servingSizeG
+			}));
+		}
+		return localSearchRows;
 	});
 
 	// Empty-state: recents (top) + favorites — both sourced from props (always-fresh from server load).
@@ -294,6 +344,54 @@
 		goto(`/scan?slot=${mealSlot}`);
 	}
 
+	let savingMealId = $state<string | null>(null);
+
+	async function logSavedMeal(row: SavedMealRow) {
+		if (savingMealId) return;
+		if (row.resolved.length === 0) {
+			showToast(m.saved_meal_unresolvable());
+			return;
+		}
+		savingMealId = row.meal.id;
+		const items = row.resolved.map(({ food, grams }) => {
+			const isBarcode = /^\d{8,14}$/.test(food.id);
+			const isSeed = food.id.startsWith('seed-');
+			return {
+				foodBarcode: isBarcode ? food.id : null,
+				foodUserId: !isBarcode && !isSeed ? food.id : null,
+				foodName: food.name,
+				grams,
+				unit: 'g',
+				kcal: Math.round((food.per100.kcal * grams) / 100),
+				proteinG: Math.round(((food.per100.protein_g * grams) / 100) * 10) / 10,
+				carbsG: Math.round(((food.per100.carbs_g * grams) / 100) * 10) / 10,
+				fatG: Math.round(((food.per100.fat_g * grams) / 100) * 10) / 10,
+				fiberG:
+					food.per100.fiber_g != null
+						? Math.round(((food.per100.fiber_g * grams) / 100) * 10) / 10
+						: undefined,
+				sugarG:
+					food.per100.sugar_g != null
+						? Math.round(((food.per100.sugar_g * grams) / 100) * 10) / 10
+						: undefined
+			};
+		});
+		const form = new FormData();
+		form.set('items', JSON.stringify(items));
+		form.set('mealSlot', mealSlot);
+		try {
+			const res = await fetch('/?/logEntry', { method: 'POST', body: form });
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			await invalidateAll();
+			showToast(`${m.added_label()} ${row.meal.name ?? ''}`);
+		} catch (e) {
+			console.error('logSavedMeal failed', e);
+			showToast(m.search_error());
+		} finally {
+			savingMealId = null;
+		}
+	}
+
 	function openCreate() {
 		createOpen = true;
 	}
@@ -309,9 +407,14 @@
 
 	const showRecentSection = $derived(query.trim().length < 3 && recentRows.length > 0);
 	const showFavoriteSection = $derived(query.trim().length < 3 && favoriteRows.length > 0);
-	const showSearchResults = $derived(query.trim().length >= 3 && serverResults != null);
+	const showSavedMealsSection = $derived(query.trim().length < 3 && savedMealRows.length > 0);
+	const showSearchResults = $derived(query.trim().length >= 3);
 	const showEmpty = $derived(
-		query.trim().length >= 3 && !searching && serverResults != null && serverResults.length === 0
+		query.trim().length >= 3 &&
+			!searching &&
+			serverResults != null &&
+			serverResults.length === 0 &&
+			localSearchRows.length === 0
 	);
 
 	function badgeClass(s: SearchSource): string {
@@ -450,7 +553,51 @@
 				{/each}
 			{/if}
 
-			{#if !showRecentSection && !showFavoriteSection}
+			{#if showSavedMealsSection}
+				<div class="group-head">
+					<Layers size={11} strokeWidth={2} class="layers-icon" />
+					<span class="gh-label">{m.add_meals()}</span>
+				</div>
+				{#each savedMealRows as row (row.meal.id)}
+					{@const unresolvable = row.resolved.length === 0}
+					<button
+						class="row meal-row"
+						class:dim={unresolvable}
+						type="button"
+						onclick={() => logSavedMeal(row)}
+						disabled={savingMealId === row.meal.id || unresolvable}
+					>
+						<div class="r-text">
+							<div class="r-name">
+								<span class="r-name-text">{row.meal.name ?? m.saved_meal_unnamed()}</span>
+								<span class="badge meal-badge">{m.add_meals()}</span>
+							</div>
+							<div class="r-meta-1">
+								<span>
+									{row.resolved.length}
+									{m.saved_meal_items()}
+								</span>
+								{#if row.missing > 0}
+									<span class="dot">·</span>
+									<span class="missing">{m.saved_meal_missing({ n: row.missing })}</span>
+								{/if}
+							</div>
+							<div class="r-meta-2">
+								<span class="per"><span class="num">{row.kcal}</span> kcal</span>
+							</div>
+						</div>
+						<span class="add-chip">
+							{#if savingMealId === row.meal.id}
+								<span class="meal-spin" aria-hidden="true"></span>
+							{:else}
+								<Plus size={13} strokeWidth={2} />
+							{/if}
+						</span>
+					</button>
+				{/each}
+			{/if}
+
+			{#if !showRecentSection && !showFavoriteSection && !showSavedMealsSection}
 				<div class="hint">{m.add_search_hint()}</div>
 			{/if}
 		{/if}
@@ -739,6 +886,31 @@
 	}
 	:global(.star-icon) {
 		color: var(--color-ember);
+	}
+	:global(.layers-icon) {
+		color: var(--color-text-muted);
+	}
+
+	.meal-row.dim {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+	.meal-row .missing {
+		color: var(--color-text-faint);
+		font-style: italic;
+	}
+	.badge.meal-badge {
+		background: color-mix(in oklab, var(--color-ember) 9%, transparent);
+		color: var(--color-text-muted);
+		border: 1px solid color-mix(in oklab, var(--color-ember) 22%, transparent);
+	}
+	.meal-spin {
+		width: 11px;
+		height: 11px;
+		border-radius: 999px;
+		border: 1.4px solid var(--color-border-strong);
+		border-top-color: var(--color-ember);
+		animation: off-spin 700ms linear infinite;
 	}
 
 	.hint {

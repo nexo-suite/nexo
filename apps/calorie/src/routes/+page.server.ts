@@ -9,7 +9,7 @@ import {
 	mealTemplateItems,
 	userFavorites
 } from '@nexo/db';
-import { and, eq, gte, lt, desc, inArray } from 'drizzle-orm';
+import { and, eq, gte, lt, desc, asc, inArray } from 'drizzle-orm';
 import { logger } from '$lib/server/logger';
 import { calculateTargets } from '$lib/calc';
 import { pickName, type Locale } from '$lib/server/off';
@@ -77,6 +77,19 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			.where(eq(mealTemplates.userId, userId))
 			.orderBy(desc(mealTemplates.createdAt));
 
+		const templateItems = templates.length
+			? await tx
+					.select()
+					.from(mealTemplateItems)
+					.where(
+						inArray(
+							mealTemplateItems.templateId,
+							templates.map((t) => t.id)
+						)
+					)
+					.orderBy(asc(mealTemplateItems.position))
+			: [];
+
 		// Cached barcoded foods this user has interacted with (recents or favorites)
 		const seenBarcodes = new Set<string>();
 		for (const r of recentRows) if (r.foodBarcode) seenBarcodes.add(r.foodBarcode);
@@ -88,7 +101,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					.where(inArray(foodsCache.barcode, Array.from(seenBarcodes)))
 			: [];
 
-		return { profileRow, todayRows, recentRows, ownFoods, favorites, templates, cacheRows };
+		return {
+			profileRow,
+			todayRows,
+			recentRows,
+			ownFoods,
+			favorites,
+			templates,
+			templateItems,
+			cacheRows
+		};
 	});
 
 	const tier: MacroTier = (data.profileRow?.tier as MacroTier) ?? defaultTier();
@@ -147,6 +169,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		profile,
 		targets,
 		todayEntries,
+		selectedIso: targetDay.toISOString().slice(0, 10),
 		// Foods catalog assembled for AddEntrySheet — only the user's own data, no cross-user bleed
 		foods: assembleFoodsCatalog(data.ownFoods, data.cacheRows, locale),
 		recentFoodIds: deriveRecents(data.recentRows),
@@ -155,7 +178,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			id: t.id,
 			name: t.name,
 			mealSlot: (t.mealSlot ?? undefined) as MealSlot | undefined,
-			items: [],
+			items: data.templateItems
+				.filter((it) => it.templateId === t.id)
+				.map((it) => ({
+					foodId: it.foodBarcode ?? it.foodUserId ?? '',
+					grams: Number(it.grams)
+				}))
+				.filter((it) => it.foodId),
 			saved: true
 		})),
 		todayMoments: deriveMoments(todayEntries)

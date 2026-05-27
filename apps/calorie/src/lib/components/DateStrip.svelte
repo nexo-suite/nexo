@@ -17,6 +17,8 @@
 	const isCurrentMonth = $derived(
 		viewMonth.getFullYear() === today.getFullYear() && viewMonth.getMonth() === today.getMonth()
 	);
+	const isSelectedToday = $derived(isSameDay(selected, today));
+	const showTodayPill = $derived(!isSelectedToday);
 
 	const days = $derived.by<Date[]>(() => {
 		const end = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0);
@@ -49,6 +51,7 @@
 		if (isFuture(d)) return;
 		selected = d;
 		onSelect?.(d);
+		centerSelected();
 	}
 
 	function prevMonth() {
@@ -96,7 +99,7 @@
 		</button>
 		<button class="month-btn" type="button" onclick={jumpToToday} aria-label="Jump to today">
 			<span class="month-text serif-display">{monthLabel}</span>
-			{#if !isCurrentMonth}
+			{#if showTodayPill}
 				<span class="today-pill">Today</span>
 			{/if}
 		</button>
