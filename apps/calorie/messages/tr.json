@@ -161,7 +161,7 @@
 	"history_subtitle": "son 90 gün",
 	"history_recent_no_data": "kayıt yok",
 	"history_lede_empty": "Geçmişini görmek için loglamaya başla.",
-	"history_lede": "<strong>{days}</strong> gün logladın, ortalama <strong>{avg} kcal</strong>.",
+	"history_lede": "{days} gün logladın, ortalama {avg} kcal.",
 	"history_heatmap_heading": "Günlük kcal",
 	"history_target_kcal": "hedef {n} kcal",
 	"history_recent_heading": "Son günler",

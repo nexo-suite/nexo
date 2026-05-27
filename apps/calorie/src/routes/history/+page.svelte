@@ -13,6 +13,10 @@
 	const targetKcal = $derived(data.targetKcal);
 	const totalDaysLogged = $derived(data.totalDaysLogged);
 
+	function localIso(d: Date): string {
+		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+	}
+
 	// Heatmap expects DaySummary[] = { date, kcal, target }
 	const heatmapDays = $derived(
 		days
@@ -26,9 +30,8 @@
 		const now = new Date();
 		const result: HistoryDay[] = [];
 		for (let i = 0; i < 14; i++) {
-			const d = new Date(now);
-			d.setDate(now.getDate() - i);
-			const iso = d.toISOString().slice(0, 10);
+			const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+			const iso = localIso(d);
 			result.push(
 				map.get(iso) ?? {
 					date: iso,
@@ -101,10 +104,18 @@
 			{#if totalDaysLogged === 0}
 				{m.history_lede_empty()}
 			{:else}
-				{@html m.history_lede({
-					days: `<span class="lede-num tnum">${totalDaysLogged}</span>`,
-					avg: `<span class="lede-num tnum">${avgKcal.toLocaleString()}</span>`
-				})}
+				{@const parts = m
+					.history_lede({ days: 'D', avg: 'A' })
+					.split(/(D|A)/)}
+				{#each parts as p, i (i)}
+					{#if p === 'D'}
+						<span class="lede-num tnum">{totalDaysLogged}</span>
+					{:else if p === 'A'}
+						<span class="lede-num tnum">{avgKcal.toLocaleString()}</span>
+					{:else}
+						{p}
+					{/if}
+				{/each}
 			{/if}
 		</p>
 	</header>
