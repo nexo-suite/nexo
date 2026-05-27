@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Plus, EyeOff } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import { untrack } from 'svelte';
 	import { PageHeader } from '@nexo/ui';
 	import KcalRing from '$lib/components/KcalRing.svelte';
 	import MacroBar from '$lib/components/MacroBar.svelte';
@@ -25,13 +24,9 @@
 
 	const todayIso = localIso(new Date());
 
-	// Tracks the date currently shown — initialised from the loaded date, synced on navigation.
-	let selectedDay = $state(
-		untrack(() => new Date((data.selectedIso ?? todayIso) + 'T12:00:00'))
-	);
-	$effect(() => {
-		selectedDay = new Date(data.selectedIso + 'T12:00:00');
-	});
+	// Tracks the date currently shown — writable derived re-syncs whenever the URL/load changes,
+	// while DateStrip's bind:selected can momentarily override it during navigation.
+	let selectedDay = $derived(new Date((data.selectedIso ?? todayIso) + 'T12:00:00'));
 
 	function localIso(d: Date): string {
 		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -45,8 +40,8 @@
 	const pageTitle = $derived.by(() => {
 		const iso = data.selectedIso;
 		if (iso === todayIso) return capitalize(m.weight_date_today());
-		const yesterday = new Date();
-		yesterday.setDate(yesterday.getDate() - 1);
+		const today = new Date();
+		const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
 		if (iso === localIso(yesterday)) return capitalize(m.weight_date_yesterday());
 		const d = new Date(iso + 'T12:00:00');
 		return new Intl.DateTimeFormat('en', {

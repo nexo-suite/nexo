@@ -161,7 +161,7 @@
 	"history_subtitle": "letzte 90 Tage",
 	"history_recent_no_data": "nichts geloggt",
 	"history_lede_empty": "Fang an zu loggen, um deinen Verlauf zu sehen.",
-	"history_lede": "Du hast <strong>{days}</strong> Tage geloggt mit einem Schnitt von <strong>{avg} kcal</strong>.",
+	"history_lede": "Du hast {days} Tage geloggt mit einem Schnitt von {avg} kcal.",
 	"history_heatmap_heading": "Tägliche kcal",
 	"history_target_kcal": "Ziel {n} kcal",
 	"history_recent_heading": "Letzte Tage",

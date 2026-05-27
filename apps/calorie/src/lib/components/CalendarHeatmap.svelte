@@ -82,14 +82,14 @@
 	<div class="hm-grid">
 		<!-- month label row above the week columns -->
 		<div class="month-row" aria-hidden="true">
-			{#each { length: 13 } as _, i}
+			{#each { length: 13 } as _, i (i)}
 				<span class="ml">{monthLabels.get(i) ?? ''}</span>
 			{/each}
 		</div>
 
 		<!-- day-of-week axis, aligned with grid rows via shared grid-template-rows -->
 		<div class="day-axis" aria-hidden="true">
-			{#each DAY_LABELS as label, i}
+			{#each DAY_LABELS as label, i (i)}
 				<span class="dl" class:visible={SHOW_DAY[i]}>{label}</span>
 			{/each}
 		</div>

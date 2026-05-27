@@ -11,12 +11,21 @@ const config: KnipConfig = {
 		'apps/landing': {
 			entry: SVELTE_ENTRY,
 			project: SVELTE_PROJECT,
-			ignoreDependencies: ['tailwindcss']
+			ignoreDependencies: [
+				'@fontsource-variable/inter',
+				'@fontsource-variable/jetbrains-mono',
+				'tailwindcss'
+			]
 		},
 		'apps/auth': {
 			entry: SVELTE_ENTRY,
 			project: SVELTE_PROJECT,
-			ignoreDependencies: ['@nexo/ui', 'tailwindcss']
+			ignoreDependencies: [
+				'@nexo/ui',
+				'@fontsource-variable/inter',
+				'@fontsource-variable/jetbrains-mono',
+				'tailwindcss'
+			]
 		},
 		'apps/admin': {
 			entry: SVELTE_ENTRY,

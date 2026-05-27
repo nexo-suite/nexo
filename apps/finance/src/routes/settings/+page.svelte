@@ -601,10 +601,6 @@
 		margin: 0 0 14px;
 		line-height: 1.5;
 	}
-	.excluded-highlight {
-		color: var(--color-text-primary);
-		font-weight: 600;
-	}
 
 	/* ─── Stub rows ─── */
 	.stub-row {
