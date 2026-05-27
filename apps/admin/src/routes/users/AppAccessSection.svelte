@@ -6,6 +6,7 @@
 	const APP_ICONS: Record<string, string> = {
 		finance: '/icon-finance.svg',
 		flaschen: '/icon-flaschen.svg',
+		calorie: '/icon-calorie.svg',
 		gym: '/icon-gym.svg'
 	};
 
