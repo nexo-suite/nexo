@@ -63,8 +63,7 @@
 }
 
 body {
-	min-height: 100dvh;
-	overflow-x: hidden;
+	/* sizing is set in @nexo/ui/base.css */
 	font-feature-settings:
 		'ss01' 1,
 		'cv11' 1;

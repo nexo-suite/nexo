@@ -18,6 +18,11 @@ body {
 body {
 	margin: 0;
 	padding: 0;
+	/* Use 100vh, not 100dvh: on iOS PWA cold-launch, dvh briefly mis-evaluates
+	   and `position: fixed; bottom: 0` (BottomNav) anchors to body bottom rather
+	   than the viewport, leaving a gap until first scroll. 100vh stays stable. */
+	min-height: 100vh;
+	overflow-x: hidden;
 }
 
 button {

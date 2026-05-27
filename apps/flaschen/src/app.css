@@ -123,8 +123,7 @@
 
 /* ───────────── Wallpaper: warm porcelain with pastel auroras ───────────── */
 body {
-	min-height: 100vh;
-	overflow-x: hidden;
+	/* sizing is set in @nexo/ui/base.css */
 	color: var(--text-primary);
 	font-family: var(--font-sans);
 	font-feature-settings:

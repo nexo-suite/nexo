@@ -34,10 +34,7 @@
 	--debt-line: color-mix(in oklab, var(--color-debt) 30%, var(--color-border-default));
 }
 
-body {
-	min-height: 100vh;
-	overflow-x: hidden;
-}
+/* body sizing is set in @nexo/ui/base.css */
 
 /* ── Animations ── */
 @keyframes pulse-dot {
