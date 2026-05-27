@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/nexo-suite/nexo/compare/cli-v0.4.0...cli-v0.4.1) (2026-05-27)
+
+
+### Bug Fixes
+
+* calorie healthz, migrate completed state, auth login stuck spinner ([ad720da](https://github.com/nexo-suite/nexo/commit/ad720dadaf9b753aae02e3b70ba8c18798827ed0))
+* **cli:** remove unused sync imagetoolsCreate — knip flagged it after async migration ([e075a80](https://github.com/nexo-suite/nexo/commit/e075a80409f5c764eb33a2ff8dba677b952582f8))
+
 ## [0.4.0](https://github.com/nexo-suite/nexo/compare/cli-v0.3.0...cli-v0.4.0) (2026-05-27)
 
 

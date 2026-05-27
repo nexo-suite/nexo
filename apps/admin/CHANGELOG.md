@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/nexo-suite/nexo/compare/admin-v0.9.0...admin-v0.9.1) (2026-05-27)
+
+
+### Bug Fixes
+
+* calorie healthz, migrate completed state, auth login stuck spinner ([ad720da](https://github.com/nexo-suite/nexo/commit/ad720dadaf9b753aae02e3b70ba8c18798827ed0))
+
 ## [0.9.0](https://github.com/nexo-suite/nexo/compare/admin-v0.8.0...admin-v0.9.0) (2026-05-27)
 
 
