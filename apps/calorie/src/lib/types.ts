@@ -101,11 +101,6 @@ export interface Meal {
 	saved?: boolean;
 }
 
-export interface WeightLog {
-	date: string; // YYYY-MM-DD
-	kg: number;
-}
-
 export interface DaySummary {
 	date: string;
 	kcal: number;
@@ -113,7 +108,7 @@ export interface DaySummary {
 }
 
 /** A single logged food entry, denormalized for history display. */
-export interface HistoryEntry {
+interface HistoryEntry {
 	id: string;
 	loggedAt: string;
 	foodName: string;

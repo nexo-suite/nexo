@@ -1,6 +1,6 @@
 export type WeightPoint = { date: string; kg: number };
 
-export type Regression = { slopePerDay: number; intercept: number };
+type Regression = { slopePerDay: number; intercept: number };
 
 export type Pace = { kgPerWeek: number; slopePerDay: number; n: number };
 
@@ -14,7 +14,7 @@ function dayOffset(date: string, anchor: string): number {
 	return Math.round((b - a) / MS_PER_DAY);
 }
 
-export function linearRegression(points: WeightPoint[]): Regression | null {
+function linearRegression(points: WeightPoint[]): Regression | null {
 	if (points.length < 2) return null;
 	const anchor = points[0].date;
 	const n = points.length;

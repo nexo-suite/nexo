@@ -19,7 +19,7 @@
 	const todayIso = new Date().toISOString().slice(0, 10);
 	const earliestIso = new Date(Date.now() - 30 * MS_PER_DAY).toISOString().slice(0, 10);
 
-	let kg = $state<number>(latestKg ?? 75);
+	let kg = $state<number>(75);
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let confirmingDelete = $state(false);
 
