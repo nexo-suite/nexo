@@ -31,6 +31,16 @@
 		{ id: 'full', label: m.tier_full }
 	];
 
+	type SearchLocaleOpt = 'auto' | 'en' | 'de' | 'tr';
+	const searchLocale = $derived<SearchLocaleOpt>(data.searchLocale ?? 'auto');
+	const searchLocaleOpts: { id: SearchLocaleOpt; label: () => string }[] = [
+		{ id: 'auto', label: m.search_locale_auto },
+		{ id: 'en', label: m.search_locale_en },
+		{ id: 'de', label: m.search_locale_de },
+		{ id: 'tr', label: m.search_locale_tr }
+	];
+	let pendingSearchLocale = $state<SearchLocaleOpt | null>(null);
+
 	let goalWeightOpen = $state(false);
 	let goalWeightDraft = $state(70);
 
@@ -168,6 +178,37 @@
 				{/if}
 			</div>
 		</button>
+	</SettingsCard>
+
+	<!-- ─── Search locale ─── -->
+	<SectionLabel title={m.search_locale_section()} subtitle={m.search_locale_subtitle()} />
+	<SettingsCard>
+		<form
+			class="tier-switcher"
+			method="POST"
+			action="?/updateSearchLocale"
+			use:enhance={({ formData }) => {
+				const next = formData.get('searchLocale');
+				pendingSearchLocale =
+					next === 'en' || next === 'de' || next === 'tr' || next === 'auto' ? next : null;
+				return async ({ update }) => {
+					await update({ reset: false });
+					pendingSearchLocale = null;
+				};
+			}}
+		>
+			{#each searchLocaleOpts as opt (opt.id)}
+				<button
+					class="tier-opt"
+					class:on={(pendingSearchLocale ?? searchLocale) === opt.id}
+					type="submit"
+					name="searchLocale"
+					value={opt.id}
+				>
+					{opt.label()}
+				</button>
+			{/each}
+		</form>
 	</SettingsCard>
 
 	<!-- ─── Recipes coming-soon ─── -->

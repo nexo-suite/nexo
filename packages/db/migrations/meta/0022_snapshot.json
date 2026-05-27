@@ -1,0 +1,3251 @@
+{
+	"id": "b6fe88cc-2b3f-40a7-b952-e01803424946",
+	"prevId": "ec360b2d-eaee-4072-93bd-b96d3d40e27f",
+	"version": "7",
+	"dialect": "postgresql",
+	"tables": {
+		"admin.health_check_run": {
+			"name": "health_check_run",
+			"schema": "admin",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"target": {
+					"name": "target",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"checked_at": {
+					"name": "checked_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"ok": {
+					"name": "ok",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"latency_ms": {
+					"name": "latency_ms",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"error": {
+					"name": "error",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"source": {
+					"name": "source",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				}
+			},
+			"indexes": {
+				"hcr_target_time_idx": {
+					"name": "hcr_target_time_idx",
+					"columns": [
+						{
+							"expression": "target",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "checked_at",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"auth.allowed_emails": {
+			"name": "allowed_emails",
+			"schema": "auth",
+			"columns": {
+				"email": {
+					"name": "email",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"added_at": {
+					"name": "added_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"auth.oauth_access_token": {
+			"name": "oauth_access_token",
+			"schema": "auth",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"access_token": {
+					"name": "access_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"refresh_token": {
+					"name": "refresh_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"access_token_expires_at": {
+					"name": "access_token_expires_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"refresh_token_expires_at": {
+					"name": "refresh_token_expires_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"client_id": {
+					"name": "client_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"scopes": {
+					"name": "scopes",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {
+				"oauth_access_token_client_id_idx": {
+					"name": "oauth_access_token_client_id_idx",
+					"columns": [
+						{
+							"expression": "client_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"oauth_access_token_user_id_idx": {
+					"name": "oauth_access_token_user_id_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"oauth_access_token_client_id_oauth_application_client_id_fk": {
+					"name": "oauth_access_token_client_id_oauth_application_client_id_fk",
+					"tableFrom": "oauth_access_token",
+					"tableTo": "oauth_application",
+					"schemaTo": "auth",
+					"columnsFrom": ["client_id"],
+					"columnsTo": ["client_id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"oauth_access_token_user_id_user_id_fk": {
+					"name": "oauth_access_token_user_id_user_id_fk",
+					"tableFrom": "oauth_access_token",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"oauth_access_token_access_token_unique": {
+					"name": "oauth_access_token_access_token_unique",
+					"nullsNotDistinct": false,
+					"columns": ["access_token"]
+				},
+				"oauth_access_token_refresh_token_unique": {
+					"name": "oauth_access_token_refresh_token_unique",
+					"nullsNotDistinct": false,
+					"columns": ["refresh_token"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"auth.account": {
+			"name": "account",
+			"schema": "auth",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"account_id": {
+					"name": "account_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"provider_id": {
+					"name": "provider_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"access_token": {
+					"name": "access_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"refresh_token": {
+					"name": "refresh_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"id_token": {
+					"name": "id_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"access_token_expires_at": {
+					"name": "access_token_expires_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"refresh_token_expires_at": {
+					"name": "refresh_token_expires_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"scope": {
+					"name": "scope",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"password": {
+					"name": "password",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"account_user_id_idx": {
+					"name": "account_user_id_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"account_user_id_user_id_fk": {
+					"name": "account_user_id_user_id_fk",
+					"tableFrom": "account",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"auth.oauth_application": {
+			"name": "oauth_application",
+			"schema": "auth",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"icon": {
+					"name": "icon",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"metadata": {
+					"name": "metadata",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"client_id": {
+					"name": "client_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"client_secret": {
+					"name": "client_secret",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"redirect_urls": {
+					"name": "redirect_urls",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"type": {
+					"name": "type",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"disabled": {
+					"name": "disabled",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": false,
+					"default": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {
+				"oauth_application_user_id_idx": {
+					"name": "oauth_application_user_id_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"oauth_application_user_id_user_id_fk": {
+					"name": "oauth_application_user_id_user_id_fk",
+					"tableFrom": "oauth_application",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"oauth_application_client_id_unique": {
+					"name": "oauth_application_client_id_unique",
+					"nullsNotDistinct": false,
+					"columns": ["client_id"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"auth.oauth_consent": {
+			"name": "oauth_consent",
+			"schema": "auth",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"client_id": {
+					"name": "client_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"scopes": {
+					"name": "scopes",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"consent_given": {
+					"name": "consent_given",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {
+				"oauth_consent_client_id_idx": {
+					"name": "oauth_consent_client_id_idx",
+					"columns": [
+						{
+							"expression": "client_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"oauth_consent_user_id_idx": {
+					"name": "oauth_consent_user_id_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"oauth_consent_client_id_oauth_application_client_id_fk": {
+					"name": "oauth_consent_client_id_oauth_application_client_id_fk",
+					"tableFrom": "oauth_consent",
+					"tableTo": "oauth_application",
+					"schemaTo": "auth",
+					"columnsFrom": ["client_id"],
+					"columnsTo": ["client_id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"oauth_consent_user_id_user_id_fk": {
+					"name": "oauth_consent_user_id_user_id_fk",
+					"tableFrom": "oauth_consent",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"auth.session": {
+			"name": "session",
+			"schema": "auth",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"expires_at": {
+					"name": "expires_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"token": {
+					"name": "token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"ip_address": {
+					"name": "ip_address",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"user_agent": {
+					"name": "user_agent",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				}
+			},
+			"indexes": {
+				"session_user_id_idx": {
+					"name": "session_user_id_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"session_user_id_user_id_fk": {
+					"name": "session_user_id_user_id_fk",
+					"tableFrom": "session",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"session_token_unique": {
+					"name": "session_token_unique",
+					"nullsNotDistinct": false,
+					"columns": ["token"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"auth.user_app_access": {
+			"name": "user_app_access",
+			"schema": "auth",
+			"columns": {
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"app": {
+					"name": "app",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"user_app_access_user_id_user_id_fk": {
+					"name": "user_app_access_user_id_user_id_fk",
+					"tableFrom": "user_app_access",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"user_app_access_user_id_app_pk": {
+					"name": "user_app_access_user_id_app_pk",
+					"columns": ["user_id", "app"]
+				}
+			},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"auth.user_preferences": {
+			"name": "user_preferences",
+			"schema": "auth",
+			"columns": {
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"display_name": {
+					"name": "display_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"language": {
+					"name": "language",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'auto'"
+				},
+				"birthday": {
+					"name": "birthday",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"theme": {
+					"name": "theme",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'system'"
+				},
+				"week_start_day": {
+					"name": "week_start_day",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'monday'"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"user_preferences_user_id_user_id_fk": {
+					"name": "user_preferences_user_id_user_id_fk",
+					"tableFrom": "user_preferences",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"auth.user": {
+			"name": "user",
+			"schema": "auth",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"email": {
+					"name": "email",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"email_verified": {
+					"name": "email_verified",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"image": {
+					"name": "image",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"user_email_unique": {
+					"name": "user_email_unique",
+					"nullsNotDistinct": false,
+					"columns": ["email"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"auth.verification": {
+			"name": "verification",
+			"schema": "auth",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"identifier": {
+					"name": "identifier",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"value": {
+					"name": "value",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"expires_at": {
+					"name": "expires_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"verification_identifier_idx": {
+					"name": "verification_identifier_idx",
+					"columns": [
+						{
+							"expression": "identifier",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"calorie.entries": {
+			"name": "entries",
+			"schema": "calorie",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"food_barcode": {
+					"name": "food_barcode",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"food_user_id": {
+					"name": "food_user_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"food_name": {
+					"name": "food_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"grams": {
+					"name": "grams",
+					"type": "numeric(7, 1)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"unit": {
+					"name": "unit",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'g'"
+				},
+				"kcal": {
+					"name": "kcal",
+					"type": "numeric(7, 1)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"protein_g": {
+					"name": "protein_g",
+					"type": "numeric(6, 1)",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'0'"
+				},
+				"carbs_g": {
+					"name": "carbs_g",
+					"type": "numeric(6, 1)",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'0'"
+				},
+				"fat_g": {
+					"name": "fat_g",
+					"type": "numeric(6, 1)",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'0'"
+				},
+				"fiber_g": {
+					"name": "fiber_g",
+					"type": "numeric(6, 1)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"sugar_g": {
+					"name": "sugar_g",
+					"type": "numeric(6, 1)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"meal_slot": {
+					"name": "meal_slot",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"meal_id": {
+					"name": "meal_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"logged_at": {
+					"name": "logged_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"entries_user_logged_idx": {
+					"name": "entries_user_logged_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "logged_at",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"entries_user_meal_idx": {
+					"name": "entries_user_meal_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "meal_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"entries_user_id_user_id_fk": {
+					"name": "entries_user_id_user_id_fk",
+					"tableFrom": "entries",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"entries_food_user_id_user_foods_id_fk": {
+					"name": "entries_food_user_id_user_foods_id_fk",
+					"tableFrom": "entries",
+					"tableTo": "user_foods",
+					"schemaTo": "calorie",
+					"columnsFrom": ["food_user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"calorie.foods_cache": {
+			"name": "foods_cache",
+			"schema": "calorie",
+			"columns": {
+				"barcode": {
+					"name": "barcode",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"name_de": {
+					"name": "name_de",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"name_tr": {
+					"name": "name_tr",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"name_en": {
+					"name": "name_en",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"name_generic": {
+					"name": "name_generic",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"brand": {
+					"name": "brand",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"kcal_100g": {
+					"name": "kcal_100g",
+					"type": "numeric(7, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"protein_100g": {
+					"name": "protein_100g",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"carbs_100g": {
+					"name": "carbs_100g",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"fat_100g": {
+					"name": "fat_100g",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"fiber_100g": {
+					"name": "fiber_100g",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"sugars_100g": {
+					"name": "sugars_100g",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"saturated_fat_100g": {
+					"name": "saturated_fat_100g",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"salt_100g": {
+					"name": "salt_100g",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"serving_size_g": {
+					"name": "serving_size_g",
+					"type": "numeric(7, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"image_url": {
+					"name": "image_url",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"raw_off": {
+					"name": "raw_off",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"fetched_at": {
+					"name": "fetched_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"last_accessed_at": {
+					"name": "last_accessed_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"calorie.foods_search_cache": {
+			"name": "foods_search_cache",
+			"schema": "calorie",
+			"columns": {
+				"query_normalized": {
+					"name": "query_normalized",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"locale": {
+					"name": "locale",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"barcodes": {
+					"name": "barcodes",
+					"type": "text[]",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"fetched_at": {
+					"name": "fetched_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {
+				"foods_search_cache_query_normalized_locale_pk": {
+					"name": "foods_search_cache_query_normalized_locale_pk",
+					"columns": ["query_normalized", "locale"]
+				}
+			},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"calorie.meal_template_items": {
+			"name": "meal_template_items",
+			"schema": "calorie",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"template_id": {
+					"name": "template_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"food_barcode": {
+					"name": "food_barcode",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"food_user_id": {
+					"name": "food_user_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"food_name": {
+					"name": "food_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"grams": {
+					"name": "grams",
+					"type": "numeric(7, 1)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"unit": {
+					"name": "unit",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'g'"
+				},
+				"position": {
+					"name": "position",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 0
+				}
+			},
+			"indexes": {
+				"meal_template_items_template_id_idx": {
+					"name": "meal_template_items_template_id_idx",
+					"columns": [
+						{
+							"expression": "template_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"meal_template_items_template_id_meal_templates_id_fk": {
+					"name": "meal_template_items_template_id_meal_templates_id_fk",
+					"tableFrom": "meal_template_items",
+					"tableTo": "meal_templates",
+					"schemaTo": "calorie",
+					"columnsFrom": ["template_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"meal_template_items_food_user_id_user_foods_id_fk": {
+					"name": "meal_template_items_food_user_id_user_foods_id_fk",
+					"tableFrom": "meal_template_items",
+					"tableTo": "user_foods",
+					"schemaTo": "calorie",
+					"columnsFrom": ["food_user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"calorie.meal_templates": {
+			"name": "meal_templates",
+			"schema": "calorie",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"meal_slot": {
+					"name": "meal_slot",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"meal_templates_user_id_idx": {
+					"name": "meal_templates_user_id_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"meal_templates_user_id_user_id_fk": {
+					"name": "meal_templates_user_id_user_id_fk",
+					"tableFrom": "meal_templates",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"calorie.profiles": {
+			"name": "profiles",
+			"schema": "calorie",
+			"columns": {
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"sex": {
+					"name": "sex",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"age": {
+					"name": "age",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"height_cm": {
+					"name": "height_cm",
+					"type": "numeric(5, 1)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"weight_kg": {
+					"name": "weight_kg",
+					"type": "numeric(5, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"target_weight_kg": {
+					"name": "target_weight_kg",
+					"type": "numeric(5, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"activity": {
+					"name": "activity",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"goal": {
+					"name": "goal",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"tier": {
+					"name": "tier",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'basic'"
+				},
+				"target_kcal": {
+					"name": "target_kcal",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"target_protein_g": {
+					"name": "target_protein_g",
+					"type": "numeric(6, 1)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"target_carbs_g": {
+					"name": "target_carbs_g",
+					"type": "numeric(6, 1)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"target_fat_g": {
+					"name": "target_fat_g",
+					"type": "numeric(6, 1)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"target_fiber_g": {
+					"name": "target_fiber_g",
+					"type": "numeric(6, 1)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"target_sugar_g": {
+					"name": "target_sugar_g",
+					"type": "numeric(6, 1)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"targets_custom": {
+					"name": "targets_custom",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"search_locale": {
+					"name": "search_locale",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"onboarding_completed_at": {
+					"name": "onboarding_completed_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"profiles_user_id_user_id_fk": {
+					"name": "profiles_user_id_user_id_fk",
+					"tableFrom": "profiles",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"calorie.user_favorites": {
+			"name": "user_favorites",
+			"schema": "calorie",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"food_barcode": {
+					"name": "food_barcode",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"food_user_id": {
+					"name": "food_user_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"user_favorites_user_id_idx": {
+					"name": "user_favorites_user_id_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"user_favorites_user_id_user_id_fk": {
+					"name": "user_favorites_user_id_user_id_fk",
+					"tableFrom": "user_favorites",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"user_favorites_food_user_id_user_foods_id_fk": {
+					"name": "user_favorites_food_user_id_user_foods_id_fk",
+					"tableFrom": "user_favorites",
+					"tableTo": "user_foods",
+					"schemaTo": "calorie",
+					"columnsFrom": ["food_user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"calorie.user_foods": {
+			"name": "user_foods",
+			"schema": "calorie",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"brand": {
+					"name": "brand",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"kcal_100g": {
+					"name": "kcal_100g",
+					"type": "numeric(7, 2)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"protein_100g": {
+					"name": "protein_100g",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'0'"
+				},
+				"carbs_100g": {
+					"name": "carbs_100g",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'0'"
+				},
+				"fat_100g": {
+					"name": "fat_100g",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'0'"
+				},
+				"fiber_100g": {
+					"name": "fiber_100g",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"sugars_100g": {
+					"name": "sugars_100g",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"units": {
+					"name": "units",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'[]'::jsonb"
+				},
+				"source_barcode": {
+					"name": "source_barcode",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"user_foods_user_id_idx": {
+					"name": "user_foods_user_id_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"user_foods_user_id_user_id_fk": {
+					"name": "user_foods_user_id_user_id_fk",
+					"tableFrom": "user_foods",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"calorie.weight_logs": {
+			"name": "weight_logs",
+			"schema": "calorie",
+			"columns": {
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"date": {
+					"name": "date",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"kg": {
+					"name": "kg",
+					"type": "numeric(5, 2)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"logged_at": {
+					"name": "logged_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"weight_logs_user_id_user_id_fk": {
+					"name": "weight_logs_user_id_user_id_fk",
+					"tableFrom": "weight_logs",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"weight_logs_user_id_date_pk": {
+					"name": "weight_logs_user_id_date_pk",
+					"columns": ["user_id", "date"]
+				}
+			},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"finance.accounts": {
+			"name": "accounts",
+			"schema": "finance",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"type": {
+					"name": "type",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'checking'"
+				},
+				"balance": {
+					"name": "balance",
+					"type": "numeric(12, 2)",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'0'"
+				},
+				"currency": {
+					"name": "currency",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'EUR'"
+				},
+				"include_in_total": {
+					"name": "include_in_total",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": true
+				},
+				"emoji": {
+					"name": "emoji",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"color": {
+					"name": "color",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"accounts_user_id_user_id_fk": {
+					"name": "accounts_user_id_user_id_fk",
+					"tableFrom": "accounts",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"finance.debts": {
+			"name": "debts",
+			"schema": "finance",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"direction": {
+					"name": "direction",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"counterparty": {
+					"name": "counterparty",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"amount": {
+					"name": "amount",
+					"type": "numeric(12, 2)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"paid": {
+					"name": "paid",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"due_date": {
+					"name": "due_date",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"account_id": {
+					"name": "account_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"notes": {
+					"name": "notes",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"debts_user_id_user_id_fk": {
+					"name": "debts_user_id_user_id_fk",
+					"tableFrom": "debts",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"debts_account_id_accounts_id_fk": {
+					"name": "debts_account_id_accounts_id_fk",
+					"tableFrom": "debts",
+					"tableTo": "accounts",
+					"schemaTo": "finance",
+					"columnsFrom": ["account_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"finance.expenses": {
+			"name": "expenses",
+			"schema": "finance",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"category": {
+					"name": "category",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'other'"
+				},
+				"amount": {
+					"name": "amount",
+					"type": "numeric(12, 2)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"recurrence": {
+					"name": "recurrence",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'monthly'"
+				},
+				"day_of_month": {
+					"name": "day_of_month",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"due_date": {
+					"name": "due_date",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"account_id": {
+					"name": "account_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"notes": {
+					"name": "notes",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"starting_month": {
+					"name": "starting_month",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"active": {
+					"name": "active",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"expenses_user_id_user_id_fk": {
+					"name": "expenses_user_id_user_id_fk",
+					"tableFrom": "expenses",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"expenses_account_id_accounts_id_fk": {
+					"name": "expenses_account_id_accounts_id_fk",
+					"tableFrom": "expenses",
+					"tableTo": "accounts",
+					"schemaTo": "finance",
+					"columnsFrom": ["account_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"finance.income": {
+			"name": "income",
+			"schema": "finance",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"amount": {
+					"name": "amount",
+					"type": "numeric(12, 2)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"recurrence": {
+					"name": "recurrence",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'monthly'"
+				},
+				"day_of_month": {
+					"name": "day_of_month",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"expected_date": {
+					"name": "expected_date",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"received": {
+					"name": "received",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"account_id": {
+					"name": "account_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"notes": {
+					"name": "notes",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"starting_month": {
+					"name": "starting_month",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"income_user_id_user_id_fk": {
+					"name": "income_user_id_user_id_fk",
+					"tableFrom": "income",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"income_account_id_accounts_id_fk": {
+					"name": "income_account_id_accounts_id_fk",
+					"tableFrom": "income",
+					"tableTo": "accounts",
+					"schemaTo": "finance",
+					"columnsFrom": ["account_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"finance.transactions": {
+			"name": "transactions",
+			"schema": "finance",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"account_id": {
+					"name": "account_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"expense_id": {
+					"name": "expense_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"income_id": {
+					"name": "income_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"debt_id": {
+					"name": "debt_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"type": {
+					"name": "type",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"amount": {
+					"name": "amount",
+					"type": "numeric(12, 2)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"fired_date": {
+					"name": "fired_date",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"description": {
+					"name": "description",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"transactions_user_id_user_id_fk": {
+					"name": "transactions_user_id_user_id_fk",
+					"tableFrom": "transactions",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"transactions_account_id_accounts_id_fk": {
+					"name": "transactions_account_id_accounts_id_fk",
+					"tableFrom": "transactions",
+					"tableTo": "accounts",
+					"schemaTo": "finance",
+					"columnsFrom": ["account_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"transactions_expense_id_expenses_id_fk": {
+					"name": "transactions_expense_id_expenses_id_fk",
+					"tableFrom": "transactions",
+					"tableTo": "expenses",
+					"schemaTo": "finance",
+					"columnsFrom": ["expense_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				},
+				"transactions_income_id_income_id_fk": {
+					"name": "transactions_income_id_income_id_fk",
+					"tableFrom": "transactions",
+					"tableTo": "income",
+					"schemaTo": "finance",
+					"columnsFrom": ["income_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				},
+				"transactions_debt_id_debts_id_fk": {
+					"name": "transactions_debt_id_debts_id_fk",
+					"tableFrom": "transactions",
+					"tableTo": "debts",
+					"schemaTo": "finance",
+					"columnsFrom": ["debt_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"finance.user_settings": {
+			"name": "user_settings",
+			"schema": "finance",
+			"columns": {
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"currency": {
+					"name": "currency",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'EUR'"
+				},
+				"default_account_id": {
+					"name": "default_account_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"hide_cents": {
+					"name": "hide_cents",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"forecast_days": {
+					"name": "forecast_days",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'90'"
+				},
+				"include_debt_in_forecast": {
+					"name": "include_debt_in_forecast",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": true
+				},
+				"last_reconciled_at": {
+					"name": "last_reconciled_at",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"session_names": {
+					"name": "session_names",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'{}'::jsonb"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"user_settings_user_id_user_id_fk": {
+					"name": "user_settings_user_id_user_id_fk",
+					"tableFrom": "user_settings",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"user_settings_default_account_id_accounts_id_fk": {
+					"name": "user_settings_default_account_id_accounts_id_fk",
+					"tableFrom": "user_settings",
+					"tableTo": "accounts",
+					"schemaTo": "finance",
+					"columnsFrom": ["default_account_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"flaschen.account": {
+			"name": "account",
+			"schema": "flaschen",
+			"columns": {
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"employee_id": {
+					"name": "employee_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"username": {
+					"name": "username",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"encrypted_refresh_token": {
+					"name": "encrypted_refresh_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"encrypted_access_token": {
+					"name": "encrypted_access_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"access_token_expires_at": {
+					"name": "access_token_expires_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"refresh_token_expires_at": {
+					"name": "refresh_token_expires_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"last_login_at": {
+					"name": "last_login_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"last_refresh_at": {
+					"name": "last_refresh_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"last_poll_at": {
+					"name": "last_poll_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"last_poll_ok": {
+					"name": "last_poll_ok",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"last_poll_error": {
+					"name": "last_poll_error",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"needs_reconnect": {
+					"name": "needs_reconnect",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"account_user_id_user_id_fk": {
+					"name": "account_user_id_user_id_fk",
+					"tableFrom": "account",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"flaschen.date_override": {
+			"name": "date_override",
+			"schema": "flaschen",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"date": {
+					"name": "date",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"kind": {
+					"name": "kind",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"slots": {
+					"name": "slots",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'[]'::jsonb"
+				},
+				"note": {
+					"name": "note",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"flaschen_date_override_user_date_idx": {
+					"name": "flaschen_date_override_user_date_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "date",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"date_override_user_id_user_id_fk": {
+					"name": "date_override_user_id_user_id_fk",
+					"tableFrom": "date_override",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"flaschen_date_override_user_date_uniq": {
+					"name": "flaschen_date_override_user_date_uniq",
+					"nullsNotDistinct": false,
+					"columns": ["user_id", "date"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"flaschen.poll_log": {
+			"name": "poll_log",
+			"schema": "flaschen",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"ran_at": {
+					"name": "ran_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"ok": {
+					"name": "ok",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"offers_seen": {
+					"name": "offers_seen",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 0
+				},
+				"matches": {
+					"name": "matches",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 0
+				},
+				"error": {
+					"name": "error",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {
+				"flaschen_poll_log_user_ran_idx": {
+					"name": "flaschen_poll_log_user_ran_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "ran_at",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"poll_log_user_id_user_id_fk": {
+					"name": "poll_log_user_id_user_id_fk",
+					"tableFrom": "poll_log",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"flaschen.prefs": {
+			"name": "prefs",
+			"schema": "flaschen",
+			"columns": {
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"enabled": {
+					"name": "enabled",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": true
+				},
+				"weekly_windows": {
+					"name": "weekly_windows",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'{\"1\":[{\"start\":420,\"end\":1380}],\"2\":[{\"start\":420,\"end\":1380}],\"3\":[{\"start\":420,\"end\":1380}],\"4\":[{\"start\":420,\"end\":1380}],\"5\":[{\"start\":420,\"end\":1380}],\"6\":[{\"start\":420,\"end\":1380}],\"7\":[]}'::jsonb"
+				},
+				"warehouse_ids": {
+					"name": "warehouse_ids",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'[3]'::jsonb"
+				},
+				"workgroup_ids": {
+					"name": "workgroup_ids",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'[1]'::jsonb"
+				},
+				"shift_min_minutes": {
+					"name": "shift_min_minutes",
+					"type": "smallint",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 0
+				},
+				"shift_max_minutes": {
+					"name": "shift_max_minutes",
+					"type": "smallint",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 360
+				},
+				"advance_notice_minutes": {
+					"name": "advance_notice_minutes",
+					"type": "smallint",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 0
+				},
+				"include_marketplace": {
+					"name": "include_marketplace",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": true
+				},
+				"quiet_hours_enabled": {
+					"name": "quiet_hours_enabled",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"quiet_start_minutes": {
+					"name": "quiet_start_minutes",
+					"type": "smallint",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 1320
+				},
+				"quiet_end_minutes": {
+					"name": "quiet_end_minutes",
+					"type": "smallint",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 360
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"prefs_user_id_user_id_fk": {
+					"name": "prefs_user_id_user_id_fk",
+					"tableFrom": "prefs",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"flaschen.seen_location": {
+			"name": "seen_location",
+			"schema": "flaschen",
+			"columns": {
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"warehouse_id": {
+					"name": "warehouse_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"warehouse_name": {
+					"name": "warehouse_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"workgroup_id": {
+					"name": "workgroup_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"workgroup_name": {
+					"name": "workgroup_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"last_seen_at": {
+					"name": "last_seen_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"seen_location_user_id_user_id_fk": {
+					"name": "seen_location_user_id_user_id_fk",
+					"tableFrom": "seen_location",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"flaschen_seen_location_uniq": {
+					"name": "flaschen_seen_location_uniq",
+					"nullsNotDistinct": false,
+					"columns": ["user_id", "warehouse_id", "workgroup_id"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"flaschen.seen_offer": {
+			"name": "seen_offer",
+			"schema": "flaschen",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"dedupe_key": {
+					"name": "dedupe_key",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"first_seen_at": {
+					"name": "first_seen_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"last_seen_at": {
+					"name": "last_seen_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"matched": {
+					"name": "matched",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"borderline": {
+					"name": "borderline",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"notified": {
+					"name": "notified",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"still_available": {
+					"name": "still_available",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": true
+				},
+				"offer": {
+					"name": "offer",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": true
+				}
+			},
+			"indexes": {
+				"flaschen_seen_offer_user_first_seen_idx": {
+					"name": "flaschen_seen_offer_user_first_seen_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "first_seen_at",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"seen_offer_user_id_user_id_fk": {
+					"name": "seen_offer_user_id_user_id_fk",
+					"tableFrom": "seen_offer",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"flaschen_seen_offer_user_dedupe_uniq": {
+					"name": "flaschen_seen_offer_user_dedupe_uniq",
+					"nullsNotDistinct": false,
+					"columns": ["user_id", "dedupe_key"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"push.subscription": {
+			"name": "subscription",
+			"schema": "push",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"app": {
+					"name": "app",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"endpoint": {
+					"name": "endpoint",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"p256dh": {
+					"name": "p256dh",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"auth": {
+					"name": "auth",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"user_agent": {
+					"name": "user_agent",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"label": {
+					"name": "label",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"last_used_at": {
+					"name": "last_used_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {
+				"push_subscription_user_app_idx": {
+					"name": "push_subscription_user_app_idx",
+					"columns": [
+						{
+							"expression": "user_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "app",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"subscription_user_id_user_id_fk": {
+					"name": "subscription_user_id_user_id_fk",
+					"tableFrom": "subscription",
+					"tableTo": "user",
+					"schemaTo": "auth",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"push_subscription_user_app_endpoint_uniq": {
+					"name": "push_subscription_user_app_endpoint_uniq",
+					"nullsNotDistinct": false,
+					"columns": ["user_id", "app", "endpoint"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		}
+	},
+	"enums": {},
+	"schemas": {
+		"admin": "admin",
+		"auth": "auth",
+		"calorie": "calorie",
+		"finance": "finance",
+		"flaschen": "flaschen",
+		"push": "push"
+	},
+	"sequences": {},
+	"roles": {},
+	"policies": {},
+	"views": {},
+	"_meta": {
+		"columns": {},
+		"schemas": {},
+		"tables": {}
+	}
+}

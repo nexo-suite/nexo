@@ -289,5 +289,11 @@
 	"onb_targets_formula_used": "Calculated from",
 	"onb_done_title": "You're set",
 	"onb_done_desc": "Log your first thing whenever — even a coffee counts.",
-	"onb_start_logging": "Start logging"
+	"onb_start_logging": "Start logging",
+	"search_locale_section": "Search language",
+	"search_locale_subtitle": "which language Open Food Facts returns",
+	"search_locale_auto": "Follow UI",
+	"search_locale_en": "English",
+	"search_locale_de": "Deutsch",
+	"search_locale_tr": "Türkçe"
 }

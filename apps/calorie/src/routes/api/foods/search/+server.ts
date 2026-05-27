@@ -4,7 +4,8 @@ import {
 	userFoods,
 	entries as entriesTable,
 	foodsCache,
-	foodsSearchCache
+	foodsSearchCache,
+	profiles
 } from '@nexo/db';
 import { and, eq, ilike, or, desc, gt, inArray } from 'drizzle-orm';
 import { logger } from '$lib/server/logger';
@@ -84,13 +85,30 @@ function cacheRowToResult(c: typeof foodsCache.$inferSelect, locale: Locale): Se
 	};
 }
 
+function isLocale(v: unknown): v is Locale {
+	return v === 'en' || v === 'de' || v === 'tr';
+}
+
 export const GET: RequestHandler = async ({ url, locals }) => {
 	const userId = locals.user!.id;
 	const q = (url.searchParams.get('q') ?? '').trim();
 	const wantGlobal = url.searchParams.get('global') === '1';
-	const locale = getLocale() as Locale;
+	const uiLocale = getLocale() as Locale;
 
 	if (q.length < 2) return json({ results: [], hasMore: false, globalError: false });
+
+	// Resolve effective search locale: per-user override on profiles.searchLocale
+	// (set in calorie settings) wins, otherwise follow the UI locale. Lets a user
+	// run the app in English while still searching German product data.
+	const [profileRow] = await withUser(userId, (tx) =>
+		tx
+			.select({ searchLocale: profiles.searchLocale })
+			.from(profiles)
+			.where(eq(profiles.userId, userId))
+			.limit(1)
+	);
+	const overrideLocale = profileRow?.searchLocale;
+	const locale: Locale = isLocale(overrideLocale) ? overrideLocale : uiLocale;
 
 	const qNorm = normalize(q);
 	const pattern = `%${q}%`;

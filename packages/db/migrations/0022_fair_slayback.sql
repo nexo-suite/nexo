@@ -1,0 +1,1 @@
+ALTER TABLE "calorie"."profiles" ADD COLUMN "search_locale" text;
