@@ -7,12 +7,8 @@ const PROD_HOSTS = new Set([
 	'admin.krieger2501.de',
 	'finance.krieger2501.de',
 	'flaschen.krieger2501.de',
-	'bot.krieger2501.de',
-	'preview.krieger2501.de',
-	'auth.preview.krieger2501.de',
-	'admin.preview.krieger2501.de',
-	'finance.preview.krieger2501.de',
-	'flaschen.preview.krieger2501.de'
+	'calorie.krieger2501.de',
+	'bot.krieger2501.de'
 ]);
 
 export interface OriginOptions {

@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { APPS, findApp, imageRef, type App } from '../apps.ts';
-import { imagetoolsCreate } from '../lib/docker.ts';
+import { imagetoolsCreateAsync } from '../lib/docker.ts';
 import { CONTEXT_FILE, readContext } from '../lib/context.ts';
 import { fail, info, section, step, success } from '../lib/log.ts';
 import { appendSummary, summarySection, summaryTable } from '../lib/summary.ts';
@@ -16,7 +16,7 @@ export type RetagOpts = {
 // Without flags, reads source/destination tags from `.nexo/ci-context.json`
 // and no-ops when the context's strategy is 'full'. With explicit --from /
 // --to, those override the context — handy for local one-offs.
-export function retag(opts: RetagOpts): void {
+export async function retag(opts: RetagOpts): Promise<void> {
 	const explicit = Boolean(opts.from && opts.to && opts.to.length > 0);
 	const ctx = !explicit && existsSync(CONTEXT_FILE) ? readContext() : null;
 
@@ -35,9 +35,7 @@ export function retag(opts: RetagOpts): void {
 		`Retagging ${targets.length} image${targets.length === 1 ? '' : 's'} :${from} → ${to.map((t) => `:${t}`).join(', ')}`
 	);
 
-	for (const app of targets) {
-		retagOne(app, from, to);
-	}
+	await Promise.all(targets.map((app) => retagOne(app, from, to)));
 
 	appendSummary(
 		summarySection(
@@ -66,9 +64,9 @@ function resolveTags(
 	return { from: opts.from ?? ctx.fromTag, to: opts.to && opts.to.length > 0 ? opts.to : ctx.tags };
 }
 
-function retagOne(app: App, from: string, to: readonly string[]): void {
+async function retagOne(app: App, from: string, to: readonly string[]): Promise<void> {
 	step(`${app.name}: retag`);
-	imagetoolsCreate(
+	await imagetoolsCreateAsync(
 		imageRef(app, from),
 		to.map((t) => imageRef(app, t))
 	);

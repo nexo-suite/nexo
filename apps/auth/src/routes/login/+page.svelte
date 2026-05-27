@@ -40,15 +40,19 @@
 		errorMsg = null;
 		loading = provider;
 		try {
-			await authClient.signIn.social({
-				provider,
-				callbackURL,
-				...(isOidcRequest && { oauth_query: page.url.search.slice(1) })
-			});
-		} catch {
+		const { error } = await authClient.signIn.social({
+			provider,
+			callbackURL,
+			...(isOidcRequest && { oauth_query: page.url.search.slice(1) })
+		});
+		if (error) {
 			errorMsg = m.login_error_unknown();
 			loading = null;
 		}
+	} catch {
+		errorMsg = m.login_error_unknown();
+		loading = null;
+	}
 	}
 
 	const appsUrl = 'https://krieger2501.de/apps';

@@ -1,5 +1,5 @@
 import { APPS, imageRef, type App } from '../apps.ts';
-import { imagetoolsCreate } from '../lib/docker.ts';
+import { imagetoolsCreateAsync } from '../lib/docker.ts';
 import { fail, info, section, step, success } from '../lib/log.ts';
 import { appendSummary, summarySection, summaryTable } from '../lib/summary.ts';
 
@@ -12,7 +12,7 @@ export type PromoteOpts = {
 // :main-<sha> as :latest and :<version>. Apps with no version in this
 // release are skipped (their :latest remains pointed at whatever the last
 // release pinned).
-export function promote(opts: PromoteOpts): void {
+export async function promote(opts: PromoteOpts): Promise<void> {
 	if (!opts.gitCommit || opts.gitCommit === 'dev') {
 		fail('promote: GIT_COMMIT/GITHUB_SHA must be set to the release SHA');
 	}
@@ -25,10 +25,12 @@ export function promote(opts: PromoteOpts): void {
 		info(`Skipping (no release this run): ${skipping.map((a) => a.name).join(', ')}`);
 	}
 
-	for (const app of releasing) {
-		const version = versionFor(app, opts.versions)!;
-		promoteOne(app, opts.gitCommit, version);
-	}
+	await Promise.all(
+		releasing.map((app) => {
+			const version = versionFor(app, opts.versions)!;
+			return promoteOne(app, opts.gitCommit, version);
+		})
+	);
 
 	const shortSha = opts.gitCommit.slice(0, 7);
 	const releasedRows: string[][] = releasing.map((a) => {
@@ -46,9 +48,12 @@ export function promote(opts: PromoteOpts): void {
 	appendSummary(summarySection('🚀 Promote', body));
 }
 
-function promoteOne(app: App, sha: string, version: string): void {
+async function promoteOne(app: App, sha: string, version: string): Promise<void> {
 	step(`${app.name}: :main-${sha.slice(0, 7)} → :latest, :${version}`);
-	imagetoolsCreate(imageRef(app, `main-${sha}`), [imageRef(app, 'latest'), imageRef(app, version)]);
+	await imagetoolsCreateAsync(imageRef(app, `main-${sha}`), [
+		imageRef(app, 'latest'),
+		imageRef(app, version)
+	]);
 	success(`${app.name}: promoted`);
 }
 

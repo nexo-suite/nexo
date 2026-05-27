@@ -84,8 +84,8 @@ program
 	.option('-a, --app <name>', 'restrict to a single app')
 	.option('--from <tag>', 'source tag (overrides context)')
 	.option('--to <tag...>', 'one or more destination tags (overrides context)')
-	.action((opts: { app?: string; from?: string; to?: string[] }) => {
-		retag({ app: opts.app, from: opts.from, to: opts.to });
+	.action(async (opts: { app?: string; from?: string; to?: string[] }) => {
+		await retag({ app: opts.app, from: opts.from, to: opts.to });
 	});
 
 program
@@ -97,9 +97,9 @@ program
 		'JSON object mapping app name → version',
 		process.env.RELEASE_VERSIONS_JSON
 	)
-	.action((opts: { gitCommit?: string; versions?: string }) => {
+	.action(async (opts: { gitCommit?: string; versions?: string }) => {
 		const versions: Record<string, string> = opts.versions ? JSON.parse(opts.versions) : {};
-		promote({ gitCommit: opts.gitCommit ?? '', versions });
+		await promote({ gitCommit: opts.gitCommit ?? '', versions });
 	});
 
 program

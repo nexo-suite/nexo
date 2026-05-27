@@ -154,8 +154,21 @@
 	// ─── Derived ───
 	const weeklyWindows = $derived(buildWeeklyWindows(dayOn, sharedWindows, dayOverrides));
 
+	// Canonical stringify: stable across object-key order. Postgres jsonb
+	// reorders keys (shorter first, then alphabetical), so a slot stored
+	// locally as {start,end} comes back as {end,start} — plain JSON.stringify
+	// would treat the saved+roundtripped state as different from the local
+	// one and leave the save bar permanently visible.
+	function stableStringify(v: unknown): string {
+		if (v === null || typeof v !== 'object') return JSON.stringify(v);
+		if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
+		const obj = v as Record<string, unknown>;
+		const keys = Object.keys(obj).sort();
+		return '{' + keys.map((k) => JSON.stringify(k) + ':' + stableStringify(obj[k])).join(',') + '}';
+	}
+
 	const dirty = $derived.by(() => {
-		const cur = JSON.stringify({
+		const cur = stableStringify({
 			enabled,
 			weeklyWindows,
 			warehouseIds: [...warehouseIds].sort((a, b) => a - b),
@@ -165,7 +178,7 @@
 			advanceNoticeMinutes,
 			includeMarketplace
 		});
-		const init = JSON.stringify({
+		const init = stableStringify({
 			enabled: data.prefs.enabled,
 			weeklyWindows: data.prefs.weeklyWindows,
 			warehouseIds: [...data.prefs.warehouseIds].sort((a, b) => a - b),
@@ -408,7 +421,9 @@
 	let longPressTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 	let longPressFired = $state(false);
 
-	function onWeekdayPointerDown(key: DayKey) {
+	function onWeekdayPointerDown(e: PointerEvent, key: DayKey) {
+		// Block the OS's long-press text selection from bleeding into the page.
+		e.preventDefault();
 		longPressFired = false;
 		clearTimer();
 		longPressTimer = setTimeout(() => {
@@ -856,7 +871,7 @@
 							class:override={overridden}
 							aria-pressed={dayOn[d.key]}
 							aria-label={dayShort[idx]}
-							onpointerdown={() => onWeekdayPointerDown(d.key)}
+							onpointerdown={(e) => onWeekdayPointerDown(e, d.key)}
 							onpointerup={onWeekdayPointerEnd}
 							onpointercancel={onWeekdayPointerEnd}
 							onpointerleave={onWeekdayPointerEnd}

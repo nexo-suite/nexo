@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { run } from './proc.ts';
+import { run, runAsync } from './proc.ts';
 
 export type BuildOpts = {
 	context: string;
@@ -68,4 +68,16 @@ export function imagetoolsCreate(source: string, targets: readonly string[]): vo
 	for (const t of targets) args.push('--tag', t);
 	args.push(source);
 	run('docker', args);
+}
+
+// Async sibling of `imagetoolsCreate`. Each call is a registry round-trip,
+// so awaiting several at once with `Promise.all` collapses ~N×latency into 1×.
+export async function imagetoolsCreateAsync(
+	source: string,
+	targets: readonly string[]
+): Promise<void> {
+	const args: string[] = ['buildx', 'imagetools', 'create'];
+	for (const t of targets) args.push('--tag', t);
+	args.push(source);
+	await runAsync('docker', args);
 }

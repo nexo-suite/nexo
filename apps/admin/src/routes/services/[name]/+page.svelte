@@ -367,7 +367,7 @@
 
 <style>
 	.page {
-		padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0));
+		padding: 12px 16px 16px;
 		max-width: 720px;
 		margin: 0 auto;
 		display: flex;

@@ -67,6 +67,11 @@
 		background: color-mix(in oklab, oklch(0.59 0.2 27) 10%, var(--color-bg-1));
 		border-color: color-mix(in oklab, oklch(0.59 0.2 27) 28%, var(--color-border-default));
 	}
+	.pill.completed {
+		color: oklch(0.6 0.12 240);
+		background: color-mix(in oklab, oklch(0.6 0.12 240) 8%, var(--color-bg-1));
+		border-color: color-mix(in oklab, oklch(0.6 0.12 240) 24%, var(--color-border-default));
+	}
 
 	@keyframes pulse {
 		0%,

@@ -22,6 +22,7 @@ x-auth-env: &auth-env
   FINANCE_URL: https://finance.krieger2501.de
   ADMIN_URL: https://admin.krieger2501.de
   FLASCHEN_URL: https://flaschen.krieger2501.de
+  CALORIE_URL: https://calorie.krieger2501.de
   PUBLIC_LANDING_URL: https://krieger2501.de
   APP_VERSION: ${APP_VERSION_AUTH:-}
   APP_COMMIT: ${APP_COMMIT:-}

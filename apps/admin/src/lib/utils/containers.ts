@@ -1,6 +1,6 @@
 import type { ContainerInfo } from '$lib/server/docker';
 
-export type CtnState = 'down' | 'pending' | 'degraded' | 'ok';
+export type CtnState = 'down' | 'pending' | 'degraded' | 'ok' | 'completed';
 
 export interface HealthzSnapshot {
 	ok: boolean;
@@ -39,7 +39,8 @@ function dockerHealth(c: ContainerInfo): DockerHealth {
 
 // Single source of truth for service state. AND-style: any red downgrades.
 //
-//   down      — process not running (exited / dead / restarting / created / paused).
+//   completed — exited with code 0 (one-shot jobs like migrate).
+//   down      — exited with non-zero code, or dead / created / paused.
 //   pending   — running but not yet confirmed healthy (Docker health: starting,
 //               OR no /healthz row in admin.health_check_run yet).
 //   degraded  — running but at least one signal is red:
@@ -52,6 +53,10 @@ function dockerHealth(c: ContainerInfo): DockerHealth {
 // (down / ok) because we don't probe them and don't expect a /healthz endpoint.
 export function ctnState(c: CtnWithHealthz): CtnState {
 	const s = c.State.toLowerCase();
+	if (s === 'exited') {
+		const m = c.Status.match(/Exited \((\d+)\)/i);
+		return m && m[1] === '0' ? 'completed' : 'down';
+	}
 	if (s !== 'running') return 'down';
 
 	const dh = dockerHealth(c);
@@ -73,7 +78,15 @@ export function ctnState(c: CtnWithHealthz): CtnState {
 }
 
 export function ctnUptimeLabel(c: ContainerInfo): string {
-	if (c.State.toLowerCase() !== 'running') return 'stopped';
+	const s = c.State.toLowerCase();
+	if (s === 'exited') {
+		// "Exited (0) 3 hours ago" → "completed 3 hours ago" / "exited 3 hours ago"
+		const m = c.Status.match(/Exited \(\d+\)\s*(.*)/i);
+		const ago = m?.[1]?.trim();
+		const prefix = c.Status.match(/Exited \(0\)/i) ? 'completed' : 'exited';
+		return ago ? `${prefix} ${ago}` : prefix;
+	}
+	if (s !== 'running') return 'stopped';
 	// Strip trailing health annotation: "Up 2 hours (healthy)" → "up 2 hours"
 	return c.Status.replace(/^Up\s+/i, 'up ').replace(/\s*\([^)]*\)\s*$/, '');
 }
