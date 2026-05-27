@@ -20,6 +20,8 @@
 		"type:check:watch": "svelte-kit sync && svelte-check-native --tsconfig ./tsconfig.json --watch"
 	},
 	"dependencies": {
+		"@fontsource-variable/inter": "^5.2.8",
+		"@fontsource-variable/jetbrains-mono": "^5.2.8",
 		"@nexo/db": "workspace:*",
 		"@nexo/i18n": "workspace:*",
 		"@nexo/security": "workspace:*",

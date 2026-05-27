@@ -21,6 +21,8 @@
 	},
 	"dependencies": {
 		"@better-auth/oauth-provider": "^1.6.11",
+		"@fontsource-variable/inter": "^5.2.8",
+		"@fontsource-variable/jetbrains-mono": "^5.2.8",
 		"@nexo/db": "workspace:*",
 		"@nexo/i18n": "workspace:*",
 		"@nexo/logger": "workspace:*",
