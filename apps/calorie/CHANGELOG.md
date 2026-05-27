@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/nexo-suite/nexo/compare/calorie-v0.3.1...calorie-v0.3.2) (2026-05-27)
+
+
+### Bug Fixes
+
+* **calorie:** bypass i18nHandle for /healthz to prevent auth call on probe ([059aae9](https://github.com/nexo-suite/nexo/commit/059aae91fbd17ff99c27d407aab8f205b7042638))
+
 ## [0.3.1](https://github.com/nexo-suite/nexo/compare/calorie-v0.3.0...calorie-v0.3.1) (2026-05-27)
 
 
