@@ -65,6 +65,7 @@ const securityHeaders: Handle = async ({ event, resolve }) => {
 };
 
 const i18nHandle: Handle = async ({ event, resolve }) => {
+	if (event.url.pathname === '/healthz') return resolve(event);
 	await ensureUserLocaleCookie(event, {
 		getSession: (request) => getAuth().api.getSession({ headers: request.headers }),
 		loadLocale: loadUserLocale
