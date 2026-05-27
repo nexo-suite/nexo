@@ -36,6 +36,9 @@ export const profiles = calorieSchema.table('profiles', {
 	targetFiberG: numeric('target_fiber_g', { precision: 6, scale: 1 }),
 	targetSugarG: numeric('target_sugar_g', { precision: 6, scale: 1 }),
 	targetsCustom: boolean('targets_custom').notNull().default(false),
+	// Optional override for OFF search locale. NULL = follow the user's UI language.
+	// Lets a user run the app in English while still searching German product data.
+	searchLocale: text('search_locale'),
 	onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()

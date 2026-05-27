@@ -289,5 +289,11 @@
 	"onb_targets_formula_used": "Berechnet aus",
 	"onb_done_title": "Fertig",
 	"onb_done_desc": "Trag das Erste ein, wann immer — auch Kaffee zählt.",
-	"onb_start_logging": "Loslegen"
+	"onb_start_logging": "Loslegen",
+	"search_locale_section": "Suchsprache",
+	"search_locale_subtitle": "in welcher Sprache Open Food Facts antwortet",
+	"search_locale_auto": "Wie die App",
+	"search_locale_en": "English",
+	"search_locale_de": "Deutsch",
+	"search_locale_tr": "Türkçe"
 }

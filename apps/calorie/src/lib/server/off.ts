@@ -262,7 +262,8 @@ export async function searchOff(query: string, locale: Locale): Promise<OffSearc
 	if (q.length < 3) return [];
 
 	try {
-		return await searchViaSearchALicious(q, locale);
+		const hits = await searchViaSearchALicious(q, locale);
+		return dedupHits(hits, locale);
 	} catch (e) {
 		logger.warn('off_search_alicious_failed', {
 			error: String(e),
@@ -270,12 +271,41 @@ export async function searchOff(query: string, locale: Locale): Promise<OffSearc
 			query: q
 		});
 		try {
-			return await searchViaCgi(q, locale);
+			const hits = await searchViaCgi(q, locale);
+			return dedupHits(hits, locale);
 		} catch (e2) {
 			logger.warn('off_search_failed', { error: String(e2), locale, query: q });
 			throw e2;
 		}
 	}
+}
+
+/**
+ * OFF returns many barcoded variants of the same generic product (e.g. six
+ * different "Toasted Bread Rolls" barcodes, all 407 kcal, none with a brand).
+ * To the user they look identical, just clutter.
+ *
+ * Bucket each hit by `(locale-resolved name, brand, kcal rounded to nearest 5)`
+ * and keep the first per bucket. Because callers sort by popularity descending
+ * before we get here, "first" is the most-scanned variant — the one a user is
+ * most likely to actually want. Genuinely different brands or different kcal
+ * survive separately.
+ */
+function dedupHits(hits: OffSearchHit[], locale: Locale): OffSearchHit[] {
+	const MAX = 8;
+	const seen = new Set<string>();
+	const out: OffSearchHit[] = [];
+	for (const h of hits) {
+		const name = pickName(h, locale).toLocaleLowerCase().replace(/\s+/g, ' ').trim();
+		const brand = (h.brand ?? '').toLocaleLowerCase().trim();
+		const kcal = h.kcal100g != null ? Math.round(Number(h.kcal100g) / 5) : -1;
+		const key = `${name}|${brand}|${kcal}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		out.push(h);
+		if (out.length >= MAX) break;
+	}
+	return out;
 }
 
 async function searchViaSearchALicious(q: string, locale: Locale): Promise<OffSearchHit[]> {
@@ -293,10 +323,15 @@ async function searchViaSearchALicious(q: string, locale: Locale): Promise<OffSe
 	// `states_tags:"en:nutrition-facts-completed"` filters to products OFF moderators
 	// have confirmed have complete nutrition data — drops stub entries that have a
 	// name but no usable kcal/macro values.
+	// `sort_by=-popularity_key` (descending) puts the most-scanned variants first,
+	// which both surfaces relevant products and lets the dedup pass keep the best
+	// representative of each bucket. We pull 16 here and dedup down — many queries
+	// have 4–8 near-duplicates that collapse into one, so a wider draw keeps the
+	// final result count from cratering after dedup.
 	const queryTerm = encodeURIComponent(`${q} states_tags:"en:nutrition-facts-completed"`);
 	const url =
 		`https://${SEARCH_HOST}/search?q=${queryTerm}` +
-		`&langs=${locale},en&page_size=8&fields=${fields}`;
+		`&langs=${locale},en&page_size=16&sort_by=-popularity_key&fields=${fields}`;
 	const res = (await offFetch(url)) as { hits?: Array<Record<string, unknown>> };
 	const hits = res.hits ?? [];
 	return hits
@@ -311,8 +346,8 @@ async function searchViaSearchALicious(q: string, locale: Locale): Promise<OffSe
 async function searchViaCgi(q: string, locale: Locale): Promise<OffSearchHit[]> {
 	const url =
 		`https://${locale}.${HOST_DOMAIN}/cgi/search.pl?search_terms=${encodeURIComponent(q)}` +
-		`&search_simple=1&action=process&json=1&page_size=8&fields=${FIELDS.join(',')}` +
-		`&states_tags=en:nutrition-facts-completed`;
+		`&search_simple=1&action=process&json=1&page_size=16&fields=${FIELDS.join(',')}` +
+		`&states_tags=en:nutrition-facts-completed&sort_by=unique_scans_n`;
 	const res = (await offFetch(url)) as { products?: Array<Record<string, unknown>> };
 	const products = res.products ?? [];
 	return products

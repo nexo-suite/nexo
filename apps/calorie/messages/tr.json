@@ -289,5 +289,11 @@
 	"onb_targets_formula_used": "Şuradan hesaplandı",
 	"onb_done_title": "Hazırsın",
 	"onb_done_desc": "İlk şeyi ne zaman istersen gir — kahve bile sayılır.",
-	"onb_start_logging": "Loglamaya başla"
+	"onb_start_logging": "Loglamaya başla",
+	"search_locale_section": "Arama dili",
+	"search_locale_subtitle": "Open Food Facts hangi dilde dönsün",
+	"search_locale_auto": "Arayüzle aynı",
+	"search_locale_en": "English",
+	"search_locale_de": "Deutsch",
+	"search_locale_tr": "Türkçe"
 }

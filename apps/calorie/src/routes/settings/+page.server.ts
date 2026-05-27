@@ -101,6 +101,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		profile,
 		targets,
 		tier,
+		searchLocale: (data.profileRow?.searchLocale as 'en' | 'de' | 'tr' | null) ?? null,
 		logline: pickLogline(data.topFoodRows[0]?.foodName ?? null),
 		diagnostics: {
 			userId,
@@ -329,6 +330,34 @@ export const actions: Actions = {
 				correlationId: locals.correlationId
 			});
 			return fail(500, { error: 'GOAL_WEIGHT_FAILED', correlationId: locals.correlationId });
+		}
+	},
+
+	updateSearchLocale: async ({ locals, request }) => {
+		const userId = locals.user!.id;
+		const form = await request.formData();
+		const raw = form.get('searchLocale');
+		// 'auto' (or empty) → store NULL = follow UI; 'en'|'de'|'tr' → concrete override.
+		const next: string | null =
+			raw === 'en' || raw === 'de' || raw === 'tr' ? raw : raw === 'auto' || !raw ? null : null;
+
+		try {
+			await withUser(userId, (tx) =>
+				tx
+					.insert(profiles)
+					.values({ userId, searchLocale: next })
+					.onConflictDoUpdate({
+						target: profiles.userId,
+						set: { searchLocale: next, updatedAt: new Date() }
+					})
+			);
+			return { success: true };
+		} catch (e) {
+			logger.error('updateSearchLocale failed', {
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { error: 'SEARCH_LOCALE_FAILED', correlationId: locals.correlationId });
 		}
 	}
 };
