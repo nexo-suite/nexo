@@ -20,8 +20,31 @@
 			.map((d) => ({ date: d.date, kcal: d.kcal, target: targetKcal }))
 	);
 
-	// Recent days list: last 14 days that have any data (entries OR weight)
-	const recentDays = $derived(days.slice(0, 14));
+	// Recent days list: always the last 14 days, filling gaps with empty records.
+	const recentDays = $derived.by(() => {
+		const map = new Map(days.map((d) => [d.date, d]));
+		const now = new Date();
+		const result: HistoryDay[] = [];
+		for (let i = 0; i < 14; i++) {
+			const d = new Date(now);
+			d.setDate(now.getDate() - i);
+			const iso = d.toISOString().slice(0, 10);
+			result.push(
+				map.get(iso) ?? {
+					date: iso,
+					kcal: 0,
+					entryCount: 0,
+					proteinG: 0,
+					carbsG: 0,
+					fatG: 0,
+					fiberG: 0,
+					weightKg: null,
+					entries: []
+				}
+			);
+		}
+		return result;
+	});
 
 	const avgKcal = $derived.by(() => {
 		const logged = days.filter((d) => d.entryCount > 0);
@@ -32,7 +55,19 @@
 	let archiveOpen = $state(false);
 	let selectedDate = $state<string | null>(null);
 	const selectedDay = $derived<HistoryDay | null>(
-		selectedDate ? (days.find((d) => d.date === selectedDate) ?? null) : null
+		selectedDate
+			? (days.find((d) => d.date === selectedDate) ?? {
+					date: selectedDate,
+					kcal: 0,
+					entryCount: 0,
+					proteinG: 0,
+					carbsG: 0,
+					fatG: 0,
+					fiberG: 0,
+					weightKg: null,
+					entries: []
+				})
+			: null
 	);
 
 	function openDay(date: string) {
@@ -56,7 +91,7 @@
 </script>
 
 <div class="page">
-	<PageHeader title={m.nav_history()}>
+	<PageHeader title={m.nav_history()} subtitle={m.history_subtitle()}>
 		{#snippet avatar()}<UserAvatarMenu />{/snippet}
 	</PageHeader>
 
@@ -97,6 +132,7 @@
 							class="row"
 							type="button"
 							class:today={d.date === todayIso}
+							class:no-data={d.entryCount === 0 && d.weightKg == null}
 							onclick={() => openDay(d.date)}
 						>
 							<span class="r-date">
@@ -108,6 +144,8 @@
 								{#if d.kcal > 0}
 									<span class="r-kcal-num tnum">{Math.round(d.kcal).toLocaleString()}</span>
 									<span class="r-kcal-unit eyebrow-num">{m.unit_kcal()}</span>
+								{:else if d.entryCount === 0 && d.weightKg == null}
+									<em class="r-no-data serif-italic">{m.history_recent_no_data()}</em>
 								{:else}
 									<span class="r-kcal-dash eyebrow-num">—</span>
 								{/if}
@@ -239,10 +277,18 @@
 		padding-left: 10px;
 	}
 
-	.r-date {
-		display: inline-flex;
-		align-items: baseline;
-		gap: 8px;
+	.row.no-data {
+		opacity: 0.42;
+	}
+
+	.r-no-data {
+		font-size: 12px;
+		color: var(--color-text-faint);
+		font-variation-settings:
+			'opsz' 18,
+			'SOFT' 100,
+			'wght' 420,
+			'ital' 1;
 	}
 
 	.r-weekday {

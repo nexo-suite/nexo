@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { Plus, EyeOff } from '@lucide/svelte';
+	import { goto } from '$app/navigation';
+	import { untrack } from 'svelte';
 	import { PageHeader } from '@nexo/ui';
 	import KcalRing from '$lib/components/KcalRing.svelte';
 	import MacroBar from '$lib/components/MacroBar.svelte';
@@ -21,7 +23,42 @@
 	const todayEntries = $derived<Entry[]>(data.todayEntries);
 	const todayMoments = $derived<Moment[]>(data.todayMoments);
 
-	let selectedDay = $state(new Date());
+	const todayIso = localIso(new Date());
+
+	// Tracks the date currently shown — initialised from the loaded date, synced on navigation.
+	let selectedDay = $state(
+		untrack(() => new Date((data.selectedIso ?? todayIso) + 'T12:00:00'))
+	);
+	$effect(() => {
+		selectedDay = new Date(data.selectedIso + 'T12:00:00');
+	});
+
+	function localIso(d: Date): string {
+		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+	}
+
+	function handleDateSelect(d: Date) {
+		const iso = localIso(d);
+		goto(iso === todayIso ? '/' : `/?date=${iso}`);
+	}
+
+	const pageTitle = $derived.by(() => {
+		const iso = data.selectedIso;
+		if (iso === todayIso) return capitalize(m.weight_date_today());
+		const yesterday = new Date();
+		yesterday.setDate(yesterday.getDate() - 1);
+		if (iso === localIso(yesterday)) return capitalize(m.weight_date_yesterday());
+		const d = new Date(iso + 'T12:00:00');
+		return new Intl.DateTimeFormat('en', {
+			weekday: 'short',
+			day: 'numeric',
+			month: 'short'
+		}).format(d);
+	});
+
+	function capitalize(s: string) {
+		return s ? s[0].toUpperCase() + s.slice(1) : s;
+	}
 	let addOpen = $state(false);
 	let preselectedSlot = $state<MealSlot | null>(null);
 	let editOpen = $state(false);
@@ -139,7 +176,7 @@
 </script>
 
 <div class="page">
-	<PageHeader title={m.app_name()} subtitle={m.app_tagline()}>
+	<PageHeader title={pageTitle} subtitle={m.app_tagline()}>
 		{#snippet avatar()}<UserAvatarMenu />{/snippet}
 		{#snippet actions()}
 			<button
@@ -161,7 +198,7 @@
 		{/snippet}
 	</PageHeader>
 
-	<DateStrip bind:selected={selectedDay} />
+	<DateStrip bind:selected={selectedDay} onSelect={handleDateSelect} />
 
 	{#if showEmpty}
 		<section class="empty">
@@ -273,6 +310,7 @@
 							foods={data.foods}
 							favoriteIds={data.favoriteIds}
 							recentIds={data.recentFoodIds}
+							savedMeals={data.savedMeals}
 							tier={profile.tier}
 							onClose={closeSlotPanel}
 							onBuildMeal={buildMealForSlot}

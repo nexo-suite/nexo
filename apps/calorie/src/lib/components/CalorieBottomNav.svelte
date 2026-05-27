@@ -5,7 +5,7 @@
 	import { m } from '$lib/paraglide/messages.js';
 
 	const tabs = $derived([
-		{ href: '/', label: m.nav_today(), icon: House, exact: true },
+		{ href: '/', label: m.nav_log(), icon: House, exact: true },
 		{ href: '/history', label: m.nav_history(), icon: CalendarRange },
 		{ href: '/profile', label: m.nav_profile(), icon: User }
 	]);

@@ -79,7 +79,10 @@
 </script>
 
 <div class="page">
-	<PageHeader title={m.nav_weight()}>
+	<PageHeader
+		title={m.nav_weight()}
+		subtitle={targetKg != null ? m.weight_subtitle_goal({ kg: targetKg.toFixed(1) }) : null}
+	>
 		{#snippet avatar()}<UserAvatarMenu />{/snippet}
 	</PageHeader>
 
