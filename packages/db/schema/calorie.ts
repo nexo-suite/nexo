@@ -25,6 +25,7 @@ export const profiles = calorieSchema.table('profiles', {
 	age: integer('age'),
 	heightCm: numeric('height_cm', { precision: 5, scale: 1 }),
 	weightKg: numeric('weight_kg', { precision: 5, scale: 2 }),
+	targetWeightKg: numeric('target_weight_kg', { precision: 5, scale: 2 }),
 	activity: integer('activity'),
 	goal: text('goal'),
 	tier: text('tier').notNull().default('basic'),

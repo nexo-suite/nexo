@@ -1,259 +1,339 @@
 <script lang="ts">
-	import { BottomSheet, PageHeader } from '@nexo/ui';
-	import { untrack } from 'svelte';
-	import { enhance } from '$app/forms';
-	import WeightChart from '$lib/components/WeightChart.svelte';
+	import { PageHeader } from '@nexo/ui';
 	import CalendarHeatmap from '$lib/components/CalendarHeatmap.svelte';
+	import DayArchiveSheet from '$lib/components/history/DayArchiveSheet.svelte';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { m } from '$lib/paraglide/messages.js';
+	import type { HistoryDay } from '$lib/types';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	const weights = $derived(data.weights);
-	const dailyKcalRaw = $derived(data.dailyKcal);
+	const days = $derived<HistoryDay[]>(data.days);
+	const targetKcal = $derived(data.targetKcal);
+	const totalDaysLogged = $derived(data.totalDaysLogged);
 
-	// Reshape kcal totals into the DaySummary shape the heatmap expects (target = 0 fallback)
-	const dailyKcal = $derived(
-		dailyKcalRaw.map((d) => ({ date: d.date, kcal: d.kcal, target: 2000 }))
+	// Heatmap expects DaySummary[] = { date, kcal, target }
+	const heatmapDays = $derived(
+		days
+			.filter((d) => d.entryCount > 0)
+			.map((d) => ({ date: d.date, kcal: d.kcal, target: targetKcal }))
 	);
 
-	let logWeightOpen = $state(false);
-	let newWeight = $state(untrack(() => weights[weights.length - 1]?.kg ?? 78));
+	// Recent days list: last 14 days that have any data (entries OR weight)
+	const recentDays = $derived(days.slice(0, 14));
 
-	$effect(() => {
-		const last = weights[weights.length - 1]?.kg;
-		if (last) newWeight = last;
+	const avgKcal = $derived.by(() => {
+		const logged = days.filter((d) => d.entryCount > 0);
+		if (logged.length === 0) return 0;
+		return Math.round(logged.reduce((s, d) => s + d.kcal, 0) / logged.length);
 	});
 
-	let dayDetailOpen = $state(false);
+	let archiveOpen = $state(false);
 	let selectedDate = $state<string | null>(null);
-
-	const selectedDay = $derived(dailyKcal.find((d) => d.date === selectedDate));
-	const dayPct = $derived(
-		selectedDay && selectedDay.target ? Math.round((selectedDay.kcal / selectedDay.target) * 100) : 0
+	const selectedDay = $derived<HistoryDay | null>(
+		selectedDate ? (days.find((d) => d.date === selectedDate) ?? null) : null
 	);
 
-	function handleSelect(date: string) {
+	function openDay(date: string) {
 		selectedDate = date;
-		dayDetailOpen = true;
+		archiveOpen = true;
 	}
+
+	function fmtRowDate(iso: string): { weekday: string; daymon: string } {
+		const d = new Date(`${iso}T00:00:00Z`);
+		return {
+			weekday: new Intl.DateTimeFormat('en', { weekday: 'short', timeZone: 'UTC' }).format(d),
+			daymon: new Intl.DateTimeFormat('en', {
+				day: 'numeric',
+				month: 'short',
+				timeZone: 'UTC'
+			}).format(d)
+		};
+	}
+
+	const todayIso = new Date().toISOString().slice(0, 10);
 </script>
 
 <div class="page">
-	<PageHeader title={m.history_weight()} subtitle={m.history_eyebrow()}>
+	<PageHeader title={m.nav_history()}>
 		{#snippet avatar()}<UserAvatarMenu />{/snippet}
 	</PageHeader>
 
-	<section class="card weight-card">
-		<WeightChart logs={weights} height={140} onLogToday={() => (logWeightOpen = true)} />
-	</section>
+	<header class="archive-head">
+		<span class="eyebrow">{m.history_eyebrow()}</span>
+		<p class="lede serif-display">
+			{#if totalDaysLogged === 0}
+				{m.history_lede_empty()}
+			{:else}
+				{@html m.history_lede({
+					days: `<span class="lede-num tnum">${totalDaysLogged}</span>`,
+					avg: `<span class="lede-num tnum">${avgKcal.toLocaleString()}</span>`
+				})}
+			{/if}
+		</p>
+	</header>
 
 	<section class="heatmap-section">
 		<div class="hm-head">
-			<span class="eyebrow">{m.history_heatmap_heading()}</span>
+			<span class="eyebrow-num">{m.history_heatmap_heading()}</span>
+			<span class="hm-target serif-italic">{m.history_target_kcal({ n: targetKcal })}</span>
 		</div>
-		<div class="card heat-card">
-			<CalendarHeatmap days={dailyKcal} onSelect={handleSelect} />
+		<CalendarHeatmap days={heatmapDays} onSelect={openDay} />
+	</section>
+
+	<section class="recent-section">
+		<div class="rs-head">
+			<span class="eyebrow">{m.history_recent_heading()}</span>
 		</div>
+		{#if recentDays.length === 0}
+			<p class="empty serif-italic">{m.history_recent_empty()}</p>
+		{:else}
+			<ol class="rows" role="list">
+				{#each recentDays as d (d.date)}
+					{@const f = fmtRowDate(d.date)}
+					<li>
+						<button
+							class="row"
+							type="button"
+							class:today={d.date === todayIso}
+							onclick={() => openDay(d.date)}
+						>
+							<span class="r-date">
+								<span class="r-weekday eyebrow-num">{f.weekday}</span>
+								<span class="r-daymon serif-display">{f.daymon}</span>
+							</span>
+							<span class="r-leader" aria-hidden="true"></span>
+							<span class="r-kcal">
+								{#if d.kcal > 0}
+									<span class="r-kcal-num tnum">{Math.round(d.kcal).toLocaleString()}</span>
+									<span class="r-kcal-unit eyebrow-num">{m.unit_kcal()}</span>
+								{:else}
+									<span class="r-kcal-dash eyebrow-num">—</span>
+								{/if}
+							</span>
+							<span class="r-extra eyebrow-num">
+								{#if d.entryCount > 0}
+									<span class="r-entries">{m.history_row_entries({ n: d.entryCount })}</span>
+								{/if}
+								{#if d.weightKg != null}
+									<span class="r-weight tnum">{d.weightKg.toFixed(1)}<span class="r-weight-unit"> kg</span></span>
+								{/if}
+							</span>
+						</button>
+					</li>
+				{/each}
+			</ol>
+		{/if}
 	</section>
 </div>
 
-<BottomSheet bind:open={logWeightOpen} title={m.history_weight_log()}>
-	<form
-		class="weight-form"
-		method="POST"
-		action="/history?/logWeight"
-		use:enhance={() => {
-			return async ({ update }) => {
-				await update();
-				logWeightOpen = false;
-			};
-		}}
-	>
-		<input type="hidden" name="date" value={new Date().toISOString().slice(0, 10)} />
-		<div class="big-num">
-			<input
-				class="bn-input"
-				type="number"
-				inputmode="decimal"
-				step="0.1"
-				name="kg"
-				bind:value={newWeight}
-			/>
-			<span class="bn-unit">kg</span>
-		</div>
-		<button class="confirm" type="submit">{m.action_save()}</button>
-	</form>
-</BottomSheet>
-
-<BottomSheet bind:open={dayDetailOpen} title={selectedDate ?? ''}>
-	{#if selectedDay}
-		<div class="day-summary">
-			<div class="ds-head">
-				<div class="ds-num-block">
-					<div class="ds-num">{selectedDay.kcal.toLocaleString()}</div>
-					<div class="ds-target">{m.unit_kcal()}</div>
-				</div>
-				<div class="ds-pct" class:over={dayPct > 105} class:under={dayPct < 85}>
-					{dayPct}%
-				</div>
-			</div>
-		</div>
-	{/if}
-</BottomSheet>
+<DayArchiveSheet bind:open={archiveOpen} day={selectedDay} />
 
 <style>
 	.page {
 		display: flex;
 		flex-direction: column;
-		gap: 20px;
-		padding: 16px 16px 24px;
+		gap: 24px;
+		padding: 12px 16px 96px;
 		position: relative;
 		z-index: 1;
 	}
 
-	.eyebrow {
-		font-family: var(--font-mono);
-		font-size: 11px;
-		letter-spacing: 0.06em;
-		color: var(--color-text-faint);
+	.archive-head {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding: 4px 0 0;
 	}
 
-	.card {
-		background: var(--color-surface-1);
-		border: 1px solid var(--color-border-default);
-		border-radius: 18px;
-		padding: 16px 18px;
+	.lede {
+		margin: 0;
+		font-size: 22px;
+		line-height: 1.32;
+		letter-spacing: -0.018em;
+		color: var(--color-text-primary);
+		font-variation-settings:
+			'opsz' 32,
+			'SOFT' 100,
+			'wght' 440;
+		max-width: 28ch;
 	}
 
-	.weight-card {
-		padding: 18px 20px 8px;
+	.lede :global(.lede-num) {
+		font-feature-settings: 'tnum' 1, 'lnum' 1;
+		font-variant-numeric: tabular-nums lining-nums;
+		color: var(--color-ember-deep);
+		font-variation-settings:
+			'opsz' 32,
+			'SOFT' 80,
+			'wght' 510;
 	}
 
 	.heatmap-section {
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
+		gap: 12px;
 	}
 
 	.hm-head {
 		display: flex;
-		justify-content: space-between;
 		align-items: baseline;
+		justify-content: space-between;
+		padding: 0 2px;
 	}
 
-	.heat-card {
-		padding: 16px;
+	.hm-target {
+		font-size: 12px;
+		color: var(--color-text-faint);
+		font-variation-settings:
+			'opsz' 18,
+			'SOFT' 100,
+			'wght' 420,
+			'ital' 1;
 	}
 
-	.weight-form {
+	.recent-section {
 		display: flex;
 		flex-direction: column;
-		gap: 18px;
-		padding: 8px 0 8px;
+		gap: 10px;
 	}
 
-	.big-num {
+	.rs-head {
+		padding: 0 2px;
+	}
+
+	.empty {
+		font-size: 14px;
+		color: var(--color-text-faint);
+		padding: 16px 4px;
+		margin: 0;
+	}
+
+	.rows {
+		list-style: none;
+		padding: 0;
+		margin: 0;
 		display: flex;
-		justify-content: center;
-		align-items: baseline;
-		gap: 8px;
-		padding: 30px 0 12px;
+		flex-direction: column;
 	}
 
-	.bn-input {
-		all: unset;
-		font-family: var(--font-display);
-		font-feature-settings: 'tnum' 1;
-		font-variation-settings:
-			'opsz' 144,
-			'SOFT' 90,
-			'wght' 480;
-		font-size: 78px;
-		line-height: 0.92;
-		letter-spacing: -0.04em;
-		color: var(--color-text-primary);
-		text-align: center;
-		width: 5ch;
-	}
-
-	.bn-unit {
-		font-size: 18px;
-		color: var(--color-text-subtle);
-	}
-
-	.confirm {
+	.row {
 		all: unset;
 		cursor: pointer;
-		padding: 16px 22px;
-		text-align: center;
-		background: var(--color-ember);
-		color: oklch(98% 0.008 70);
-		border-radius: 16px;
-		font-size: 15px;
-		font-weight: 500;
-	}
-
-	.day-summary {
-		display: flex;
-		flex-direction: column;
-		gap: 14px;
-		padding: 0 0 8px;
-	}
-
-	.ds-head {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-end;
-		padding-bottom: 12px;
+		display: grid;
+		grid-template-columns: auto 1fr auto auto;
+		align-items: baseline;
+		gap: 12px;
+		padding: 12px 4px;
 		border-bottom: 1px solid var(--color-border-subtle);
+		transition: background 200ms;
 	}
 
-	.ds-num-block {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
+	.row:hover {
+		background: color-mix(in oklab, var(--color-ember) 3%, transparent);
 	}
 
-	.ds-num {
-		font-family: var(--font-display);
-		font-feature-settings: 'tnum' 1;
+	.row.today {
+		box-shadow: inset 2px 0 0 var(--color-ember);
+		padding-left: 10px;
+	}
+
+	.r-date {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 8px;
+	}
+
+	.r-weekday {
+		color: var(--color-text-faint);
+		font-size: 9.5px;
+	}
+
+	.r-daymon {
+		font-size: 16px;
+		color: var(--color-text-muted);
 		font-variation-settings:
-			'opsz' 96,
-			'SOFT' 80,
-			'wght' 480;
-		font-size: 44px;
-		line-height: 1;
-		letter-spacing: -0.03em;
+			'opsz' 24,
+			'SOFT' 100,
+			'wght' 440;
+		letter-spacing: -0.01em;
+	}
+
+	.row.today .r-daymon {
 		color: var(--color-text-primary);
 	}
 
-	.ds-target {
-		font-size: 12px;
-		color: var(--color-text-subtle);
+	.r-leader {
+		align-self: center;
+		min-width: 12px;
+		height: 1px;
+		background-image: radial-gradient(
+			circle,
+			var(--color-text-faint) 0.55px,
+			transparent 0.55px
+		);
+		background-size: 4px 1px;
+		background-repeat: repeat-x;
+		background-position: bottom center;
+		opacity: 0.45;
 	}
 
-	.ds-pct {
+	.r-kcal {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 4px;
+	}
+
+	.r-kcal-num {
 		font-family: var(--font-display);
-		font-feature-settings: 'tnum' 1;
+		font-feature-settings: 'tnum' 1, 'lnum' 1;
 		font-variation-settings:
-			'opsz' 36,
+			'opsz' 24,
+			'SOFT' 80,
 			'wght' 460;
-		font-size: 22px;
-		color: var(--color-ontarget);
-		padding: 4px 12px;
-		border-radius: 999px;
-		background: color-mix(in oklab, var(--color-ontarget) 12%, var(--color-bg-0));
+		font-size: 17px;
+		color: var(--color-text-primary);
+		letter-spacing: -0.015em;
 	}
 
-	.ds-pct.over {
-		color: var(--color-overtarget);
-		background: color-mix(in oklab, var(--color-overtarget) 12%, var(--color-bg-0));
+	.row.today .r-kcal-num {
+		color: var(--color-ember-deep);
+		font-variation-settings:
+			'opsz' 24,
+			'SOFT' 80,
+			'wght' 510;
 	}
 
-	.ds-pct.under {
-		color: oklch(50% 0.1 88);
-		background: color-mix(in oklab, var(--color-undertarget) 18%, var(--color-bg-0));
+	.r-kcal-unit {
+		color: var(--color-text-faint);
+		font-size: 9px;
+	}
+
+	.r-kcal-dash {
+		color: var(--color-text-faint);
+		opacity: 0.5;
+	}
+
+	.r-extra {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 8px;
+		color: var(--color-text-faint);
+		font-size: 9.5px;
+	}
+
+	.r-entries {
+		opacity: 0.85;
+	}
+
+	.r-weight {
+		color: var(--color-text-muted);
+		font-size: 11px;
+		font-feature-settings: 'tnum' 1, 'lnum' 1;
+	}
+
+	.r-weight-unit {
+		opacity: 0.55;
 	}
 </style>

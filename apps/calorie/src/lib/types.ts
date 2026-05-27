@@ -111,3 +111,32 @@ export interface DaySummary {
 	kcal: number;
 	target: number;
 }
+
+/** A single logged food entry, denormalized for history display. */
+export interface HistoryEntry {
+	id: string;
+	loggedAt: string;
+	foodName: string;
+	grams: number;
+	unit: string;
+	kcal: number;
+	proteinG: number;
+	carbsG: number;
+	fatG: number;
+	fiberG: number | null;
+	sugarG: number | null;
+	mealSlot: string | null;
+}
+
+/** Aggregated per-day record for the history archive. */
+export interface HistoryDay {
+	date: string;
+	kcal: number;
+	entryCount: number;
+	proteinG: number;
+	carbsG: number;
+	fatG: number;
+	fiberG: number;
+	weightKg: number | null;
+	entries: HistoryEntry[];
+}

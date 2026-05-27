@@ -1,13 +1,16 @@
 <script lang="ts">
-	import { Sparkles } from '@lucide/svelte';
+	import { Sparkles, Target } from '@lucide/svelte';
 	import { untrack } from 'svelte';
+	import { enhance } from '$app/forms';
 	import {
 		AboutDiagnostics,
+		BottomSheet,
 		PageHeader,
 		ProfileHubCard,
 		SectionLabel,
 		SettingsCard
 	} from '@nexo/ui';
+	import Stepper from '$lib/components/Stepper.svelte';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import type { MacroTier } from '$lib/types';
 	import { m } from '$lib/paraglide/messages.js';
@@ -18,6 +21,7 @@
 	const profile = $derived(data.profile);
 	const targets = $derived(data.targets);
 	const logline = $derived(data.logline);
+	const targetWeightKg = $derived(profile?.targetWeightKg ?? null);
 
 	let tier = $state<MacroTier>(untrack(() => data.tier));
 
@@ -26,6 +30,15 @@
 		{ id: 'extended', label: m.tier_extended },
 		{ id: 'full', label: m.tier_full }
 	];
+
+	let goalWeightOpen = $state(false);
+	let goalWeightDraft = $state(70);
+
+	$effect(() => {
+		if (goalWeightOpen) {
+			goalWeightDraft = targetWeightKg ?? Math.round((profile?.weightKg ?? 70) * 10) / 10;
+		}
+	});
 
 	const hubUrl = 'https://krieger2501.de/apps';
 
@@ -125,6 +138,38 @@
 		</div>
 	</SettingsCard>
 
+	<!-- ─── Goal weight ─── -->
+	<SectionLabel
+		title={m.profile_goal_weight_section()}
+		subtitle={m.profile_goal_weight_subtitle()}
+	/>
+	<SettingsCard>
+		<button class="goal-row" type="button" onclick={() => (goalWeightOpen = true)}>
+			<div class="gr-icon" aria-hidden="true">
+				<Target size={14} strokeWidth={1.7} />
+			</div>
+			<div class="gr-num-block">
+				{#if targetWeightKg != null}
+					<span class="gr-num tnum">{targetWeightKg.toFixed(1)}<span class="g">kg</span></span>
+					{#if profile}
+						{@const delta = targetWeightKg - profile.weightKg}
+						<span class="gr-delta tnum">
+							{#if Math.abs(delta) < 0.1}
+								·
+							{:else if delta < 0}
+								↓ {Math.abs(delta).toFixed(1)} kg
+							{:else}
+								↑ {delta.toFixed(1)} kg
+							{/if}
+						</span>
+					{/if}
+				{:else}
+					<span class="gr-empty">{m.profile_goal_weight_not_set()}</span>
+				{/if}
+			</div>
+		</button>
+	</SettingsCard>
+
 	<!-- ─── Recipes coming-soon ─── -->
 	<div class="recipes-card">
 		<div class="rc-icon" aria-hidden="true">
@@ -145,6 +190,54 @@
 		buildTime={appMeta.buildTime}
 	/>
 </div>
+
+<BottomSheet bind:open={goalWeightOpen} title={m.profile_goal_weight_section()}>
+	<div class="goal-form">
+		<div class="gf-stepper-wrap">
+			<Stepper
+				bind:value={goalWeightDraft}
+				min={20}
+				max={400}
+				step={0.1}
+				decimals={1}
+				size="lg"
+				ariaLabel={m.profile_goal_weight_section()}
+			/>
+			<span class="gf-unit">kg</span>
+		</div>
+		<div class="gf-actions">
+			{#if targetWeightKg != null}
+				<form
+					method="POST"
+					action="?/updateGoalWeight"
+					use:enhance={() => {
+						return async ({ update }) => {
+							await update();
+							goalWeightOpen = false;
+						};
+					}}
+				>
+					<input type="hidden" name="targetWeightKg" value="" />
+					<button class="gf-clear" type="submit">{m.profile_goal_weight_clear()}</button>
+				</form>
+			{/if}
+			<form
+				class="gf-save-form"
+				method="POST"
+				action="?/updateGoalWeight"
+				use:enhance={() => {
+					return async ({ update }) => {
+						await update();
+						goalWeightOpen = false;
+					};
+				}}
+			>
+				<input type="hidden" name="targetWeightKg" value={goalWeightDraft.toFixed(1)} />
+				<button class="gf-save" type="submit">{m.action_save()}</button>
+			</form>
+		</div>
+	</div>
+</BottomSheet>
 
 <style>
 	.page {
@@ -321,6 +414,121 @@
 		display: grid;
 		grid-template-columns: 1fr 1fr 1fr;
 		padding: 16px 18px;
+	}
+
+	/* ── Goal weight row ── */
+	.goal-row {
+		all: unset;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		padding: 18px 18px;
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.gr-icon {
+		width: 32px;
+		height: 32px;
+		border-radius: 999px;
+		background: var(--ember-tint-bg);
+		color: var(--color-ember-deep);
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+	}
+
+	.gr-num-block {
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.gr-num {
+		font-family: var(--font-display);
+		font-feature-settings: 'tnum' 1, 'lnum' 1;
+		font-variation-settings: 'opsz' 60, 'SOFT' 80, 'wght' 470;
+		font-size: 30px;
+		letter-spacing: -0.025em;
+		line-height: 1;
+		color: var(--color-text-primary);
+	}
+
+	.gr-delta {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.04em;
+		color: var(--color-text-faint);
+	}
+
+	.gr-empty {
+		font-family: var(--font-display);
+		font-style: italic;
+		font-variation-settings: 'opsz' 24, 'SOFT' 100, 'wght' 420, 'ital' 1;
+		font-size: 17px;
+		color: var(--color-text-subtle);
+	}
+
+	/* ── Goal weight sheet ── */
+	.goal-form {
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+		padding: 8px 0 12px;
+	}
+
+	.gf-stepper-wrap {
+		display: flex;
+		justify-content: center;
+		align-items: baseline;
+		gap: 10px;
+		padding: 18px 0 6px;
+	}
+
+	.gf-unit {
+		font-family: var(--font-display);
+		font-variation-settings: 'opsz' 36, 'SOFT' 80, 'wght' 420;
+		font-size: 18px;
+		color: var(--color-text-subtle);
+	}
+
+	.gf-actions {
+		display: flex;
+		gap: 10px;
+	}
+
+	.gf-clear {
+		all: unset;
+		cursor: pointer;
+		flex: 0 0 auto;
+		padding: 14px 18px;
+		text-align: center;
+		background: var(--color-bg-1);
+		color: var(--color-text-muted);
+		border-radius: 14px;
+		font-size: 14px;
+		font-weight: 500;
+	}
+
+	.gf-save-form {
+		flex: 1;
+		display: flex;
+	}
+
+	.gf-save {
+		all: unset;
+		cursor: pointer;
+		flex: 1;
+		padding: 14px 18px;
+		text-align: center;
+		background: var(--color-ember);
+		color: oklch(98% 0.008 70);
+		border-radius: 14px;
+		font-size: 15px;
+		font-weight: 500;
 	}
 
 	.b-cell {

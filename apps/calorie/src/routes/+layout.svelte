@@ -3,7 +3,7 @@
 	import { page, navigating } from '$app/state';
 	import { BottomNav, KonamiCode, PageShell, UpdatePrompt } from '@nexo/ui';
 	import type { BottomNavTab } from '@nexo/ui';
-	import { CalendarRange, House, Settings } from '@lucide/svelte';
+	import { CalendarRange, House, Scale, Settings } from '@lucide/svelte';
 	import { m } from '$lib/paraglide/messages.js';
 
 	let { children } = $props();
@@ -14,6 +14,7 @@
 
 	const tabs = $derived<BottomNavTab[]>([
 		{ href: '/', label: m.nav_today(), icon: House, exact: true },
+		{ href: '/weight', label: m.nav_weight(), icon: Scale },
 		{ href: '/history', label: m.nav_history(), icon: CalendarRange },
 		{ href: '/settings', label: m.nav_settings(), icon: Settings }
 	]);

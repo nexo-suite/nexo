@@ -73,6 +73,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 				age: data.profileRow.age ?? 30,
 				heightCm: Number(data.profileRow.heightCm ?? 170),
 				weightKg: Number(data.profileRow.weightKg ?? 70),
+				targetWeightKg: data.profileRow.targetWeightKg
+					? Number(data.profileRow.targetWeightKg)
+					: null,
 				activity: (data.profileRow.activity as ActivityLevel) ?? 3,
 				goal: (data.profileRow.goal as Goal) ?? 'maintain',
 				tier
@@ -292,6 +295,40 @@ export const actions: Actions = {
 				correlationId: locals.correlationId
 			});
 			return fail(500, { error: 'RESET_FAILED', correlationId: locals.correlationId });
+		}
+	},
+
+	updateGoalWeight: async ({ locals, request }) => {
+		const userId = locals.user!.id;
+		const form = await request.formData();
+		const raw = form.get('targetWeightKg');
+		const value = typeof raw === 'string' ? raw.trim() : '';
+
+		let next: string | null;
+		if (!value) {
+			next = null;
+		} else {
+			const parsed = Number(value);
+			if (!Number.isFinite(parsed) || parsed < 20 || parsed > 400) {
+				return fail(400, { error: 'INVALID_TARGET_WEIGHT', correlationId: locals.correlationId });
+			}
+			next = parsed.toFixed(1);
+		}
+
+		try {
+			await withUser(userId, (tx) =>
+				tx
+					.update(profiles)
+					.set({ targetWeightKg: next, updatedAt: new Date() })
+					.where(eq(profiles.userId, userId))
+			);
+			return { success: true };
+		} catch (e) {
+			logger.error('updateGoalWeight failed', {
+				error: String(e),
+				correlationId: locals.correlationId
+			});
+			return fail(500, { error: 'GOAL_WEIGHT_FAILED', correlationId: locals.correlationId });
 		}
 	}
 };
