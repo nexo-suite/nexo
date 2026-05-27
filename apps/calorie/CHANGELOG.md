@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/nexo-suite/nexo/compare/calorie-v0.3.2...calorie-v0.4.0) (2026-05-27)
+
+
+### Features
+
+* **calorie:** per-user OFF search locale + popularity sort + dedup ([bf22fdc](https://github.com/nexo-suite/nexo/commit/bf22fdc41456868b3cd77219df7aae84cf7b79be))
+
 ## [0.3.2](https://github.com/nexo-suite/nexo/compare/calorie-v0.3.1...calorie-v0.3.2) (2026-05-27)
 
 

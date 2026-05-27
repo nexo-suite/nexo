@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/nexo-suite/nexo/compare/admin-v0.9.1...admin-v0.10.0) (2026-05-27)
+
+
+### Features
+
+* **admin:** show calorie icon in user access section ([717920c](https://github.com/nexo-suite/nexo/commit/717920c3ec1a5c41dc54c2d48cb0d2e2e1df716f))
+
 ## [0.9.1](https://github.com/nexo-suite/nexo/compare/admin-v0.9.0...admin-v0.9.1) (2026-05-27)
 
 

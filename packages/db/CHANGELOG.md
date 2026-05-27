@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/nexo-suite/nexo/compare/db-v0.9.0...db-v0.10.0) (2026-05-27)
+
+
+### Features
+
+* **calorie:** per-user OFF search locale + popularity sort + dedup ([bf22fdc](https://github.com/nexo-suite/nexo/commit/bf22fdc41456868b3cd77219df7aae84cf7b79be))
+
 ## [0.9.0](https://github.com/nexo-suite/nexo/compare/db-v0.8.0...db-v0.9.0) (2026-05-27)
 
 
