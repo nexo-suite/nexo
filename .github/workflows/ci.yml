@@ -10,6 +10,7 @@ permissions:
   contents: write
   pull-requests: write
   packages: write
+  deployments: write
 
 jobs:
   checks:
@@ -212,11 +213,32 @@ jobs:
     needs: [release-please, promote]
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://krieger2501.de
     concurrency:
       group: deploy-production
       cancel-in-progress: false
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.0
+        env:
+          PNPM_HOME: ${{ runner.temp }}/pnpm
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Deploy to VPS
+        id: deploy
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         env:
           APP_VERSION_AUTH: ${{ fromJSON(needs.release-please.outputs.versions_json).auth }}
@@ -226,13 +248,14 @@ jobs:
           APP_VERSION_CALORIE: ${{ fromJSON(needs.release-please.outputs.versions_json).calorie }}
           APP_VERSION_LANDING: ${{ fromJSON(needs.release-please.outputs.versions_json).landing }}
           APP_VERSION_BOT: ${{ fromJSON(needs.release-please.outputs.versions_json).bot }}
+          APP_VERSION_DB: ${{ fromJSON(needs.release-please.outputs.versions_json).db }}
           APP_COMMIT: ${{ github.sha }}
           APP_BUILD_TIME: ${{ github.event.head_commit.timestamp }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: APP_VERSION_AUTH,APP_VERSION_ADMIN,APP_VERSION_FINANCE,APP_VERSION_FLASCHEN,APP_VERSION_CALORIE,APP_VERSION_LANDING,APP_VERSION_BOT,APP_COMMIT,APP_BUILD_TIME
+          envs: APP_VERSION_AUTH,APP_VERSION_ADMIN,APP_VERSION_FINANCE,APP_VERSION_FLASCHEN,APP_VERSION_CALORIE,APP_VERSION_LANDING,APP_VERSION_BOT,APP_VERSION_DB,APP_COMMIT,APP_BUILD_TIME
           script: |
             set -e
             cd /home/deploy/nexo
@@ -240,3 +263,14 @@ jobs:
             git checkout -f main
             git reset --hard origin/main
             node scripts/deploy.mjs
+
+      - name: Write job summary
+        if: always()
+        env:
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.repository }}
+          VERSIONS_JSON: ${{ needs.release-please.outputs.versions_json }}
+        run: pnpm exec nexo deploy-summary

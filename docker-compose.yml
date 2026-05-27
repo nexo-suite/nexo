@@ -225,7 +225,7 @@ services:
 
   migrate:
     profiles: [production]
-    image: ghcr.io/nexo-suite/nexo-db:latest
+    image: ghcr.io/nexo-suite/nexo-db:${APP_VERSION_DB:-latest}
     pull_policy: always
     networks: [production]
     environment:
@@ -244,7 +244,7 @@ services:
 
   auth:
     profiles: [production]
-    image: ghcr.io/nexo-suite/nexo-auth:latest
+    image: ghcr.io/nexo-suite/nexo-auth:${APP_VERSION_AUTH:-latest}
     pull_policy: always
     restart: unless-stopped
     init: true
@@ -291,7 +291,7 @@ services:
 
   admin:
     profiles: [production]
-    image: ghcr.io/nexo-suite/nexo-admin:latest
+    image: ghcr.io/nexo-suite/nexo-admin:${APP_VERSION_ADMIN:-latest}
     pull_policy: always
     restart: unless-stopped
     init: true
@@ -340,7 +340,7 @@ services:
 
   finance:
     profiles: [production]
-    image: ghcr.io/nexo-suite/nexo-finance:latest
+    image: ghcr.io/nexo-suite/nexo-finance:${APP_VERSION_FINANCE:-latest}
     pull_policy: always
     restart: unless-stopped
     init: true
@@ -387,7 +387,7 @@ services:
 
   calorie:
     profiles: [production]
-    image: ghcr.io/nexo-suite/nexo-calorie:latest
+    image: ghcr.io/nexo-suite/nexo-calorie:${APP_VERSION_CALORIE:-latest}
     pull_policy: always
     restart: unless-stopped
     init: true
@@ -434,7 +434,7 @@ services:
 
   flaschen:
     profiles: [production]
-    image: ghcr.io/nexo-suite/nexo-flaschen:latest
+    image: ghcr.io/nexo-suite/nexo-flaschen:${APP_VERSION_FLASCHEN:-latest}
     pull_policy: always
     restart: unless-stopped
     init: true
@@ -481,7 +481,7 @@ services:
 
   flaschen-worker:
     profiles: [production]
-    image: ghcr.io/nexo-suite/nexo-flaschen:latest
+    image: ghcr.io/nexo-suite/nexo-flaschen:${APP_VERSION_FLASCHEN:-latest}
     pull_policy: always
     command: node build/worker/index.js
     restart: unless-stopped
@@ -541,7 +541,7 @@ services:
 
   landing:
     profiles: [production]
-    image: ghcr.io/nexo-suite/nexo-landing:latest
+    image: ghcr.io/nexo-suite/nexo-landing:${APP_VERSION_LANDING:-latest}
     pull_policy: always
     restart: unless-stopped
     init: true
@@ -743,7 +743,7 @@ services:
 
   bot:
     profiles: [server]
-    image: ghcr.io/nexo-suite/nexo-bot:latest
+    image: ghcr.io/nexo-suite/nexo-bot:${APP_VERSION_BOT:-latest}
     pull_policy: always
     restart: unless-stopped
     init: true

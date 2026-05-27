@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.page_datenschutz_title()}</title>
+	<title>{m.page_privacy_title()}</title>
 </svelte:head>
 
 <main class="mx-auto max-w-[680px] px-6 py-16 pb-32">

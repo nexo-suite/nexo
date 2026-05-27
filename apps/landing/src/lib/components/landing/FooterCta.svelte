@@ -9,7 +9,7 @@
 		<div>{m.footer_copy()}</div>
 		<div class="flex items-center gap-4">
 			<a href="/impressum" class="text-text-faint hover:text-text-subtle transition-colors">{m.nav_impressum()}</a>
-			<a href="/datenschutz" class="text-text-faint hover:text-text-subtle transition-colors">{m.nav_datenschutz()}</a>
+			<a href="/privacy" class="text-text-faint hover:text-text-subtle transition-colors">{m.nav_privacy()}</a>
 			<span class="font-mono tracking-wider italic">{m.footer_tagline()}</span>
 		</div>
 	</div>

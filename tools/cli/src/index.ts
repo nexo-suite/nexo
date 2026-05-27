@@ -8,6 +8,7 @@ import { retag } from './commands/retag.ts';
 import { promote } from './commands/promote.ts';
 import { ciInit } from './commands/ci-init.ts';
 import { collectVersions } from './commands/collect-versions.ts';
+import { deploySummary, type DeploySummaryOpts } from './commands/deploy-summary.ts';
 import { fail } from './lib/log.ts';
 
 const program = new Command();
@@ -107,6 +108,19 @@ program
 	.description('Read $RP_OUTPUTS_JSON and emit {<app>: <version>} on stdout')
 	.action(() => {
 		collectVersions();
+	});
+
+program
+	.command('deploy-summary')
+	.description('Write a production deploy result to $GITHUB_STEP_SUMMARY')
+	.option('--outcome <status>', 'step outcome (success|failure|…)', process.env.DEPLOY_OUTCOME)
+	.option('--commit <sha>', 'git SHA', process.env.COMMIT_SHA)
+	.option('--run-number <n>', 'Actions run number', process.env.RUN_NUMBER)
+	.option('--run-id <id>', 'Actions run ID', process.env.RUN_ID)
+	.option('--repo <owner/name>', 'GitHub repo slug', process.env.REPO)
+	.option('--versions <json>', 'versions JSON object', process.env.VERSIONS_JSON)
+	.action((opts: DeploySummaryOpts) => {
+		deploySummary(opts);
 	});
 
 program.parseAsync(process.argv).catch((err) => {
