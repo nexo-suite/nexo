@@ -22,7 +22,7 @@
 //   APP_VERSION_BOT, APP_VERSION_DB, APP_COMMIT, APP_BUILD_TIME
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 
 const REGISTRY = 'ghcr.io/nexo-suite';
 const PROD_SERVICES = [
@@ -103,6 +103,7 @@ main().catch((err) => {
 
 async function main() {
 	ensureUnstableEnvFile();
+	ensureVersionsEnvFile();
 
 	logSection('1/7  Persist versions + snapshot :previous');
 	persistVersions();
@@ -169,9 +170,9 @@ function restoreVersions() {
 	if (existsSync('.env.versions.previous')) {
 		renameSync('.env.versions.previous', '.env.versions');
 		console.log('  Restored .env.versions from .env.versions.previous');
-	} else if (existsSync('.env.versions')) {
-		unlinkSync('.env.versions');
-		console.log('  Removed .env.versions (no previous backup; will fall back to :latest)');
+	} else {
+		writeFileSync('.env.versions', '');
+		console.log('  Cleared .env.versions (no previous backup; will fall back to :latest)');
 	}
 }
 
@@ -203,6 +204,10 @@ function buildComposeEnv(versionsJson) {
 
 function ensureUnstableEnvFile() {
 	if (!existsSync('.env.unstable')) writeFileSync('.env.unstable', '');
+}
+
+function ensureVersionsEnvFile() {
+	if (!existsSync('.env.versions')) writeFileSync('.env.versions', '');
 }
 
 function snapshotPreviousImages() {
