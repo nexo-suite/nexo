@@ -236,5 +236,10 @@
 	"appsub_pomodoro": "odak zamanlayıcı",
 	"appsub_books": "okuma günlüğü",
 	"appsub_recipes": "işe yarayanlar",
-	"appsub_movies": "izleme listesi"
+	"appsub_movies": "izleme listesi",
+
+	"nav_impressum": "Impressum",
+	"nav_datenschutz": "Gizlilik",
+	"page_impressum_title": "Impressum — Nexo",
+	"page_datenschutz_title": "Gizlilik — Nexo"
 }

@@ -7,7 +7,11 @@
 <footer class="border-border-subtle text-text-faint border-t py-5 pb-20 text-[12px] sm:pb-5">
 	<div class="mx-auto flex max-w-[1100px] flex-wrap items-center justify-between gap-3 px-6">
 		<div>{m.footer_copy()}</div>
-		<div class="font-mono tracking-wider italic">{m.footer_tagline()}</div>
+		<div class="flex items-center gap-4">
+			<a href="/impressum" class="text-text-faint hover:text-text-subtle transition-colors">{m.nav_impressum()}</a>
+			<a href="/datenschutz" class="text-text-faint hover:text-text-subtle transition-colors">{m.nav_datenschutz()}</a>
+			<span class="font-mono tracking-wider italic">{m.footer_tagline()}</span>
+		</div>
 	</div>
 </footer>
 

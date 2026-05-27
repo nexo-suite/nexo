@@ -236,5 +236,10 @@
 	"appsub_pomodoro": "a focus timer",
 	"appsub_books": "reading log",
 	"appsub_recipes": "what works",
-	"appsub_movies": "watch list"
+	"appsub_movies": "watch list",
+
+	"nav_impressum": "Impressum",
+	"nav_datenschutz": "Privacy",
+	"page_impressum_title": "Impressum — Nexo",
+	"page_datenschutz_title": "Datenschutz — Nexo"
 }
