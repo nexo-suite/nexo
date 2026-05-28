@@ -7,6 +7,9 @@
 		label: string;
 		description?: string;
 		icon?: string;
+		// Renders the row dimmed and non-interactive — useful for
+		// "coming soon" choices that should still be visible.
+		disabled?: boolean;
 	};
 
 	let {
@@ -16,6 +19,7 @@
 		value = $bindable(),
 		options,
 		doneLabel = 'Done',
+		stubNotice,
 		footer
 	}: {
 		open?: boolean;
@@ -24,6 +28,9 @@
 		value: V;
 		options: readonly Option[];
 		doneLabel?: string;
+		// Optional callout shown below the picker when at least one
+		// disabled option is present (e.g. "More themes coming later").
+		stubNotice?: string;
 		footer?: Snippet;
 	} = $props();
 </script>
@@ -38,7 +45,9 @@
 				type="button"
 				class="opt"
 				class:active={opt.value === value}
-				onclick={() => (value = opt.value)}
+				class:disabled={opt.disabled}
+				disabled={opt.disabled}
+				onclick={() => !opt.disabled && (value = opt.value)}
 			>
 				{#if opt.icon}
 					<span class="opt-icon">{opt.icon}</span>
@@ -53,6 +62,9 @@
 			</button>
 		{/each}
 	</div>
+	{#if stubNotice}
+		<div class="stub-notice">{stubNotice}</div>
+	{/if}
 	{@render footer?.()}
 	<button type="button" class="done" onclick={() => (open = false)}>{doneLabel}</button>
 </BottomSheet>
@@ -96,6 +108,25 @@
 
 	.opt:active {
 		background: var(--color-bg-2);
+	}
+
+	.opt.disabled {
+		opacity: 0.55;
+		cursor: default;
+	}
+
+	.opt.disabled:active {
+		background: transparent;
+	}
+
+	.stub-notice {
+		font-size: 12px;
+		color: var(--color-text-subtle);
+		background: var(--color-bg-1);
+		padding: 10px 12px;
+		border-radius: var(--radius-sm, 8px);
+		margin-top: 12px;
+		line-height: 1.4;
 	}
 
 	.opt-icon {

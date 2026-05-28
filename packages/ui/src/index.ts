@@ -15,6 +15,7 @@ export { default as SettingsRow } from './SettingsRow.svelte';
 export { default as SettingsScope } from './SettingsScope.svelte';
 export { default as ProfileHubCard } from './ProfileHubCard.svelte';
 export { default as SectionLabel } from './SectionLabel.svelte';
+export { default as StubInfoSheet } from './StubInfoSheet.svelte';
 export { default as Toggle } from './Toggle.svelte';
 export { default as ToggleRow } from './ToggleRow.svelte';
 export { default as UnsavedGuard } from './UnsavedGuard.svelte';

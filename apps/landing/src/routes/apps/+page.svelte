@@ -10,10 +10,13 @@
 		Toast,
 		AboutDiagnostics,
 		OptionPickerSheet,
+		StubInfoSheet,
 		UnsavedGuard
 	} from '@nexo/ui';
 	import SessionsSheet from '$lib/components/apps/SessionsSheet.svelte';
 	import AppGrid from '$lib/components/apps/AppGrid.svelte';
+	import NameEditSheet from '$lib/components/settings/NameEditSheet.svelte';
+	import SignoutSheet from '$lib/components/settings/SignoutSheet.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	const { data, form: actionData }: { data: PageData; form: ActionData } = $props();
@@ -81,46 +84,21 @@
 		selectedLocale = initialLocale;
 	}
 
-	type SheetField =
-		| 'name'
-		| 'email'
-		| 'time-format'
-		| 'theme'
-		| 'backups'
-		| 'export'
-		| 'audit'
-		| 'sessions'
-		| 'signout'
-		| null;
-	let settingsSheetOpen = $state(false);
-	let settingsSheetField = $state<SheetField>(null);
+	let nameSheetOpen = $state(false);
+	let emailSheetOpen = $state(false);
+	let backupsSheetOpen = $state(false);
+	let exportSheetOpen = $state(false);
+	let auditSheetOpen = $state(false);
+	let sessionsSheetOpen = $state(false);
+	let signoutSheetOpen = $state(false);
 	let languageSheetOpen = $state(false);
 	let weekSheetOpen = $state(false);
+	let timeFormatSheetOpen = $state(false);
+	let themeSheetOpen = $state(false);
 
-	const settingsSheetTitle = $derived.by(() => {
-		switch (settingsSheetField) {
-			case 'name':
-				return m.sheet_title_name();
-			case 'email':
-				return m.sheet_title_email();
-			case 'time-format':
-				return m.sheet_title_time_format();
-			case 'theme':
-				return m.sheet_title_theme();
-			case 'backups':
-				return m.sheet_title_backups();
-			case 'export':
-				return m.sheet_title_export();
-			case 'audit':
-				return m.sheet_title_audit();
-			case 'sessions':
-				return m.sheet_title_sessions();
-			case 'signout':
-				return m.sheet_title_signout();
-			default:
-				return '';
-		}
-	});
+	// Stubs — only one active option each, the rest are visible but disabled.
+	let stubTimeFormat = $state<'24h' | '12h'>('24h');
+	let stubTheme = $state<'light' | 'dark' | 'system'>('light');
 
 	const languageOptions = $derived(
 		locales.map((locale) => ({
@@ -139,6 +117,55 @@
 			icon: o.icon
 		}))
 	);
+
+	const timeFormatOptions = $derived<
+		{ value: '24h' | '12h'; label: string; description: string; icon: string; disabled?: boolean }[]
+	>([
+		{
+			value: '24h',
+			label: m.sheet_time_format_24h(),
+			description: m.sheet_time_format_24h_eg(),
+			icon: '🕐'
+		},
+		{
+			value: '12h',
+			label: m.sheet_time_format_12h(),
+			description: m.sheet_time_format_12h_eg(),
+			icon: '🕧',
+			disabled: true
+		}
+	]);
+
+	const themeOptions = $derived<
+		{
+			value: 'light' | 'dark' | 'system';
+			label: string;
+			description: string;
+			icon: string;
+			disabled?: boolean;
+		}[]
+	>([
+		{
+			value: 'light',
+			label: m.sheet_theme_light(),
+			description: m.sheet_theme_light_desc(),
+			icon: '☀️'
+		},
+		{
+			value: 'dark',
+			label: m.sheet_theme_dark(),
+			description: m.sheet_theme_dark_desc(),
+			icon: '🌙',
+			disabled: true
+		},
+		{
+			value: 'system',
+			label: m.sheet_theme_system(),
+			description: m.sheet_theme_system_desc(),
+			icon: '💻',
+			disabled: true
+		}
+	]);
 
 	let toastOpen = $state(false);
 	let toastMessage = $state('');
@@ -308,15 +335,6 @@
 		window.addEventListener('beforeunload', handler);
 		return () => window.removeEventListener('beforeunload', handler);
 	});
-
-	function openSheet(field: SheetField) {
-		settingsSheetField = field;
-		settingsSheetOpen = true;
-	}
-
-	function stubAction(_feature: string) {
-		return;
-	}
 </script>
 
 <svelte:head>
@@ -350,7 +368,7 @@
 			type="button"
 			class="icon-btn"
 			aria-label={m.apps_edit_profile_aria()}
-			onclick={() => openSheet('name')}
+			onclick={() => (nameSheetOpen = true)}
 		>
 			<svg
 				viewBox="0 0 24 24"
@@ -400,7 +418,7 @@
 			<div class="set-scope">
 				<b>{m.settings_scope_identity_label()}</b> · {m.settings_scope_identity_desc()}
 			</div>
-			<button type="button" class="set-row" onclick={() => openSheet('name')}>
+			<button type="button" class="set-row" onclick={() => (nameSheetOpen = true)}>
 				<div class="sr-icon">@</div>
 				<div class="sr-text">
 					<div class="sr-label">{m.settings_display_name()}</div>
@@ -417,7 +435,7 @@
 					>
 				</span>
 			</button>
-			<button type="button" class="set-row" onclick={() => openSheet('email')}>
+			<button type="button" class="set-row" onclick={() => (emailSheetOpen = true)}>
 				<div class="sr-icon">✉</div>
 				<div class="sr-text">
 					<div class="sr-label">{m.settings_email()}</div>
@@ -470,7 +488,7 @@
 					>
 				</span>
 			</button>
-			<button type="button" class="set-row stub-row" onclick={() => openSheet('time-format')}>
+			<button type="button" class="set-row stub-row" onclick={() => (timeFormatSheetOpen = true)}>
 				<div class="sr-icon">🕒</div>
 				<div class="sr-text">
 					<div class="sr-label">{m.settings_time_format()}</div>
@@ -490,7 +508,7 @@
 			<div class="set-scope">
 				<b>{m.settings_scope_appearance_label()}</b> · {m.settings_scope_appearance_desc()}
 			</div>
-			<button type="button" class="set-row stub-row" onclick={() => openSheet('theme')}>
+			<button type="button" class="set-row stub-row" onclick={() => (themeSheetOpen = true)}>
 				<div class="sr-icon">☀</div>
 				<div class="sr-text">
 					<div class="sr-label">{m.settings_theme()}</div>
@@ -513,7 +531,7 @@
 		<SectionLabel title={m.settings_data()} subtitle={m.settings_data_sub()} />
 
 		<div class="set-card">
-			<button type="button" class="set-row stub-row" onclick={() => openSheet('backups')}>
+			<button type="button" class="set-row stub-row" onclick={() => (backupsSheetOpen = true)}>
 				<div class="sr-icon">💾</div>
 				<div class="sr-text">
 					<div class="sr-label">{m.settings_backups()}</div>
@@ -521,7 +539,7 @@
 				</div>
 				<span class="dot-on">{m.settings_backups_on()}</span>
 			</button>
-			<button type="button" class="set-row stub-row" onclick={() => openSheet('export')}>
+			<button type="button" class="set-row stub-row" onclick={() => (exportSheetOpen = true)}>
 				<div class="sr-icon">↓</div>
 				<div class="sr-text">
 					<div class="sr-label">{m.settings_export()}</div>
@@ -538,7 +556,7 @@
 					>
 				</span>
 			</button>
-			<button type="button" class="set-row stub-row" onclick={() => openSheet('audit')}>
+			<button type="button" class="set-row stub-row" onclick={() => (auditSheetOpen = true)}>
 				<div class="sr-icon">📜</div>
 				<div class="sr-text">
 					<div class="sr-label">{m.settings_audit()}</div>
@@ -561,7 +579,7 @@
 		<SectionLabel title={m.settings_account()} />
 
 		<div class="set-card">
-			<button type="button" class="set-row" onclick={() => openSheet('sessions')}>
+			<button type="button" class="set-row" onclick={() => (sessionsSheetOpen = true)}>
 				<div class="sr-icon">🔑</div>
 				<div class="sr-text">
 					<div class="sr-label">{m.settings_sessions()}</div>
@@ -578,7 +596,7 @@
 					>
 				</span>
 			</button>
-			<button type="button" class="set-row danger-row" onclick={() => openSheet('signout')}>
+			<button type="button" class="set-row danger-row" onclick={() => (signoutSheetOpen = true)}>
 				<div class="sr-icon">⎋</div>
 				<div class="sr-text">
 					<div class="sr-label">{m.settings_signout()}</div>
@@ -636,134 +654,56 @@
 	</footer>
 
 	<!-- Settings sheets -->
-	<BottomSheet bind:open={settingsSheetOpen} title={settingsSheetTitle}>
-		{#if settingsSheetField === 'name'}
-			<p class="sheet-sub">{m.sheet_name_sub()}</p>
-			<div class="sheet-field">
-				<label for="sheetName">{m.sheet_name_label()}</label>
-				<input
-					id="sheetName"
-					type="text"
-					bind:value={displayName}
-					maxlength="32"
-					placeholder={m.sheet_name_placeholder()}
-				/>
-			</div>
-			<div class="sheet-hint">
-				{m.sheet_name_hint()}
-			</div>
-			<button type="button" class="sheet-done" onclick={() => (settingsSheetOpen = false)}
-				>{m.sheet_action_done()}</button
-			>
-		{:else if settingsSheetField === 'email'}
-			<p class="sheet-sub">{m.sheet_email_sub()}</p>
-			<div class="sheet-info">
-				{m.sheet_email_currently()} <b>{data.user.email}</b><br />
-				{m.sheet_email_verified()}
-			</div>
-			<div class="sheet-stub-notice">{m.sheet_email_stub()}</div>
-			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
-				>{m.sheet_action_close()}</button
-			>
-		{:else if settingsSheetField === 'time-format'}
-			<p class="sheet-sub">{m.sheet_time_format_sub()}</p>
-			<div class="sheet-picker">
-				<button type="button" class="sheet-opt active" onclick={() => stubAction('time-format')}>
-					<span class="sheet-opt-icon">🕐</span>
-					<div class="sheet-opt-text">
-						<span class="sheet-opt-name">{m.sheet_time_format_24h()}</span>
-						<span class="sheet-opt-desc">{m.sheet_time_format_24h_eg()}</span>
-					</div>
-					<span class="sheet-radio"></span>
-				</button>
-				<button type="button" class="sheet-opt" style="opacity: 0.55; pointer-events: none;">
-					<span class="sheet-opt-icon">🕧</span>
-					<div class="sheet-opt-text">
-						<span class="sheet-opt-name">{m.sheet_time_format_12h()}</span>
-						<span class="sheet-opt-desc">{m.sheet_time_format_12h_eg()}</span>
-					</div>
-					<span class="sheet-radio"></span>
-				</button>
-			</div>
-			<div class="sheet-stub-notice">{m.sheet_time_format_stub()}</div>
-			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
-				>{m.sheet_action_close()}</button
-			>
-		{:else if settingsSheetField === 'theme'}
-			<p class="sheet-sub">{m.sheet_theme_sub()}</p>
-			<div class="sheet-picker">
-				<button type="button" class="sheet-opt active" onclick={() => stubAction('theme')}>
-					<span class="sheet-opt-icon">☀️</span>
-					<div class="sheet-opt-text">
-						<span class="sheet-opt-name">{m.sheet_theme_light()}</span>
-						<span class="sheet-opt-desc">{m.sheet_theme_light_desc()}</span>
-					</div>
-					<span class="sheet-radio"></span>
-				</button>
-				<button type="button" class="sheet-opt" style="opacity: 0.55; pointer-events: none;">
-					<span class="sheet-opt-icon">🌙</span>
-					<div class="sheet-opt-text">
-						<span class="sheet-opt-name">{m.sheet_theme_dark()}</span>
-						<span class="sheet-opt-desc">{m.sheet_theme_dark_desc()}</span>
-					</div>
-					<span class="sheet-radio"></span>
-				</button>
-				<button type="button" class="sheet-opt" style="opacity: 0.55; pointer-events: none;">
-					<span class="sheet-opt-icon">💻</span>
-					<div class="sheet-opt-text">
-						<span class="sheet-opt-name">{m.sheet_theme_system()}</span>
-						<span class="sheet-opt-desc">{m.sheet_theme_system_desc()}</span>
-					</div>
-					<span class="sheet-radio"></span>
-				</button>
-			</div>
-			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
-				>{m.sheet_action_close()}</button
-			>
-		{:else if settingsSheetField === 'backups'}
-			<p class="sheet-sub">{m.sheet_backups_sub()}</p>
-			<div class="sheet-stub-notice">{m.sheet_backups_stub()}</div>
-			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
-				>{m.sheet_action_close()}</button
-			>
-		{:else if settingsSheetField === 'export'}
-			<p class="sheet-sub">
-				{m.sheet_export_sub()}
-			</p>
-			<div class="sheet-info">
-				<b>{m.sheet_export_inside_label()}</b><br />
-				· {m.sheet_export_inside_finance()}<br />
-				· {m.sheet_export_inside_profile()}<br />
-				· {m.sheet_export_inside_audit()}
-			</div>
-			<div class="sheet-stub-notice">{m.sheet_export_stub()}</div>
-			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
-				>{m.sheet_action_close()}</button
-			>
-		{:else if settingsSheetField === 'audit'}
-			<p class="sheet-sub">{m.sheet_audit_sub()}</p>
-			<div class="sheet-stub-notice">{m.sheet_audit_stub()}</div>
-			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
-				>{m.sheet_action_close()}</button
-			>
-		{:else if settingsSheetField === 'sessions'}
-			<SessionsSheet sessions={data.sessions} onclose={() => (settingsSheetOpen = false)} />
-		{:else if settingsSheetField === 'signout'}
-			<p class="sheet-sub">
-				{m.sheet_signout_sub()}
-			</p>
-			<div class="sheet-actions">
-				<button
-					type="button"
-					class="sheet-btn-secondary"
-					onclick={() => (settingsSheetOpen = false)}>{m.sheet_signout_stay()}</button
-				>
-				<a href={`${env.PUBLIC_AUTH_URL}/signout`} class="sheet-btn-danger"
-					>{m.sheet_signout_confirm()}</a
-				>
-			</div>
-		{/if}
+	<NameEditSheet bind:open={nameSheetOpen} bind:value={displayName} />
+
+	<StubInfoSheet
+		bind:open={emailSheetOpen}
+		title={m.sheet_title_email()}
+		subtitle={m.sheet_email_sub()}
+		stubNotice={m.sheet_email_stub()}
+		closeLabel={m.sheet_action_close()}
+	>
+		{m.sheet_email_currently()} <b>{data.user.email}</b><br />
+		{m.sheet_email_verified()}
+	</StubInfoSheet>
+
+	<StubInfoSheet
+		bind:open={backupsSheetOpen}
+		title={m.sheet_title_backups()}
+		subtitle={m.sheet_backups_sub()}
+		stubNotice={m.sheet_backups_stub()}
+		closeLabel={m.sheet_action_close()}
+	/>
+
+	<StubInfoSheet
+		bind:open={exportSheetOpen}
+		title={m.sheet_title_export()}
+		subtitle={m.sheet_export_sub()}
+		stubNotice={m.sheet_export_stub()}
+		closeLabel={m.sheet_action_close()}
+	>
+		<b>{m.sheet_export_inside_label()}</b><br />
+		· {m.sheet_export_inside_finance()}<br />
+		· {m.sheet_export_inside_profile()}<br />
+		· {m.sheet_export_inside_audit()}
+	</StubInfoSheet>
+
+	<StubInfoSheet
+		bind:open={auditSheetOpen}
+		title={m.sheet_title_audit()}
+		subtitle={m.sheet_audit_sub()}
+		stubNotice={m.sheet_audit_stub()}
+		closeLabel={m.sheet_action_close()}
+	/>
+
+	<BottomSheet bind:open={sessionsSheetOpen} title={m.sheet_title_sessions()}>
+		<SessionsSheet sessions={data.sessions} onclose={() => (sessionsSheetOpen = false)} />
 	</BottomSheet>
+
+	<SignoutSheet
+		bind:open={signoutSheetOpen}
+		signOutHref={`${env.PUBLIC_AUTH_URL}/signout`}
+	/>
 
 	<OptionPickerSheet
 		bind:open={languageSheetOpen}
@@ -781,6 +721,25 @@
 		subtitle={m.sheet_week_sub()}
 		options={weekOptionsForPicker}
 		doneLabel={m.sheet_action_done()}
+	/>
+
+	<OptionPickerSheet
+		bind:open={timeFormatSheetOpen}
+		bind:value={stubTimeFormat}
+		title={m.sheet_title_time_format()}
+		subtitle={m.sheet_time_format_sub()}
+		options={timeFormatOptions}
+		stubNotice={m.sheet_time_format_stub()}
+		doneLabel={m.sheet_action_close()}
+	/>
+
+	<OptionPickerSheet
+		bind:open={themeSheetOpen}
+		bind:value={stubTheme}
+		title={m.sheet_title_theme()}
+		subtitle={m.sheet_theme_sub()}
+		options={themeOptions}
+		doneLabel={m.sheet_action_close()}
 	/>
 </div>
 
@@ -1093,184 +1052,6 @@
 	}
 
 	/* ─── Sheet content ─── */
-	.sheet-sub {
-		font-size: 13px;
-		color: var(--color-text-subtle);
-		margin-top: 4px;
-		line-height: 1.5;
-	}
-	.sheet-field {
-		margin-top: 14px;
-	}
-	.sheet-field label {
-		display: block;
-		font-family: var(--font-mono);
-		font-size: 10px;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		color: var(--color-text-subtle);
-		margin-bottom: 6px;
-	}
-	.sheet-field input {
-		width: 100%;
-		height: 48px;
-		padding: 0 14px;
-		font: inherit;
-		font-size: 15px;
-		background: var(--color-bg-1);
-		border: 1px solid var(--color-border-subtle);
-		border-radius: var(--radius-md);
-		color: var(--color-text-primary);
-		outline: none;
-	}
-	.sheet-field input:focus {
-		border-color: var(--color-accent);
-		background: var(--color-surface-1);
-		box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 12%, transparent);
-	}
-	.sheet-hint {
-		margin-top: 8px;
-		font-size: 12px;
-		color: var(--color-text-subtle);
-		line-height: 1.5;
-	}
-	.sheet-info {
-		margin-top: 14px;
-		padding: 14px;
-		background: var(--color-bg-1);
-		border-radius: var(--radius-md);
-		font-size: 13px;
-		color: var(--color-text-muted);
-		line-height: 1.6;
-	}
-	.sheet-stub-notice {
-		margin-top: 14px;
-		padding: 12px 14px;
-		background: color-mix(in oklab, var(--color-accent) 6%, var(--color-bg-1));
-		border: 1px dashed color-mix(in oklab, var(--color-accent) 20%, var(--color-border-subtle));
-		border-radius: var(--radius-md);
-		font-size: 12px;
-		color: var(--color-text-subtle);
-		text-align: center;
-	}
-	.sheet-picker {
-		margin-top: 14px;
-		display: flex;
-		flex-direction: column;
-		background: var(--color-bg-1);
-		border-radius: var(--radius-md);
-		overflow: hidden;
-	}
-	.sheet-opt {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 13px 14px;
-		border: none;
-		border-top: 1px solid var(--color-border-subtle);
-		background: transparent;
-		cursor: pointer;
-		font: inherit;
-		color: inherit;
-		width: 100%;
-		text-align: left;
-		transition: background var(--duration-fast) var(--ease-out);
-	}
-	.sheet-opt:first-child {
-		border-top: 0;
-	}
-	.sheet-opt:active {
-		background: var(--color-bg-2);
-	}
-	.sheet-opt-text {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-	.sheet-opt-icon {
-		width: 28px;
-		height: 28px;
-		border-radius: 7px;
-		background: var(--color-bg-1);
-		border: 1px solid var(--color-border-subtle);
-		display: grid;
-		place-items: center;
-		font-size: 14px;
-		flex-shrink: 0;
-	}
-	.sheet-opt-name {
-		flex: 1;
-		font-size: 14.5px;
-		font-weight: 500;
-		letter-spacing: -0.005em;
-	}
-	.sheet-opt.active .sheet-opt-name {
-		color: color-mix(in oklab, var(--color-accent) 80%, #000);
-	}
-	.sheet-opt-desc {
-		font-size: 11.5px;
-		color: var(--color-text-subtle);
-	}
-	.sheet-radio {
-		width: 18px;
-		height: 18px;
-		border-radius: 50%;
-		border: 2px solid var(--color-border-strong);
-		flex-shrink: 0;
-		position: relative;
-		transition: border-color var(--duration-fast) var(--ease-out);
-	}
-	.sheet-opt.active .sheet-radio {
-		border-color: var(--color-accent);
-	}
-	.sheet-opt.active .sheet-radio::after {
-		content: '';
-		position: absolute;
-		inset: 3px;
-		border-radius: 50%;
-		background: var(--color-accent);
-	}
-	.sheet-done.secondary {
-		background: var(--color-bg-1);
-		color: var(--color-text-primary);
-		border: 1px solid var(--color-border-default);
-	}
-	.sheet-actions {
-		display: flex;
-		gap: 10px;
-	}
-	.sheet-btn-secondary {
-		flex: 1;
-		height: 48px;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		border-radius: var(--radius-md);
-		border: 1px solid var(--color-border-default);
-		background: var(--color-bg-1);
-		color: var(--color-text-primary);
-		cursor: pointer;
-	}
-	.sheet-btn-secondary:active {
-		opacity: 0.85;
-	}
-	.sheet-btn-danger {
-		flex: 1;
-		height: 48px;
-		font: inherit;
-		font-size: 15px;
-		font-weight: 600;
-		border-radius: var(--radius-md);
-		border: none;
-		background: oklch(0.59 0.2 27);
-		color: #fff;
-		cursor: pointer;
-		text-decoration: none;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
 	.sheet-btn-danger:active {
 		opacity: 0.85;
 	}
