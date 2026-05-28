@@ -44,7 +44,9 @@ jobs:
           envs: ACTION,SERVICE,PR_NUMBER
           # Dispatch + per-action validation lives in scripts/unstable.mjs;
           # the script accepts all three positional args every time and
-          # ignores empties for the variants that don't need them. No `case`,
-          # no `set -e` — script_stop gives us the same fail-fast behaviour.
-          script_stop: true
-          script: cd /home/deploy/nexo && node scripts/unstable.mjs "$ACTION" "$SERVICE" "$PR_NUMBER"
+          # ignores empties for the variants that don't need them. `set -e`
+          # at the top of the script gives us fail-fast behaviour.
+          script: |
+            set -e
+            cd /home/deploy/nexo
+            node scripts/unstable.mjs "$ACTION" "$SERVICE" "$PR_NUMBER"
