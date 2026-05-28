@@ -67,9 +67,9 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 			if (!state) return;
 			state.headSha = newSha;
 			// New commits → fresh `:pr-<n>` builds will publish; reset image
-			// readiness to pending and let registry_package re-flip them. The
-			// registry_package handler will auto-redeploy services whose
-			// intent is still true once the new image lands.
+			// readiness to pending and let package.published re-flip them. The
+			// package handler will auto-redeploy services whose intent is still
+			// true once the new image lands.
 			state.images = freshImages();
 			setPRState(state);
 			try {
