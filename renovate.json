@@ -3,11 +3,12 @@
 	"extends": [
 		"config:recommended",
 		":dependencyDashboard",
+		":disableLockFileMaintenance",
 		":semanticCommits",
 		"helpers:pinGitHubActionDigests"
 	],
 	"timezone": "Europe/Berlin",
-	"schedule": ["before 5am on Monday"],
+	"schedule": ["before 6am on weekdays"],
 	"labels": ["dependencies"],
 	"commitMessagePrefix": "chore(deps):",
 	"prConcurrentLimit": 10,
@@ -25,24 +26,21 @@
 			"groupName": "SvelteKit ecosystem",
 			"matchPackageNames": [
 				"svelte",
-				"svelte-check",
+				"svelte-check-native",
 				"@sveltejs/kit",
 				"@sveltejs/adapter-node",
 				"@sveltejs/vite-plugin-svelte",
 				"vite",
-				"@vite-pwa/sveltekit"
+				"@vite-pwa/sveltekit",
+				"vite-plugin-pwa",
+				"workbox-precaching",
+				"workbox-window"
 			]
 		},
 		{
 			"description": "Tailwind family",
 			"groupName": "Tailwind",
-			"matchPackageNames": [
-				"tailwindcss",
-				"@tailwindcss/vite",
-				"tailwind-merge",
-				"tailwind-variants",
-				"prettier-plugin-tailwindcss"
-			]
+			"matchPackageNames": ["tailwindcss", "@tailwindcss/vite", "tailwind-merge"]
 		},
 		{
 			"description": "Drizzle monorepo",
@@ -57,20 +55,7 @@
 		{
 			"description": "ESLint ecosystem",
 			"groupName": "ESLint",
-			"matchPackageNames": [
-				"eslint",
-				"@eslint/js",
-				"@eslint/compat",
-				"eslint-config-prettier",
-				"eslint-plugin-svelte",
-				"typescript-eslint",
-				"globals"
-			]
-		},
-		{
-			"description": "Prettier plugins — keep in sync",
-			"groupName": "Prettier",
-			"matchPackageNames": ["prettier", "prettier-plugin-svelte", "prettier-plugin-tailwindcss"]
+			"matchPackageNames": ["eslint", "@eslint/compat", "eslint-plugin-svelte", "typescript-eslint"]
 		},
 		{
 			"description": "Testing stack",
@@ -79,20 +64,78 @@
 				"vitest",
 				"@vitest/coverage-v8",
 				"@playwright/test",
-				"@testing-library/svelte",
 				"@testing-library/jest-dom",
 				"happy-dom"
 			]
 		},
 		{
-			"description": "Turbo",
+			"description": "Turborepo",
 			"groupName": "Turborepo",
 			"matchPackageNames": ["turbo"]
 		},
 		{
-			"description": "@types/node — single PR across all workspace packages",
-			"groupName": "@types/node",
-			"matchPackageNames": ["@types/node"]
+			"description": "Node.js runtime + types — single PR across .node-version, Dockerfiles, engines and @types/node",
+			"groupName": "Node.js",
+			"matchPackageNames": ["node", "@types/node"]
+		},
+		{
+			"description": "Pin @types/node major to match the Node runtime — bump this constraint when the project moves to Node 25+",
+			"matchPackageNames": ["@types/node"],
+			"allowedVersions": "<25"
+		},
+		{
+			"description": "Paraglide i18n",
+			"groupName": "Paraglide",
+			"matchPackageNames": ["@inlang/paraglide-js"]
+		},
+		{
+			"description": "React Email — keep runtime, types and tooling in sync",
+			"groupName": "React Email",
+			"matchPackageNames": [
+				"react",
+				"react-dom",
+				"@types/react",
+				"@types/react-dom",
+				"react-email",
+				"@react-email/ui"
+			]
+		},
+		{
+			"description": "Build tools",
+			"groupName": "Build tools",
+			"matchPackageNames": ["tsx", "tsdown", "oxlint", "oxfmt", "@typescript/native-preview"]
+		},
+		{
+			"description": "Fontsource variable fonts — move together",
+			"groupName": "Fontsource",
+			"matchPackageNames": [
+				"@fontsource-variable/inter",
+				"@fontsource-variable/jetbrains-mono",
+				"@fontsource-variable/fraunces"
+			]
+		},
+		{
+			"description": "Octokit — GitHub API + webhook clients for the bot",
+			"groupName": "Octokit",
+			"matchPackageNames": ["@octokit/auth-app", "@octokit/rest", "@octokit/webhooks"]
+		},
+		{
+			"description": "Observability stack — keep Grafana and Loki in sync",
+			"groupName": "Observability stack",
+			"matchManagers": ["docker-compose"],
+			"matchPackageNames": ["grafana/grafana", "grafana/loki"]
+		},
+		{
+			"description": "Dev utilities — miscellaneous root-level dev tooling",
+			"groupName": "devDeps",
+			"matchPackageNames": [
+				"knip",
+				"lint-staged",
+				"simple-git-hooks",
+				"sort-package-json",
+				"del-cli",
+				"npm-run-all2"
+			]
 		},
 		{
 			"description": "Major updates require explicit dashboard approval",
@@ -109,18 +152,12 @@
 		},
 		{
 			"description": "Dockerfile base images — keep digest-pinned",
-			"matchManagers": ["dockerfile"],
+			"matchManagers": ["dockerfile", "docker-compose"],
 			"pinDigests": true
 		},
 		{
-			"description": "Node Docker image — single PR across all 8 Dockerfiles",
-			"matchManagers": ["dockerfile"],
-			"matchPackageNames": ["node"],
-			"groupName": "node Docker image"
-		},
-		{
-			"description": "Dockerfile digest-only bumps (upstream rebuilds) — automerge",
-			"matchManagers": ["dockerfile"],
+			"description": "Dockerfile/compose digest-only bumps (upstream rebuilds) — automerge",
+			"matchManagers": ["dockerfile", "docker-compose"],
 			"matchUpdateTypes": ["digest"],
 			"automerge": true,
 			"automergeType": "pr",
