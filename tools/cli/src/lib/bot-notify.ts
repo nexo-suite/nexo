@@ -20,6 +20,7 @@ export type ImageReadyEvent = {
 };
 
 const RETRY_BACKOFFS_MS = [1000, 2000, 4000];
+const REQUEST_TIMEOUT_MS = 5000;
 
 export async function notifyImagesReady(events: readonly ImageReadyEvent[]): Promise<void> {
 	if (events.length === 0) return;
@@ -76,6 +77,8 @@ async function postWithRetry(
 
 	let lastError: unknown;
 	for (let attempt = 0; attempt <= RETRY_BACKOFFS_MS.length; attempt++) {
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 		try {
 			const res = await fetch(endpoint, {
 				method: 'POST',
@@ -83,16 +86,23 @@ async function postWithRetry(
 					'content-type': 'application/json',
 					'x-nexo-signature': `sha256=${sig}`
 				},
-				body
+				body,
+				signal: controller.signal
 			});
 			if (res.status >= 200 && res.status < 300) return;
-			// 4xx is not retriable — bail immediately.
+			// 4xx is not retriable — bail immediately. Misconfigured secret or
+			// stale bot deployment without /cli-event will land here.
 			if (res.status >= 400 && res.status < 500) {
 				throw new Error(`HTTP ${res.status}`);
 			}
 			lastError = new Error(`HTTP ${res.status}`);
 		} catch (e) {
 			lastError = e;
+			// 4xx errors are non-retriable — surface them now so we don't burn
+			// the full retry budget on a bad request.
+			if (e instanceof Error && /^HTTP 4\d\d$/.test(e.message)) throw e;
+		} finally {
+			clearTimeout(timer);
 		}
 
 		const backoff = RETRY_BACKOFFS_MS[attempt];
