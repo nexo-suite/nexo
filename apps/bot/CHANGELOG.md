@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/nexo-suite/nexo/compare/bot-v0.6.0...bot-v0.6.1) (2026-05-28)
+
+
+### Bug Fixes
+
+* **bot:** switch to newer package webhook type ([60fba80](https://github.com/nexo-suite/nexo/commit/60fba80aa9c9ba53255a1c5eb405064d8e952ba1))
+
 ## [0.6.0](https://github.com/nexo-suite/nexo/compare/bot-v0.5.0...bot-v0.6.0) (2026-05-27)
 
 
