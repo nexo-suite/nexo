@@ -189,12 +189,6 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 		await onContainerReady(pkg.name, pkg.package_type, pkg.owner?.login ?? '', tag);
 	});
 
-	webhooks.on('package.updated', async ({ payload }) => {
-		const pkg = payload.package;
-		const tag = pkg.package_version?.docker_metadata?.[0]?.tags?.[0] ?? '';
-		await onContainerReady(pkg.name, pkg.package_type, pkg.owner?.login ?? '', tag);
-	});
-
 	webhooks.on('workflow_run.completed', async ({ payload }) => {
 		const path = payload.workflow_run.path ?? '';
 
