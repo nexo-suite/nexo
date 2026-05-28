@@ -12,6 +12,8 @@
 	let videoEl = $state<HTMLVideoElement | null>(null);
 	let stream: MediaStream | null = null;
 	let stop = $state(false);
+	let cameraError = $state<string | null>(null);
+	let needsTap = $state(false);
 
 	async function lookup(barcode: string) {
 		phase = 'searching';
@@ -34,29 +36,83 @@
 	}
 
 	async function startCamera() {
+		if (!videoEl) {
+			cameraError = 'Video element not ready';
+			return;
+		}
+		cameraError = null;
+		needsTap = false;
 		try {
 			stream = await navigator.mediaDevices.getUserMedia({
-				video: { facingMode: 'environment' }
+				video: { facingMode: { ideal: 'environment' } }
 			});
-			if (videoEl) {
-				videoEl.srcObject = stream;
-				await videoEl.play();
+			videoEl.srcObject = stream;
+
+			// Wait for metadata so the video has real dimensions before play().
+			// On iOS PWA standalone, calling play() before loadedmetadata is a
+			// common cause of permission-granted-but-black-screen.
+			if (videoEl.readyState < 1) {
+				await new Promise<void>((resolve, reject) => {
+					if (!videoEl) return reject(new Error('video unmounted'));
+					const onLoad = () => {
+						cleanup();
+						resolve();
+					};
+					const onErr = () => {
+						cleanup();
+						reject(new Error('loadedmetadata error'));
+					};
+					const cleanup = () => {
+						videoEl?.removeEventListener('loadedmetadata', onLoad);
+						videoEl?.removeEventListener('error', onErr);
+					};
+					videoEl.addEventListener('loadedmetadata', onLoad, { once: true });
+					videoEl.addEventListener('error', onErr, { once: true });
+				});
 			}
-			const decode = await makeDecoder();
-			const tick = async () => {
-				if (stop || !videoEl) return;
-				if (phase === 'idle') {
-					const hit = await decode(videoEl);
-					if (hit && /^\d{8,14}$/.test(hit)) {
-						await lookup(hit);
-						return;
-					}
-				}
-				requestAnimationFrame(tick);
-			};
-			requestAnimationFrame(tick);
+
+			try {
+				await videoEl.play();
+			} catch (playErr) {
+				// iOS PWA can refuse autoplay even with playsinline+muted if the
+				// page wasn't entered via direct user gesture. Surface a tap-to-start.
+				console.warn('autoplay blocked, requesting tap', playErr);
+				needsTap = true;
+				return;
+			}
+
+			startDecodeLoop();
 		} catch (e) {
-			console.warn('camera unavailable', e);
+			console.error('camera failed', e);
+			cameraError = e instanceof Error ? e.message : String(e);
+		}
+	}
+
+	async function startDecodeLoop() {
+		const decode = await makeDecoder();
+		const tick = async () => {
+			if (stop || !videoEl) return;
+			if (phase === 'idle') {
+				const hit = await decode(videoEl);
+				if (hit && /^\d{8,14}$/.test(hit)) {
+					await lookup(hit);
+					return;
+				}
+			}
+			requestAnimationFrame(tick);
+		};
+		requestAnimationFrame(tick);
+	}
+
+	async function tapToStart() {
+		if (!videoEl) return;
+		try {
+			await videoEl.play();
+			needsTap = false;
+			startDecodeLoop();
+		} catch (e) {
+			console.error('tap-to-start failed', e);
+			cameraError = e instanceof Error ? e.message : String(e);
 		}
 	}
 
@@ -86,10 +142,21 @@
 			class="cam-video"
 			playsinline
 			muted
-			autoplay
 			aria-hidden="true"
 		></video>
 		<ScannerReticle state={phase} bind:torchOn />
+
+		{#if needsTap}
+			<button class="overlay-cta" type="button" onclick={tapToStart}>
+				Tap to start camera
+			</button>
+		{:else if cameraError}
+			<div class="overlay-error" role="alert">
+				<p>Camera unavailable</p>
+				<p class="overlay-error-detail">{cameraError}</p>
+				<button class="overlay-cta" type="button" onclick={startCamera}>Retry</button>
+			</div>
+		{/if}
 	</div>
 
 	<div class="bottom-panel">
@@ -168,6 +235,39 @@
 		height: 100%;
 		object-fit: cover;
 		z-index: 0;
+	}
+
+	.overlay-cta {
+		all: unset;
+		cursor: pointer;
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		padding: 14px 22px;
+		background: var(--color-ember);
+		color: oklch(98% 0.008 70);
+		border-radius: 14px;
+		font-size: 15px;
+		font-weight: 500;
+		z-index: 3;
+	}
+
+	.overlay-error {
+		position: absolute;
+		inset: 20px;
+		display: grid;
+		place-items: center;
+		gap: 10px;
+		text-align: center;
+		color: oklch(95% 0.008 70);
+		z-index: 3;
+	}
+
+	.overlay-error-detail {
+		font-size: 12px;
+		opacity: 0.7;
+		font-family: var(--font-mono);
 	}
 
 	.bottom-panel {
