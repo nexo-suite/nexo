@@ -668,7 +668,7 @@ services:
 
   cadvisor:
     profiles: [server]
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    image: ghcr.io/google/cadvisor:v0.57.0
     restart: unless-stopped
     networks: [production]
     mem_limit: 192m
