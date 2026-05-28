@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.2](https://github.com/nexo-suite/nexo/compare/bot-v0.6.1...bot-v0.6.2) (2026-05-28)
+
+
+### Bug Fixes
+
+* **bot:** update stale registry_package comment to package ([8118610](https://github.com/nexo-suite/nexo/commit/81186105cb15fbc7c39e6dc346e66c72fdda5361))
+* **unstable:** bot recovery, per-app cookie, parallel CLI cleanups ([040f639](https://github.com/nexo-suite/nexo/commit/040f63939339496c9230f9e23c8db6940106a064))
+
 ## [0.6.1](https://github.com/nexo-suite/nexo/compare/bot-v0.6.0...bot-v0.6.1) (2026-05-28)
 
 

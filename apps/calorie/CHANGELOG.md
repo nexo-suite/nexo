@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/nexo-suite/nexo/compare/calorie-v0.4.0...calorie-v0.4.1) (2026-05-28)
+
+
+### Bug Fixes
+
+* **calorie:** make scanner camera robust on iOS PWA standalone ([d0d846f](https://github.com/nexo-suite/nexo/commit/d0d846f3aed4e5392877a8f2f32d5c78a628df82))
+
 ## [0.4.0](https://github.com/nexo-suite/nexo/compare/calorie-v0.3.2...calorie-v0.4.0) (2026-05-27)
 
 

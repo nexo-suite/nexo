@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/nexo-suite/nexo/compare/cli-v0.5.0...cli-v0.5.1) (2026-05-28)
+
+
+### Bug Fixes
+
+* **unstable:** bot recovery, per-app cookie, parallel CLI cleanups ([040f639](https://github.com/nexo-suite/nexo/commit/040f63939339496c9230f9e23c8db6940106a064))
+
 ## [0.5.0](https://github.com/nexo-suite/nexo/compare/cli-v0.4.1...cli-v0.5.0) (2026-05-27)
 
 

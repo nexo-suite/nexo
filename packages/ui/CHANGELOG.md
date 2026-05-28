@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/nexo-suite/nexo/compare/ui-v0.9.0...ui-v0.9.1) (2026-05-28)
+
+
+### Bug Fixes
+
+* **unstable:** bot recovery, per-app cookie, parallel CLI cleanups ([040f639](https://github.com/nexo-suite/nexo/commit/040f63939339496c9230f9e23c8db6940106a064))
+
 ## [0.9.0](https://github.com/nexo-suite/nexo/compare/ui-v0.8.0...ui-v0.9.0) (2026-05-27)
 
 
