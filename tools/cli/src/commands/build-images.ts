@@ -119,6 +119,12 @@ function resolveOpts(
 	};
 }
 
+// OCI label that links a published GHCR package to the source repository.
+// Without it, packages live at the org level only and the repo's `package`
+// webhook never fires for new pushes — see
+// https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#labelling-container-images
+const REPO_URL = 'https://github.com/nexo-suite/nexo';
+
 function buildOne(app: App, outDir: string, opts: ResolvedBuildOpts): void {
 	const context = join(outDir, app.name);
 	buildxBuild({
@@ -129,12 +135,14 @@ function buildOne(app: App, outDir: string, opts: ResolvedBuildOpts): void {
 			GIT_COMMIT: opts.gitCommit,
 			BUILD_TIME: opts.buildTime
 		},
+		labels: imageLabels(opts),
 		push: opts.push
 	});
 	success(`${app.name}: image built`);
 }
 
 function bakeAll(targets: readonly App[], outDir: string, opts: ResolvedBuildOpts): void {
+	const labels = imageLabels(opts);
 	const bakeTargets: BakeTarget[] = targets.map((app) => ({
 		name: app.name,
 		context: join(outDir, app.name),
@@ -143,7 +151,8 @@ function bakeAll(targets: readonly App[], outDir: string, opts: ResolvedBuildOpt
 		args: {
 			GIT_COMMIT: opts.gitCommit,
 			BUILD_TIME: opts.buildTime
-		}
+		},
+		labels
 	}));
 	bakeBuild({
 		targets: bakeTargets,
@@ -151,4 +160,13 @@ function bakeAll(targets: readonly App[], outDir: string, opts: ResolvedBuildOpt
 		bakeFile: join(outDir, 'docker-bake.json')
 	});
 	for (const app of targets) success(`${app.name}: image built`);
+}
+
+function imageLabels(opts: ResolvedBuildOpts): Record<string, string> {
+	const labels: Record<string, string> = {
+		'org.opencontainers.image.source': REPO_URL,
+		'org.opencontainers.image.revision': opts.gitCommit
+	};
+	if (opts.buildTime) labels['org.opencontainers.image.created'] = opts.buildTime;
+	return labels;
 }

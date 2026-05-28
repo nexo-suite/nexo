@@ -7,6 +7,7 @@ export type BuildOpts = {
 	dockerfile?: string;
 	tags: readonly string[];
 	buildArgs?: Record<string, string>;
+	labels?: Record<string, string>;
 	push?: boolean;
 };
 
@@ -16,6 +17,9 @@ export function buildxBuild(opts: BuildOpts): void {
 	for (const tag of opts.tags) args.push('-t', tag);
 	for (const [k, v] of Object.entries(opts.buildArgs ?? {})) {
 		args.push('--build-arg', `${k}=${v}`);
+	}
+	for (const [k, v] of Object.entries(opts.labels ?? {})) {
+		args.push('--label', `${k}=${v}`);
 	}
 	args.push(opts.push ? '--push' : '--load');
 	args.push(opts.context);
@@ -30,6 +34,7 @@ export type BakeTarget = {
 	dockerfile?: string;
 	tags: readonly string[];
 	args?: Record<string, string>;
+	labels?: Record<string, string>;
 };
 
 // Emit a JSON bake file describing every target, then run `docker buildx
@@ -49,6 +54,7 @@ export function bakeBuild(opts: {
 			dockerfile: t.dockerfile ?? 'Dockerfile',
 			tags: [...t.tags],
 			args: t.args ?? {},
+			labels: t.labels ?? {},
 			output: [opts.push ? 'type=registry' : 'type=docker']
 		};
 	}
