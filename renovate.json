@@ -8,7 +8,7 @@
 		"helpers:pinGitHubActionDigests"
 	],
 	"timezone": "Europe/Berlin",
-	"schedule": ["before 6am on weekdays"],
+	"schedule": ["before 6am every weekday"],
 	"labels": ["dependencies"],
 	"commitMessagePrefix": "chore(deps):",
 	"prConcurrentLimit": 10,
