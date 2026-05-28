@@ -6,6 +6,7 @@ export type { BottomNavTab } from './BottomNav.types.js';
 export { default as BottomSheet } from './BottomSheet.svelte';
 export { default as DeviceListRow } from './DeviceListRow.svelte';
 export { default as KonamiCode } from './KonamiCode.svelte';
+export { default as OptionPickerSheet } from './OptionPickerSheet.svelte';
 export { default as PageHeader } from './PageHeader.svelte';
 export { default as PageShell } from './PageShell.svelte';
 export { default as SaveBar } from './SaveBar.svelte';

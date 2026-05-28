@@ -5,10 +5,12 @@
 	import {
 		AboutDiagnostics,
 		BottomSheet,
+		OptionPickerSheet,
 		PageHeader,
 		ProfileHubCard,
 		SectionLabel,
-		SettingsCard
+		SettingsCard,
+		SettingsRow
 	} from '@nexo/ui';
 	import Stepper from '$lib/components/Stepper.svelte';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
@@ -33,13 +35,37 @@
 
 	type SearchLocaleOpt = 'auto' | 'en' | 'de' | 'tr';
 	const searchLocale = $derived<SearchLocaleOpt>(data.searchLocale ?? 'auto');
-	const searchLocaleOpts: { id: SearchLocaleOpt; label: () => string }[] = [
-		{ id: 'auto', label: m.search_locale_auto },
-		{ id: 'en', label: m.search_locale_en },
-		{ id: 'de', label: m.search_locale_de },
-		{ id: 'tr', label: m.search_locale_tr }
-	];
+	const searchLocaleOptions = $derived<
+		{ value: SearchLocaleOpt; label: string; icon: string }[]
+	>([
+		{ value: 'auto', label: m.search_locale_auto(), icon: '🌐' },
+		{ value: 'en', label: m.search_locale_en(), icon: '🇬🇧' },
+		{ value: 'de', label: m.search_locale_de(), icon: '🇩🇪' },
+		{ value: 'tr', label: m.search_locale_tr(), icon: '🇹🇷' }
+	]);
 	let pendingSearchLocale = $state<SearchLocaleOpt | null>(null);
+	let searchLocaleSheetOpen = $state(false);
+	let searchLocaleDraft = $state<SearchLocaleOpt>('auto');
+	let searchLocaleForm = $state<HTMLFormElement | null>(null);
+
+	$effect(() => {
+		// Sync the draft to whatever the server says when the sheet isn't open;
+		// inside the sheet, draft is driven by the user's picks.
+		if (!searchLocaleSheetOpen) searchLocaleDraft = searchLocale;
+	});
+
+	$effect(() => {
+		// Submit immediately on pick — same instant feel as the old segmented
+		// buttons, just inside the new sheet layout.
+		const next = searchLocaleDraft;
+		if (searchLocaleSheetOpen && next !== searchLocale && searchLocaleForm) {
+			searchLocaleForm.requestSubmit();
+		}
+	});
+
+	const currentSearchLocaleLabel = $derived(
+		searchLocaleOptions.find((o) => o.value === (pendingSearchLocale ?? searchLocale))?.label ?? ''
+	);
 
 	let goalWeightOpen = $state(false);
 	let goalWeightDraft = $state(70);
@@ -183,31 +209,27 @@
 	<!-- ─── Search locale ─── -->
 	<SectionLabel title={m.search_locale_section()} subtitle={m.search_locale_subtitle()} />
 	<SettingsCard>
+		<SettingsRow
+			icon="🌐"
+			label={m.search_locale_section()}
+			value={currentSearchLocaleLabel}
+			onclick={() => (searchLocaleSheetOpen = true)}
+		/>
+
 		<form
-			class="tier-switcher"
+			bind:this={searchLocaleForm}
 			method="POST"
 			action="?/updateSearchLocale"
-			use:enhance={({ formData }) => {
-				const next = formData.get('searchLocale');
-				pendingSearchLocale =
-					next === 'en' || next === 'de' || next === 'tr' || next === 'auto' ? next : null;
+			class="hidden-form"
+			use:enhance={() => {
+				pendingSearchLocale = searchLocaleDraft;
 				return async ({ update }) => {
 					await update({ reset: false });
 					pendingSearchLocale = null;
 				};
 			}}
 		>
-			{#each searchLocaleOpts as opt (opt.id)}
-				<button
-					class="tier-opt"
-					class:on={(pendingSearchLocale ?? searchLocale) === opt.id}
-					type="submit"
-					name="searchLocale"
-					value={opt.id}
-				>
-					{opt.label()}
-				</button>
-			{/each}
+			<input type="hidden" name="searchLocale" value={searchLocaleDraft} />
 		</form>
 	</SettingsCard>
 
@@ -279,6 +301,14 @@
 		</div>
 	</div>
 </BottomSheet>
+
+<OptionPickerSheet
+	bind:open={searchLocaleSheetOpen}
+	bind:value={searchLocaleDraft}
+	title={m.search_locale_section()}
+	subtitle={m.search_locale_subtitle()}
+	options={searchLocaleOptions}
+/>
 
 <style>
 	.page {
@@ -422,6 +452,10 @@
 		font-weight: 400;
 		color: var(--color-text-subtle);
 		margin-left: 1px;
+	}
+
+	.hidden-form {
+		display: none;
 	}
 
 	/* ── Tier switcher ── */

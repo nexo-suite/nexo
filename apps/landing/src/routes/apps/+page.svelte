@@ -9,6 +9,7 @@
 		SectionLabel,
 		Toast,
 		AboutDiagnostics,
+		OptionPickerSheet,
 		UnsavedGuard
 	} from '@nexo/ui';
 	import SessionsSheet from '$lib/components/apps/SessionsSheet.svelte';
@@ -83,8 +84,6 @@
 	type SheetField =
 		| 'name'
 		| 'email'
-		| 'language'
-		| 'week'
 		| 'time-format'
 		| 'theme'
 		| 'backups'
@@ -95,6 +94,51 @@
 		| null;
 	let settingsSheetOpen = $state(false);
 	let settingsSheetField = $state<SheetField>(null);
+	let languageSheetOpen = $state(false);
+	let weekSheetOpen = $state(false);
+
+	const settingsSheetTitle = $derived.by(() => {
+		switch (settingsSheetField) {
+			case 'name':
+				return m.sheet_title_name();
+			case 'email':
+				return m.sheet_title_email();
+			case 'time-format':
+				return m.sheet_title_time_format();
+			case 'theme':
+				return m.sheet_title_theme();
+			case 'backups':
+				return m.sheet_title_backups();
+			case 'export':
+				return m.sheet_title_export();
+			case 'audit':
+				return m.sheet_title_audit();
+			case 'sessions':
+				return m.sheet_title_sessions();
+			case 'signout':
+				return m.sheet_title_signout();
+			default:
+				return '';
+		}
+	});
+
+	const languageOptions = $derived(
+		locales.map((locale) => ({
+			value: locale,
+			label: languageLabels[locale] ?? locale,
+			description: languageDescs[locale] ?? '',
+			icon: languageIcons[locale] ?? '🌐'
+		}))
+	);
+
+	const weekOptionsForPicker = $derived(
+		weekDayOptions.map((o) => ({
+			value: o.value,
+			label: o.label,
+			description: o.desc,
+			icon: o.icon
+		}))
+	);
 
 	let toastOpen = $state(false);
 	let toastMessage = $state('');
@@ -394,7 +438,7 @@
 			<div class="set-scope">
 				<b>{m.settings_scope_locale_label()}</b> · {m.settings_scope_locale_desc()}
 			</div>
-			<button type="button" class="set-row" onclick={() => openSheet('language')}>
+			<button type="button" class="set-row" onclick={() => (languageSheetOpen = true)}>
 				<div class="sr-icon">🌐</div>
 				<div class="sr-text">
 					<div class="sr-label">{m.settings_language()}</div>
@@ -410,7 +454,7 @@
 					>
 				</span>
 			</button>
-			<button type="button" class="set-row" onclick={() => openSheet('week')}>
+			<button type="button" class="set-row" onclick={() => (weekSheetOpen = true)}>
 				<div class="sr-icon">📅</div>
 				<div class="sr-text">
 					<div class="sr-label">{m.settings_week_starts()}</div>
@@ -592,32 +636,7 @@
 	</footer>
 
 	<!-- Settings sheets -->
-	<BottomSheet
-		bind:open={settingsSheetOpen}
-		title={settingsSheetField === 'name'
-			? m.sheet_title_name()
-			: settingsSheetField === 'email'
-				? m.sheet_title_email()
-				: settingsSheetField === 'language'
-					? m.sheet_title_language()
-					: settingsSheetField === 'week'
-						? m.sheet_title_week()
-						: settingsSheetField === 'time-format'
-							? m.sheet_title_time_format()
-							: settingsSheetField === 'theme'
-								? m.sheet_title_theme()
-								: settingsSheetField === 'backups'
-									? m.sheet_title_backups()
-									: settingsSheetField === 'export'
-										? m.sheet_title_export()
-										: settingsSheetField === 'audit'
-											? m.sheet_title_audit()
-											: settingsSheetField === 'sessions'
-												? m.sheet_title_sessions()
-												: settingsSheetField === 'signout'
-													? m.sheet_title_signout()
-													: ''}
-	>
+	<BottomSheet bind:open={settingsSheetOpen} title={settingsSheetTitle}>
 		{#if settingsSheetField === 'name'}
 			<p class="sheet-sub">{m.sheet_name_sub()}</p>
 			<div class="sheet-field">
@@ -645,50 +664,6 @@
 			<div class="sheet-stub-notice">{m.sheet_email_stub()}</div>
 			<button type="button" class="sheet-done secondary" onclick={() => (settingsSheetOpen = false)}
 				>{m.sheet_action_close()}</button
-			>
-		{:else if settingsSheetField === 'language'}
-			<p class="sheet-sub">{m.sheet_language_sub()}</p>
-			<div class="sheet-picker">
-				{#each locales as locale (locale)}
-					<button
-						type="button"
-						class="sheet-opt"
-						class:active={locale === selectedLocale}
-						onclick={() => (selectedLocale = locale)}
-					>
-						<span class="sheet-opt-icon">{languageIcons[locale] ?? '🌐'}</span>
-						<div class="sheet-opt-text">
-							<span class="sheet-opt-name">{languageLabels[locale] ?? locale}</span>
-							<span class="sheet-opt-desc">{languageDescs[locale] ?? ''}</span>
-						</div>
-						<span class="sheet-radio"></span>
-					</button>
-				{/each}
-			</div>
-			<button type="button" class="sheet-done" onclick={() => (settingsSheetOpen = false)}
-				>{m.sheet_action_done()}</button
-			>
-		{:else if settingsSheetField === 'week'}
-			<p class="sheet-sub">{m.sheet_week_sub()}</p>
-			<div class="sheet-picker">
-				{#each weekDayOptions as opt (opt.value)}
-					<button
-						type="button"
-						class="sheet-opt"
-						class:active={weekStartDay === opt.value}
-						onclick={() => (weekStartDay = opt.value)}
-					>
-						<span class="sheet-opt-icon">{opt.icon}</span>
-						<div class="sheet-opt-text">
-							<span class="sheet-opt-name">{opt.label}</span>
-							<span class="sheet-opt-desc">{opt.desc}</span>
-						</div>
-						<span class="sheet-radio"></span>
-					</button>
-				{/each}
-			</div>
-			<button type="button" class="sheet-done" onclick={() => (settingsSheetOpen = false)}
-				>{m.sheet_action_done()}</button
 			>
 		{:else if settingsSheetField === 'time-format'}
 			<p class="sheet-sub">{m.sheet_time_format_sub()}</p>
@@ -789,6 +764,24 @@
 			</div>
 		{/if}
 	</BottomSheet>
+
+	<OptionPickerSheet
+		bind:open={languageSheetOpen}
+		bind:value={selectedLocale}
+		title={m.sheet_title_language()}
+		subtitle={m.sheet_language_sub()}
+		options={languageOptions}
+		doneLabel={m.sheet_action_done()}
+	/>
+
+	<OptionPickerSheet
+		bind:open={weekSheetOpen}
+		bind:value={weekStartDay}
+		title={m.sheet_title_week()}
+		subtitle={m.sheet_week_sub()}
+		options={weekOptionsForPicker}
+		doneLabel={m.sheet_action_done()}
+	/>
 </div>
 
 <Toast bind:open={toastOpen} type={toastType} message={toastMessage} duration={3000} />

@@ -11,7 +11,7 @@ export type BuildOpts = {
 };
 
 export function buildxBuild(opts: BuildOpts): void {
-	const args: string[] = ['buildx', 'build'];
+	const args: string[] = ['buildx', 'build', '--progress=quiet'];
 	if (opts.dockerfile) args.push('-f', opts.dockerfile);
 	for (const tag of opts.tags) args.push('-t', tag);
 	for (const [k, v] of Object.entries(opts.buildArgs ?? {})) {
@@ -58,7 +58,7 @@ export function bakeBuild(opts: {
 	};
 	mkdirSync(dirname(opts.bakeFile), { recursive: true });
 	writeFileSync(opts.bakeFile, JSON.stringify(bake, null, 2));
-	run('docker', ['buildx', 'bake', '-f', opts.bakeFile]);
+	run('docker', ['buildx', 'bake', '--progress=quiet', '-f', opts.bakeFile]);
 }
 
 // Registry-side manifest copy. No layer pull/push — fast, even for multi-arch
