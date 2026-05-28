@@ -89,7 +89,14 @@
 	}
 
 	async function startDecodeLoop() {
-		const decode = await makeDecoder();
+		let decode;
+		try {
+			decode = await makeDecoder();
+		} catch (e) {
+			console.error('scanner init failed', e);
+			cameraError = e instanceof Error ? e.message : String(e);
+			return;
+		}
 		const tick = async () => {
 			if (stop || !videoEl) return;
 			if (phase === 'idle') {
