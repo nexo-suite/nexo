@@ -144,19 +144,45 @@ export function registerWebhooks(webhooks: Webhooks, env: Env): void {
 		// GitHub's `package` webhook sends `package_type: "CONTAINER"` on the
 		// wire (uppercase) even though Octokit's TS types claim lowercase.
 		// Normalize before comparing so events aren't silently dropped.
-		if (packageType.toLowerCase() !== 'container') return;
-		if (ownerLogin.toLowerCase() !== env.owner.toLowerCase()) return;
-		if (!pkgName.startsWith('nexo-')) return;
+		if (packageType.toLowerCase() !== 'container') {
+			logger.debug('package skipped: not a container', { pkgName, packageType });
+			return;
+		}
+		if (ownerLogin.toLowerCase() !== env.owner.toLowerCase()) {
+			logger.debug('package skipped: wrong owner', {
+				pkgName,
+				ownerLogin,
+				expected: env.owner
+			});
+			return;
+		}
+		if (!pkgName.startsWith('nexo-')) {
+			logger.debug('package skipped: not a nexo image', { pkgName });
+			return;
+		}
 		const app = pkgName.slice('nexo-'.length);
-		if (!UNSTABLE_APPS.includes(app as UnstableApp)) return;
+		if (!UNSTABLE_APPS.includes(app as UnstableApp)) {
+			logger.debug('package skipped: app not in UNSTABLE_APPS', { app, pkgName });
+			return;
+		}
 		const m = tag.match(/^pr-(\d+)$/);
-		if (!m) return;
+		if (!m) {
+			logger.debug('package skipped: tag is not pr-N', { tag, app });
+			return;
+		}
 		const prNumber = Number(m[1]);
 
 		await withPRLock(prNumber, async () => {
 			const state = getPRState(prNumber);
-			if (!state) return;
-			if (state.images[app as UnstableApp] === 'ready') return;
+			if (!state) {
+				logger.debug('package skipped: no PR state', { prNumber, app });
+				return;
+			}
+			if (state.images[app as UnstableApp] === 'ready') {
+				logger.debug('package skipped: image already ready', { prNumber, app });
+				return;
+			}
+			logger.info('package: image ready', { prNumber, app, tag });
 			state.images[app as UnstableApp] = 'ready';
 			setPRState(state);
 			try {
