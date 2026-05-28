@@ -85,6 +85,17 @@
 		// unstable upstream. Caddy's per-vhost matchers already only see cookies
 		// sent to that vhost, so no Caddy change is needed.
 		const secure = location.protocol === 'https:' ? '; secure' : '';
+		// Always also write a `max-age=0` cookie at the parent domain. Before
+		// the per-app migration this toggle wrote with `domain=.krieger2501.de`,
+		// so anyone who enabled it back then has a parent-scoped cookie that
+		// shadows our host-scoped one — `document.cookie` reads it first and
+		// the toggle appears stuck on `=1`. A host-scoped delete won't touch
+		// the parent cookie; only a write that matches the original domain
+		// will. Doing this on every toggle (tick AND untick) makes the
+		// migration self-healing without nagging anyone.
+		if (location.hostname.endsWith('krieger2501.de')) {
+			document.cookie = `${UNSTABLE_COOKIE}=0; path=/; domain=.krieger2501.de; max-age=0${secure}; samesite=lax`;
+		}
 		const value = next ? '1' : '0';
 		const maxAge = next ? 'max-age=2592000' : 'max-age=0';
 		document.cookie = `${UNSTABLE_COOKIE}=${value}; path=/; ${maxAge}${secure}; samesite=lax`;
