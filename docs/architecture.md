@@ -349,6 +349,14 @@ this file when starting an unstable container and clears it on PR close or after
 a successful production release. Production therefore always converges to a
 known-good `:latest` state.
 
+The bot learns when a PR's `:pr-N` images are ready via a direct authenticated
+POST from the CI runner (`/cli-event`, HMAC-SHA256 with a dedicated secret).
+We don't rely on GHCR's `package.published` webhook events — they fire with
+empty `tag.name` for manifest-creation and aren't reliably delivered for all
+packages. The CLI knows what it just pushed; it tells the bot directly. See
+[deployment.md › Unstable instances](deployment.md#unstable-instances) for the
+wire format.
+
 All bot mutations (slash commands, checkbox toggles) are gated by a GitHub
 repo-permission check — only `admin`/`maintain`/`write` collaborators can drive
 the bot.

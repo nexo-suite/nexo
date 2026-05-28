@@ -59,7 +59,7 @@ program
 	.option('--git-commit <sha>')
 	.option('--build-time <iso>')
 	.action(
-		(opts: {
+		async (opts: {
 			app?: string;
 			outDir: string;
 			tag?: string[];
@@ -67,7 +67,7 @@ program
 			gitCommit?: string;
 			buildTime?: string;
 		}) => {
-			buildImages({
+			await buildImages({
 				app: opts.app,
 				outDir: opts.outDir,
 				tags: opts.tag,

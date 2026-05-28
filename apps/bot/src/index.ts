@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { createLogger } from '@nexo/logger';
 import { registerWebhooks } from './webhooks.js';
+import { handleCliEvent } from './cli-event.js';
 import { bootstrapImageProbes } from './reconcile.js';
 import { getInstallationOctokit, type Env } from './github.js';
 import { initStateFromDisk, setOnChange, snapshot } from './state.js';
@@ -21,10 +22,18 @@ const {
 	GH_WEBHOOK_SECRET,
 	GH_REPO_OWNER,
 	GH_REPO_NAME,
+	NEXO_BOT_SECRET,
 	PORT = '3003'
 } = process.env;
 
-if (!GH_CLIENT_ID || !GH_APP_PRIVATE_KEY || !GH_WEBHOOK_SECRET || !GH_REPO_OWNER || !GH_REPO_NAME) {
+if (
+	!GH_CLIENT_ID ||
+	!GH_APP_PRIVATE_KEY ||
+	!GH_WEBHOOK_SECRET ||
+	!GH_REPO_OWNER ||
+	!GH_REPO_NAME ||
+	!NEXO_BOT_SECRET
+) {
 	logger.error('missing required env vars');
 	process.exit(1);
 }
@@ -68,6 +77,10 @@ createServer((req, res) => {
 				latency_ms: 0
 			})
 		);
+		return;
+	}
+	if (req.url === '/cli-event') {
+		void handleCliEvent(req, res, env, NEXO_BOT_SECRET!);
 		return;
 	}
 	middleware(req, res);

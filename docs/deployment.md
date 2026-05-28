@@ -407,7 +407,21 @@ Open `https://auth.krieger2501.de/login` and sign in. That's your admin account.
 
 The normal path is CI/CD — merge to main and let release-please handle it (see Deploy above).
 
-If you need to ship a fix to production **without** waiting for a release PR:
+```mermaid
+flowchart TD
+  start([Need to ship a fix to prod NOW]) --> ci_works{CI working?}
+  ci_works -->|yes| pr[Open PR + squash-merge fast]
+  ci_works -->|no| local[Build locally + push :hotfix tag]
+  pr --> waitci[Wait for CI to retag :main]
+  waitci --> sshmain[SSH + compose pull + up :main]
+  local --> sshhotfix[SSH + retag :latest + compose pull + up]
+  sshmain --> done([Production runs hotfix])
+  sshhotfix --> done
+```
+
+### CI working: pin a single service to `:main`
+
+If you need to ship a fix to production **without** waiting for a release PR but CI is healthy:
 
 1. Merge the fix to `main`. CI retags `:pr-<n>` → `:main-<sha>` + `:main`.
 2. SSH to the VPS and pin a single service to `:main`:
@@ -422,6 +436,50 @@ If you need to ship a fix to production **without** waiting for a release PR:
 The `:latest` images for other services stay untouched. Next release will fold the fix in normally.
 
 > Don't `--build` on the VPS. The Dockerfiles are thin (single-stage `COPY . . + CMD`); the actual build happens in CI inside `pnpm deploy` output. Building locally would fail because the VPS doesn't have the source tree's `node_modules/` or `build/` artifacts.
+
+### Worst case: CI is broken / can't ship through release-please
+
+When CI itself is unavailable (provider outage, broken workflow, etc.) and you must ship a fix immediately, bypass CI entirely: build locally, push to GHCR, retag `:latest`, and roll the service on the VPS by hand.
+
+**Prerequisites on your laptop:** Docker (with buildx), `docker login ghcr.io` (or `gh auth login` and `gh auth token | docker login ghcr.io -u <username> --password-stdin`), SSH access to the VPS as `deploy`.
+
+```bash
+# 1. Build and push a hotfix-tagged image. The :hotfix-<sha> tag can't collide
+#    with normal CI output, so it's safe even if CI comes back mid-flight.
+SHORT_SHA=$(git rev-parse --short HEAD)
+APP=finance   # or whichever broken service
+IMAGE="ghcr.io/nexo-suite/nexo-$APP:hotfix-$SHORT_SHA"
+
+# Build context the same way CI does
+pnpm install --frozen-lockfile
+pnpm exec nexo build-apps
+pnpm exec nexo prepare-contexts
+
+# Push with the same Dockerfile CI uses
+docker buildx build \
+  -f "out/$APP/Dockerfile" \
+  -t "$IMAGE" \
+  --push \
+  "out/$APP"
+
+# 2. Retag :latest at the registry (no layer pull/push — fast) so
+#    `docker compose pull` on the VPS picks up the hotfix build.
+docker buildx imagetools create --tag "ghcr.io/nexo-suite/nexo-$APP:latest" "$IMAGE"
+
+# 3. SSH and roll just that service.
+ssh deploy@VPS_HOST <<EOF
+  cd ~/nexo
+  docker compose --profile production --env-file .env --env-file .env.versions pull $APP
+  docker compose --profile production --env-file .env --env-file .env.versions up -d $APP
+EOF
+```
+
+**Caveats**:
+
+- This bypasses release-please and `.env.versions`. The next normal release will overwrite `:latest` with the proper `:version` tag, which is fine — your fix is still committed in git as long as you merged the underlying change to `main` (do this even if CI is broken, you want the audit trail).
+- For database-side hotfixes (a bad migration), don't try to ship a code fix — `docker compose exec postgres psql` and roll back manually. Different runbook.
+- If the VPS itself is degraded (Docker daemon stuck, disk full), this won't help. Different runbook again.
+- If `auth` or `caddy` is the broken service, expect short-lived 5xx during the `up -d` cycle while the container restarts.
 
 ---
 
@@ -546,24 +604,62 @@ worker, so pinning it would affect everyone.
 
 ```mermaid
 flowchart LR
-  click[Maintainer ticks checkbox<br/>on PR sticky comment]
-  click --> bot
-  bot[nexo-bot<br/>perms gate + reconciler] -->|workflow_dispatch| wf
-  wf[unstable.yml] -->|SSH| vps
+  subgraph github[GitHub]
+    pr[PR push]
+    ci[CI workflow<br/>build-images]
+    ghcr[(GHCR<br/>:pr-N images)]
+  end
+
+  subgraph botbox[bot.krieger2501.de]
+    sticky[Sticky comment<br/>checkboxes]
+    cli_evt["/cli-event<br/>HMAC-signed"]
+    webhook["/webhook<br/>GitHub HMAC"]
+  end
 
   subgraph vps[VPS]
-    script[scripts/unstable.mjs<br/>up &lt;svc&gt; &lt;pr&gt;]
-    envfile[.env.unstable<br/>FINANCE_UNSTABLE_TAG=pr-N]
-    script --> envfile
-    script --> compose[docker compose --profile unstable up -d]
-    compose --> peer[finance_unstable<br/>:pr-N]
+    script[scripts/unstable.mjs]
+    peer[finance_unstable<br/>:pr-N]
   end
+
+  pr --> ci -->|push| ghcr
+  ci -->|POST image-ready| cli_evt
+  cli_evt -->|flip images=ready| sticky
+  sticky -.->|user ticks box| webhook
+  webhook -->|workflow_dispatch| script -->|compose up| peer
 
   user([Browser w/ cookie<br/>nexo_unstable=1]) --> caddy[Caddy]
   caddy --> peer
   user2([Everyone else]) --> caddy
   caddy --> stable[finance<br/>:latest]
 ```
+
+The CLI signals the bot directly after pushing to GHCR — we don't rely on
+GHCR's `package.published` events, which fire with empty tag names for
+manifest-creation and aren't reliably delivered for all packages. The
+`/cli-event` endpoint is HMAC-authenticated with `NEXO_BOT_SECRET` (a fresh
+secret, separate from the GitHub webhook secret).
+
+#### Wire format
+
+The CLI POSTs one event per pushed app right after `docker buildx bake` returns:
+
+```http
+POST /cli-event
+Content-Type: application/json
+X-Nexo-Signature: sha256=<hex hmac-sha256 of body>
+
+{ "kind": "image-ready", "app": "calorie", "prNumber": 95, "tag": "pr-95" }
+```
+
+The bot verifies the HMAC, looks up the PR's state, flips
+`images[app] = 'ready'`, and either dispatches the unstable workflow (if the
+checkbox was already ticked) or just refreshes the sticky comment. Duplicate
+events are idempotent — the comment refresh is self-healing if state and
+display ever drift.
+
+Retries: the CLI retries up to 3× with 1s/2s/4s backoff on network errors and
+5xx; 4xx is fatal. If the bot is genuinely down, the CI step fails loudly so
+a missed signal can't pass silently.
 
 State sources:
 

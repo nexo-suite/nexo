@@ -112,6 +112,9 @@ jobs:
         run: pnpm exec nexo prepare-contexts
 
       - name: Build & push container images
+        env:
+          NEXO_BOT_URL: ${{ secrets.NEXO_BOT_URL }}
+          NEXO_BOT_SECRET: ${{ secrets.NEXO_BOT_SECRET }}
         run: pnpm exec nexo build-images
 
       - name: Retag images

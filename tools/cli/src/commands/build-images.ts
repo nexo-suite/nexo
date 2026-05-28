@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { APPS, findApp, imageRef, type App } from '../apps.ts';
+import { notifyImagesReady, type ImageReadyEvent } from '../lib/bot-notify.ts';
 import { bakeBuild, buildxBuild, type BakeTarget } from '../lib/docker.ts';
 import { CONTEXT_FILE, readContext } from '../lib/context.ts';
 import { fail, info, section, success } from '../lib/log.ts';
@@ -29,7 +30,7 @@ export type BuildImagesOpts = {
 // `.nexo/ci-context.json`. CLI flags override the context for local runs.
 // No-op on the retag fast-path so the CI workflow can call this command
 // unconditionally.
-export function buildImages(opts: BuildImagesOpts): void {
+export async function buildImages(opts: BuildImagesOpts): Promise<void> {
 	const ctx = existsSync(CONTEXT_FILE) ? readContext() : null;
 	if (ctx?.strategy === 'retag' && (!opts.tags || opts.tags.length === 0)) {
 		section('Build & push container images');
@@ -77,6 +78,22 @@ export function buildImages(opts: BuildImagesOpts): void {
 			)
 		)
 	);
+
+	// Notify the bot that PR images just landed in GHCR. Only fires when this
+	// run pushed a `:pr-N` tag — main and release pushes have nothing for the
+	// bot to do. Non-PR runs and local invocations skip emission silently.
+	if (resolved.push) {
+		const prTag = resolved.tags.find((t) => /^pr-\d+$/.test(t));
+		const prNumber = ctx?.prNumber ? Number(ctx.prNumber) : null;
+		if (prTag && prNumber && Number.isInteger(prNumber) && prNumber > 0) {
+			const events: ImageReadyEvent[] = targets.map((a) => ({
+				app: a.name,
+				prNumber,
+				tag: prTag
+			}));
+			await notifyImagesReady(events);
+		}
+	}
 }
 
 type ResolvedBuildOpts = {
