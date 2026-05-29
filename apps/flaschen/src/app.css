@@ -216,42 +216,8 @@ body {
 }
 
 /* ───────────── Page header / greeting ───────────── */
-.greeting {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	padding: 16px 4px 6px;
-}
-.greeting-line {
-	display: flex;
-	align-items: baseline;
-	gap: 8px;
-	flex-wrap: wrap;
-}
-.greeting-hi {
-	font-family: var(--font-display);
-	font-style: italic;
-	font-size: 36px;
-	line-height: 1;
-	letter-spacing: -0.01em;
-	color: var(--accent-ink);
-	font-weight: 400;
-}
-.greeting-name {
-	font-size: 30px;
-	line-height: 1;
-	letter-spacing: -0.025em;
-	font-weight: 700;
-	color: var(--text-primary);
-}
-.greeting-date {
-	font-family: var(--font-mono);
-	font-size: 11px;
-	letter-spacing: 0.18em;
-	text-transform: uppercase;
-	color: var(--text-subtle);
-	margin-top: 6px;
-}
+/* The dashboard greeting now uses <GreetingHeader> from @nexo/ui;
+   the legacy .greeting / .greeting-* rules were removed. */
 
 /* ───────────── Status pill (replaces .status-strip) ───────────── */
 .status-strip {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronLeft } from '@lucide/svelte';
+	import { ChevronLeft, RefreshCw, Pencil, Send } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
 	import ScannerReticle from '$lib/components/ScannerReticle.svelte';
@@ -14,12 +14,29 @@
 	let stop = $state(false);
 	let cameraError = $state<string | null>(null);
 	let needsTap = $state(false);
+	// The barcode we last attempted — kept so the not-found card can show it
+	// (it makes the error feel concrete, and gives the user something to copy
+	// or paste into Open Food Facts directly).
+	let lastBarcode = $state<string | null>(null);
+
+	// Friends-and-family humor: a tiny rotating bench of headlines so the same
+	// dead-end doesn't feel like a wall every time. Picked once per not-found.
+	const NOT_FOUND_LINES: Array<() => string> = [
+		m.scan_nf_line_1,
+		m.scan_nf_line_2,
+		m.scan_nf_line_3,
+		m.scan_nf_line_4,
+		m.scan_nf_line_5
+	];
+	let notFoundLine = $state<() => string>(NOT_FOUND_LINES[0]);
 
 	async function lookup(barcode: string) {
 		phase = 'searching';
+		lastBarcode = barcode;
 		try {
 			const res = await fetch(`/api/foods/scan?barcode=${encodeURIComponent(barcode)}`);
 			if (res.status === 404) {
+				notFoundLine = NOT_FOUND_LINES[Math.floor(Math.random() * NOT_FOUND_LINES.length)];
 				phase = 'not-found';
 				return;
 			}
@@ -31,6 +48,7 @@
 			goto('/?from=scan');
 		} catch (e) {
 			console.error('scan lookup failed', e);
+			notFoundLine = NOT_FOUND_LINES[Math.floor(Math.random() * NOT_FOUND_LINES.length)];
 			phase = 'not-found';
 		}
 	}
@@ -128,6 +146,28 @@
 		manual = '';
 	}
 
+	function logManually() {
+		// Stash the orphaned barcode so the home page can offer "create as your
+		// own food" pre-filled with it, instead of dropping the user in cold.
+		if (lastBarcode) {
+			sessionStorage.setItem('calorie:scanOrphan', lastBarcode);
+		}
+		goto('/?from=scan-orphan');
+	}
+
+	function openOFF() {
+		if (!lastBarcode) return;
+		// Open Food Facts has a per-product URL — sending users there to add it
+		// keeps OFF healthy and means the scan works for everyone next time.
+		window.open(`https://world.openfoodfacts.org/product/${lastBarcode}`, '_blank', 'noopener');
+	}
+
+	// Visually format a barcode like a typewriter slip: groups of 4.
+	const formattedBarcode = $derived.by(() => {
+		if (!lastBarcode) return '';
+		return lastBarcode.replace(/(.{4})/g, '$1 ').trim();
+	});
+
 	onMount(() => {
 		startCamera();
 	});
@@ -138,7 +178,7 @@
 	});
 </script>
 
-<div class="scan-page">
+<div class="scan-page" data-phase={phase}>
 	<button class="back" type="button" onclick={() => goto('/')} aria-label={m.action_back()}>
 		<ChevronLeft size={22} strokeWidth={1.7} />
 	</button>
@@ -147,6 +187,7 @@
 		<video
 			bind:this={videoEl}
 			class="cam-video"
+			class:dim={phase === 'not-found'}
 			playsinline
 			muted
 			aria-hidden="true"
@@ -164,37 +205,120 @@
 				<button class="overlay-cta" type="button" onclick={startCamera}>Retry</button>
 			</div>
 		{/if}
+
+		{#if phase === 'not-found'}
+			<div class="nf-card" role="alert">
+				<div class="nf-stamp" aria-hidden="true">
+					<svg viewBox="0 0 80 80" width="64" height="64" fill="none">
+						<!-- Postmark-style ring with a soft slash -->
+						<circle
+							cx="40"
+							cy="40"
+							r="34"
+							stroke="currentColor"
+							stroke-width="1.4"
+							stroke-dasharray="3 5"
+							opacity="0.6"
+						/>
+						<circle
+							cx="40"
+							cy="40"
+							r="26"
+							stroke="currentColor"
+							stroke-width="1.2"
+							opacity="0.45"
+						/>
+						<path
+							d="M22 22 L58 58"
+							stroke="currentColor"
+							stroke-width="1.6"
+							stroke-linecap="round"
+							opacity="0.65"
+						/>
+						<text
+							x="40"
+							y="44"
+							text-anchor="middle"
+							font-family="var(--font-mono)"
+							font-size="9"
+							letter-spacing="0.18em"
+							fill="currentColor"
+							opacity="0.9"
+						>
+							NOT FILED
+						</text>
+					</svg>
+				</div>
+
+				<p class="nf-eyebrow">{m.scan_nf_eyebrow()}</p>
+				<h2 class="nf-headline">{notFoundLine()}</h2>
+
+				{#if lastBarcode}
+					<div class="nf-barcode" aria-label={`Scanned barcode ${lastBarcode}`}>
+						<span class="nf-barcode-label">{m.scan_nf_barcode_label()}</span>
+						<span class="nf-barcode-value">{formattedBarcode}</span>
+					</div>
+				{/if}
+
+				<p class="nf-body">{m.scan_nf_body()}</p>
+
+				<div class="nf-actions">
+					<button class="nf-primary" type="button" onclick={logManually}>
+						<Pencil size={15} strokeWidth={1.8} />
+						<span>{m.scan_nf_add_yourself()}</span>
+					</button>
+					<button class="nf-secondary" type="button" onclick={reset}>
+						<RefreshCw size={14} strokeWidth={1.7} />
+						<span>{m.scan_nf_try_again()}</span>
+					</button>
+				</div>
+
+				{#if lastBarcode}
+					<button class="nf-link" type="button" onclick={openOFF}>
+						<Send size={11} strokeWidth={1.7} />
+						<span>{m.scan_nf_help_off()}</span>
+					</button>
+				{/if}
+			</div>
+		{/if}
 	</div>
 
-	<div class="bottom-panel">
-		{#if phase === 'not-found'}
-			<button class="primary-cta" type="button" onclick={() => goto('/')}>
-				{m.action_log_manually()}
-			</button>
-			<button class="secondary-cta" type="button" onclick={reset}> Try again </button>
-		{:else}
-			<form
-				class="manual"
-				onsubmit={(e) => {
-					e.preventDefault();
-					if (manual.length >= 8) lookup(manual);
-				}}
-			>
-				<label class="manual-label" for="barcode">{m.scan_manual_label()}</label>
-				<div class="manual-row">
-					<input
-						id="barcode"
-						class="manual-input"
-						type="text"
-						inputmode="numeric"
-						pattern="[0-9]*"
-						placeholder={m.scan_manual_placeholder()}
-						bind:value={manual}
-					/>
-					<button type="submit" class="manual-go" disabled={manual.length < 8}>↵</button>
-				</div>
-			</form>
-		{/if}
+	<div class="bottom-panel" class:hidden={phase === 'not-found'}>
+		<div class="panel-rule" aria-hidden="true">
+			<span class="rule-line"></span>
+			<span class="rule-eyebrow">{m.scan_manual_label()}</span>
+			<span class="rule-line"></span>
+		</div>
+
+		<form
+			class="manual"
+			onsubmit={(e) => {
+				e.preventDefault();
+				if (manual.length >= 8) lookup(manual);
+			}}
+		>
+			<div class="manual-row">
+				<input
+					id="barcode"
+					class="manual-input"
+					type="text"
+					inputmode="numeric"
+					pattern="[0-9]*"
+					placeholder={m.scan_manual_placeholder()}
+					bind:value={manual}
+					aria-label={m.scan_manual_label()}
+				/>
+				<button
+					type="submit"
+					class="manual-go"
+					disabled={manual.length < 8}
+					aria-label="Look up"
+				>
+					<span class="go-arrow">→</span>
+				</button>
+			</div>
+			<p class="manual-hint">{m.scan_manual_hint()}</p>
+		</form>
 	</div>
 </div>
 
@@ -203,10 +327,31 @@
 		min-height: 100dvh;
 		display: flex;
 		flex-direction: column;
-		background: oklch(15% 0.02 60);
+		/* Warm graphite — a darkroom rather than a void. The radial center
+		   keeps the camera feed feeling lit; the corners darken into the
+		   scope housing. */
+		background:
+			radial-gradient(ellipse 90% 70% at 50% 38%, oklch(20% 0.025 50), oklch(13% 0.02 50) 70%),
+			oklch(11% 0.018 45);
 		position: relative;
 		z-index: 1;
 		padding-top: var(--safe-top);
+	}
+
+	/* Subtle warm noise overlay on the page chrome — adds film texture
+	   to the strips above and below the camera feed. */
+	.scan-page::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		background-image:
+			radial-gradient(circle at 20% 30%, oklch(40% 0.04 50) 0.4px, transparent 1.5px),
+			radial-gradient(circle at 75% 65%, oklch(38% 0.04 50) 0.4px, transparent 1.5px);
+		background-size: 5px 5px, 7px 7px;
+		opacity: 0.18;
+		mix-blend-mode: overlay;
+		z-index: 0;
 	}
 
 	.back {
@@ -242,6 +387,11 @@
 		height: 100%;
 		object-fit: cover;
 		z-index: 0;
+		transition: filter 320ms ease;
+	}
+
+	.cam-video.dim {
+		filter: blur(14px) brightness(0.42) saturate(0.7);
 	}
 
 	.overlay-cta {
@@ -277,12 +427,317 @@
 		font-family: var(--font-mono);
 	}
 
-	.bottom-panel {
-		padding: 20px 20px calc(24px + var(--safe-bot));
-		background: linear-gradient(to top, oklch(12% 0.02 60), transparent);
+	/* ── Not-found card — paper slip pinned to a corkboard ── */
+	.nf-card {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%) rotate(-0.6deg);
+		width: min(86vw, 360px);
 		display: flex;
 		flex-direction: column;
+		align-items: center;
 		gap: 10px;
+		padding: 28px 22px 22px;
+		background: oklch(96% 0.018 70);
+		color: oklch(28% 0.04 50);
+		border-radius: 6px;
+		box-shadow:
+			0 0 0 1px oklch(88% 0.02 70),
+			0 1px 0 oklch(78% 0.02 70),
+			0 30px 40px -16px rgba(0, 0, 0, 0.55),
+			0 60px 80px -40px rgba(0, 0, 0, 0.45);
+		z-index: 4;
+		text-align: center;
+		animation: nf-drop 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+		isolation: isolate;
+	}
+
+	/* Subtle paper grain */
+	.nf-card::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background-image:
+			radial-gradient(circle at 22% 30%, oklch(80% 0.02 70) 0.4px, transparent 1.6px),
+			radial-gradient(circle at 75% 65%, oklch(80% 0.02 70) 0.4px, transparent 1.6px);
+		background-size: 4px 4px, 6px 6px;
+		opacity: 0.45;
+		mix-blend-mode: multiply;
+		pointer-events: none;
+		z-index: -1;
+	}
+
+	/* Tape strip pinned to the top */
+	.nf-card::after {
+		content: '';
+		position: absolute;
+		top: -10px;
+		left: 50%;
+		transform: translateX(-50%) rotate(-1.5deg);
+		width: 64px;
+		height: 18px;
+		background: oklch(88% 0.04 78 / 0.78);
+		border-left: 1px solid oklch(78% 0.04 78 / 0.55);
+		border-right: 1px solid oklch(78% 0.04 78 / 0.55);
+		box-shadow: 0 1px 0 oklch(70% 0.04 78 / 0.4);
+	}
+
+	@keyframes nf-drop {
+		0% {
+			opacity: 0;
+			transform: translate(-50%, calc(-50% - 24px)) rotate(-3deg) scale(0.96);
+		}
+		60% {
+			transform: translate(-50%, calc(-50% + 4px)) rotate(0deg) scale(1.005);
+		}
+		100% {
+			opacity: 1;
+			transform: translate(-50%, -50%) rotate(-0.6deg) scale(1);
+		}
+	}
+
+	.nf-stamp {
+		color: var(--color-ember-deep);
+		opacity: 0.85;
+		margin-bottom: 2px;
+		animation: nf-stamp 600ms cubic-bezier(0.32, 0.72, 0, 1) 200ms both;
+	}
+
+	@keyframes nf-stamp {
+		from {
+			opacity: 0;
+			transform: scale(1.4) rotate(-12deg);
+		}
+		to {
+			opacity: 0.85;
+			transform: scale(1) rotate(-6deg);
+		}
+	}
+
+	.nf-eyebrow {
+		font-family: var(--font-mono);
+		font-size: 9.5px;
+		letter-spacing: 0.24em;
+		text-transform: uppercase;
+		color: var(--color-ember-deep);
+		opacity: 0.75;
+		margin: 4px 0 0;
+	}
+
+	.nf-headline {
+		font-family: var(--font-display);
+		font-variation-settings:
+			'opsz' 60,
+			'SOFT' 100,
+			'wght' 460;
+		font-size: clamp(20px, 5.6vw, 24px);
+		line-height: 1.18;
+		letter-spacing: -0.02em;
+		color: oklch(24% 0.04 50);
+		margin: 0;
+		max-width: 280px;
+	}
+
+	.nf-barcode {
+		display: inline-flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 3px;
+		margin: 8px 0 4px;
+		padding: 8px 14px;
+		background: oklch(94% 0.014 70);
+		border: 1px dashed oklch(78% 0.02 70);
+		border-radius: 4px;
+	}
+
+	.nf-barcode-label {
+		font-family: var(--font-mono);
+		font-size: 8.5px;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: oklch(54% 0.02 70);
+	}
+
+	.nf-barcode-value {
+		font-family: var(--font-mono);
+		font-feature-settings: 'tnum' 1;
+		font-size: 14.5px;
+		letter-spacing: 0.06em;
+		color: oklch(28% 0.04 50);
+	}
+
+	.nf-body {
+		font-family: var(--font-display);
+		font-style: italic;
+		font-variation-settings:
+			'opsz' 24,
+			'SOFT' 100,
+			'wght' 380,
+			'ital' 1;
+		font-size: 13px;
+		line-height: 1.45;
+		color: oklch(46% 0.03 50);
+		margin: 0;
+		max-width: 260px;
+	}
+
+	.nf-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		width: 100%;
+		margin-top: 10px;
+	}
+
+	.nf-primary {
+		all: unset;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		padding: 13px 18px;
+		background: var(--color-ember);
+		color: oklch(98% 0.008 70);
+		border-radius: 999px;
+		font-size: 14px;
+		font-weight: 500;
+		letter-spacing: 0.005em;
+		box-shadow: 0 6px 14px -6px var(--color-ember-deep);
+		transition:
+			transform 120ms,
+			background 200ms;
+	}
+
+	.nf-primary:active {
+		transform: scale(0.97);
+		background: var(--color-ember-deep);
+	}
+
+	.nf-secondary {
+		all: unset;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 7px;
+		padding: 11px 18px;
+		background: transparent;
+		color: oklch(36% 0.03 50);
+		border: 1px solid oklch(82% 0.02 70);
+		border-radius: 999px;
+		font-size: 13px;
+		font-weight: 500;
+		transition:
+			background 200ms,
+			border-color 200ms;
+	}
+
+	.nf-secondary:active {
+		background: oklch(92% 0.02 70);
+		border-color: oklch(72% 0.02 70);
+	}
+
+	.nf-link {
+		all: unset;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		margin-top: 4px;
+		padding: 6px 4px;
+		font-size: 11.5px;
+		color: oklch(50% 0.04 50);
+		text-decoration: underline;
+		text-decoration-style: dotted;
+		text-decoration-color: oklch(72% 0.02 70);
+		text-underline-offset: 3px;
+	}
+
+	.nf-link:active {
+		color: var(--color-ember-deep);
+	}
+
+	.bottom-panel {
+		position: relative;
+		padding: 22px 24px calc(28px + var(--safe-bot));
+		/* Warm gradient with a hint of ember bleeding up. Replaces the flat
+		   black-to-transparent that didn't really feel like part of the
+		   instrument. */
+		background:
+			linear-gradient(
+				to top,
+				oklch(11% 0.02 45) 0%,
+				oklch(13% 0.02 45) 30%,
+				oklch(13% 0.02 45 / 0.7) 75%,
+				transparent 100%
+			),
+			radial-gradient(
+				ellipse 60% 80% at 50% 100%,
+				color-mix(in oklab, var(--color-ember) 12%, transparent),
+				transparent 70%
+			);
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		transition:
+			opacity 240ms,
+			transform 280ms;
+		z-index: 2;
+	}
+
+	/* A hairline measurement rule pinned to the top of the panel — visually
+	   ties the panel back into the scope housing. */
+	.bottom-panel::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 14%;
+		right: 14%;
+		height: 1px;
+		background: linear-gradient(
+			to right,
+			transparent,
+			color-mix(in oklab, var(--color-ember-glow) 50%, transparent) 50%,
+			transparent
+		);
+		opacity: 0.5;
+	}
+
+	.bottom-panel.hidden {
+		opacity: 0;
+		transform: translateY(8px);
+		pointer-events: none;
+	}
+
+	/* ── Eyebrow rule with mono label between two dashed lines ── */
+	.panel-rule {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 0 4px;
+	}
+
+	.rule-line {
+		flex: 1;
+		height: 1px;
+		background-image: linear-gradient(
+			to right,
+			color-mix(in oklab, var(--color-ember-glow) 30%, transparent) 50%,
+			transparent 50%
+		);
+		background-size: 4px 1px;
+		opacity: 0.65;
+	}
+
+	.rule-eyebrow {
+		font-family: var(--font-mono);
+		font-size: 9.5px;
+		letter-spacing: 0.26em;
+		text-transform: uppercase;
+		color: color-mix(in oklab, var(--color-ember-glow) 65%, oklch(72% 0.014 70));
 	}
 
 	.manual {
@@ -291,78 +746,97 @@
 		gap: 8px;
 	}
 
-	.manual-label {
-		font-size: 11px;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: oklch(72% 0.014 70);
-	}
-
 	.manual-row {
 		display: flex;
-		gap: 8px;
+		gap: 10px;
 		align-items: stretch;
 	}
 
+	/* Typewriter slip: monospace, dashed underline, no box. The input
+	   feels like a typed line on a service ticket — fits the instrument
+	   theme without competing with the camera feed. */
 	.manual-input {
 		flex: 1;
 		all: unset;
-		padding: 14px 16px;
-		background: rgba(255, 255, 255, 0.06);
-		border: 1px solid rgba(255, 255, 255, 0.14);
-		border-radius: 14px;
-		color: oklch(95% 0.008 70);
+		padding: 12px 4px 12px 4px;
+		color: oklch(95% 0.012 60);
 		font-family: var(--font-mono);
-		font-size: 15px;
+		font-size: 17px;
 		font-feature-settings: 'tnum' 1;
-		letter-spacing: 0.04em;
-		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
+		letter-spacing: 0.08em;
+		border-bottom: 1px dashed color-mix(in oklab, var(--color-ember-glow) 38%, transparent);
+		caret-color: var(--color-ember-glow);
+		transition: border-color 200ms;
+	}
+
+	.manual-input:focus {
+		border-bottom-color: var(--color-ember-glow);
+		border-bottom-style: solid;
 	}
 
 	.manual-input::placeholder {
-		color: oklch(60% 0.014 70);
+		color: color-mix(in oklab, var(--color-ember-glow) 18%, oklch(56% 0.014 70));
+		font-style: italic;
+		letter-spacing: 0.06em;
 	}
 
 	.manual-go {
 		all: unset;
 		cursor: pointer;
-		padding: 0 18px;
-		border-radius: 14px;
-		background: var(--color-ember);
-		color: oklch(98% 0.008 70);
-		font-size: 16px;
+		padding: 0 16px;
+		min-width: 50px;
+		min-height: 44px;
 		display: grid;
 		place-items: center;
-		min-width: 52px;
-		transition: opacity 160ms;
+		border-radius: 999px;
+		background: color-mix(in oklab, var(--color-ember) 92%, transparent);
+		color: oklch(98% 0.008 70);
+		font-family: var(--font-display);
+		font-size: 18px;
+		box-shadow:
+			0 4px 14px -4px color-mix(in oklab, var(--color-ember) 70%, transparent),
+			inset 0 0 0 1px color-mix(in oklab, var(--color-ember-glow) 28%, transparent);
+		transition:
+			opacity 180ms,
+			transform 140ms,
+			background 200ms;
+	}
+
+	.manual-go:active {
+		transform: scale(0.95);
+		background: var(--color-ember-deep);
 	}
 
 	.manual-go:disabled {
-		opacity: 0.4;
+		opacity: 0.32;
 		cursor: default;
+		box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+		background: rgba(255, 255, 255, 0.04);
 	}
 
-	.primary-cta {
-		all: unset;
-		cursor: pointer;
-		padding: 16px 22px;
-		text-align: center;
-		background: var(--color-ember);
-		color: oklch(98% 0.008 70);
-		border-radius: 16px;
-		font-size: 15px;
-		font-weight: 500;
+	.go-arrow {
+		display: inline-block;
+		transform: translateY(-1px);
 	}
 
-	.secondary-cta {
-		all: unset;
-		cursor: pointer;
-		padding: 12px 22px;
-		text-align: center;
-		color: oklch(82% 0.014 70);
-		border: 1px solid rgba(255, 255, 255, 0.14);
-		border-radius: 14px;
-		font-size: 13.5px;
+	.manual-hint {
+		margin: 4px 4px 0;
+		font-family: var(--font-display);
+		font-style: italic;
+		font-variation-settings: 'opsz' 14, 'SOFT' 100, 'wght' 380, 'ital' 1;
+		font-size: 12px;
+		line-height: 1.4;
+		color: color-mix(in oklab, var(--color-ember-glow) 22%, oklch(62% 0.012 60));
+		opacity: 0.85;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.nf-card,
+		.nf-stamp {
+			animation: none;
+		}
+		.cam-video {
+			transition: none;
+		}
 	}
 </style>

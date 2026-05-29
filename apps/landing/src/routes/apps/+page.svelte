@@ -5,13 +5,15 @@
 	import { m } from '$lib/paraglide/messages.js';
 	import {
 		BottomSheet,
+		GreetingHeader,
 		SaveBar,
 		SectionLabel,
 		Toast,
 		AboutDiagnostics,
 		OptionPickerSheet,
 		StubInfoSheet,
-		UnsavedGuard
+		UnsavedGuard,
+		useNow
 	} from '@nexo/ui';
 	import SessionsSheet from '$lib/components/apps/SessionsSheet.svelte';
 	import AppGrid from '$lib/components/apps/AppGrid.svelte';
@@ -201,6 +203,18 @@
 			.toUpperCase()
 	);
 
+	const clock = useNow();
+	const todayLabel = $derived(
+		clock.value.toLocaleDateString(getLocale(), {
+			weekday: 'long',
+			month: 'short',
+			day: 'numeric'
+		})
+	);
+	const timeLabel = $derived(
+		clock.value.toLocaleTimeString(getLocale(), { hour: '2-digit', minute: '2-digit' })
+	);
+
 	type LiveApp = {
 		id: string;
 		name: string;
@@ -351,37 +365,29 @@
 		<span class="version">v{data.appVersions.landing}</span>
 	</div>
 
-	<!-- Profile hero -->
-	<div class="profile-hero">
-		<div class="avatar-big">{initials}</div>
-		<div class="who">
-			<div class="name">{m.apps_greeting({ firstName })}</div>
-			<div class="greeting">
-				<!-- eslint-disable-next-line svelte/no-at-html-tags -- interpolated values are integer .length counts, not user input -->
-				{@html m.apps_status_summary({
-					live: `<b>${liveApps.length}</b>`,
-					coming: `<b>${workshopApps.length + ideaApps.length}</b>`
-				})}
-			</div>
-		</div>
-		<button
-			type="button"
-			class="icon-btn"
-			aria-label={m.apps_edit_profile_aria()}
-			onclick={() => (nameSheetOpen = true)}
-		>
-			<svg
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				><path d="M12 20h9" /><path
-					d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"
-				/></svg
+	<!-- Greeting -->
+	<GreetingHeader
+		name={firstName}
+		eyebrow={todayLabel}
+		details={[
+			timeLabel,
+			liveApps.length === 1 ? '1 live' : `${liveApps.length} live`,
+			workshopApps.length + ideaApps.length === 1
+				? '1 in workshop'
+				: `${workshopApps.length + ideaApps.length} in workshop`
+		]}
+	>
+		{#snippet avatar()}
+			<button
+				type="button"
+				class="gh-initials"
+				aria-label={m.apps_edit_profile_aria()}
+				onclick={() => (nameSheetOpen = true)}
 			>
-		</button>
-	</div>
+				{initials}
+			</button>
+		{/snippet}
+	</GreetingHeader>
 
 	<!-- Your Apps / Workshop / Ideas -->
 	<AppGrid
@@ -788,36 +794,13 @@
 		color: var(--color-text-faint);
 	}
 
-	/* ─── Profile hero ─── */
-	.profile-hero {
-		position: relative;
-		padding: 22px;
-		background: var(--color-surface-1);
-		border: 1px solid var(--color-border-default);
-		border-radius: var(--radius-2xl);
-		display: flex;
-		align-items: center;
-		gap: 16px;
-		overflow: hidden;
-	}
-	.profile-hero::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: radial-gradient(
-			60% 80% at 0% -20%,
-			color-mix(in oklab, var(--color-accent) 14%, transparent),
-			transparent 70%
-		);
-		pointer-events: none;
-	}
-	.profile-hero > * {
-		position: relative;
-		z-index: 1;
-	}
-	.avatar-big {
-		width: 64px;
-		height: 64px;
+	/* ─── Greeting avatar (initials button that opens the name sheet) ─── */
+	.gh-initials {
+		appearance: none;
+		border: 0;
+		cursor: pointer;
+		width: 38px;
+		height: 38px;
 		border-radius: 999px;
 		background: linear-gradient(
 			135deg,
@@ -827,57 +810,17 @@
 		color: #fff;
 		display: grid;
 		place-items: center;
-		font-size: 22px;
-		font-weight: 600;
-		letter-spacing: 0.01em;
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.02em;
 		box-shadow:
-			0 0 0 3px var(--color-surface-1),
-			0 0 0 4px var(--color-border-subtle),
-			0 6px 16px color-mix(in oklab, var(--color-accent) 40%, transparent);
-		flex-shrink: 0;
+			0 0 0 2px var(--color-surface-1),
+			0 0 0 3px var(--color-border-subtle),
+			0 4px 12px color-mix(in oklab, var(--color-accent) 40%, transparent);
+		transition: transform var(--duration-fast) var(--ease-out);
 	}
-	.who {
-		flex: 1;
-		min-width: 0;
-	}
-	.who .name {
-		font-size: 22px;
-		font-weight: 600;
-		letter-spacing: -0.02em;
-		line-height: 1.1;
-	}
-	.who .greeting {
-		margin-top: 4px;
-		font-size: 13.5px;
-		color: var(--color-text-muted);
-		line-height: 1.45;
-	}
-	.who .greeting :global(b) {
-		color: var(--color-text-primary);
-		font-weight: 500;
-	}
-	.icon-btn {
-		width: 36px;
-		height: 36px;
-		border-radius: 999px;
-		background: var(--color-bg-1);
-		border: 1px solid var(--color-border-default);
-		display: grid;
-		place-items: center;
-		cursor: pointer;
-		flex-shrink: 0;
-		color: var(--color-text-muted);
-		transition:
-			background var(--duration-fast) var(--ease-out),
-			border-color var(--duration-fast) var(--ease-out);
-	}
-	.icon-btn:active {
-		background: var(--color-surface-2);
-	}
-	.icon-btn svg {
-		width: 15px;
-		height: 15px;
-		stroke-width: 1.8;
+	.gh-initials:active {
+		transform: scale(0.96);
 	}
 
 	/* ─── Settings card ─── */

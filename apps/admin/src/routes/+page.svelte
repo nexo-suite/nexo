@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { EnrichedContainer } from './+page.server';
 	import { ChevronDown, CircleCheck, AlertTriangle } from '@lucide/svelte';
-	import { PageHeader } from '@nexo/ui';
+	import { GreetingHeader, useNow } from '@nexo/ui';
 	import { ctnState, ctnIsApp, type CtnState } from '$lib/utils/containers';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import CorrelationIdSearch from '$lib/components/CorrelationIdSearch.svelte';
@@ -70,13 +70,33 @@
 		const hasIssue = grouped.infra.some((c) => ctnState(c) !== 'ok');
 		if (hasIssue) infraOpen = true;
 	});
+
+	const displayName = $derived(
+		data.profile?.displayName?.trim() || data.user?.name?.split(' ')[0] || 'there'
+	);
+	const clock = useNow();
+	const todayLabel = $derived(
+		clock.value.toLocaleDateString('en-GB', { weekday: 'long', month: 'short', day: 'numeric' })
+	);
+	const timeLabel = $derived(
+		clock.value.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+	);
+	const greetDetails = $derived.by<string[]>(() => {
+		const items: string[] = [timeLabel];
+		const total = data.containers.length;
+		items.push(total === 1 ? '1 service' : `${total} services`);
+		if (downCount + degradedCount === 0) items.push('all healthy');
+		else if (downCount > 0) items.push(downCount === 1 ? '1 down' : `${downCount} down`);
+		else items.push(degradedCount === 1 ? '1 degraded' : `${degradedCount} degraded`);
+		return items;
+	});
 </script>
 
 <div class="page">
-	<PageHeader title={m.page_title_ops()}>
+	<GreetingHeader name={displayName} eyebrow={todayLabel} details={greetDetails}>
 		{#snippet avatar()}<UserAvatarMenu />{/snippet}
 		{#snippet actions()}<CorrelationIdSearch />{/snippet}
-	</PageHeader>
+	</GreetingHeader>
 
 	<div class="banner" class:ok={allGood} class:bad={!allGood}>
 		{#if allGood}

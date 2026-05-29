@@ -5,7 +5,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { applyAction, enhance } from '$app/forms';
 	import { page } from '$app/state';
-	import { BottomSheet, type SheetAction } from '@nexo/ui';
+	import { BottomSheet, GreetingHeader, type SheetAction } from '@nexo/ui';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import MatchHotCard from '$lib/components/MatchHotCard.svelte';
 	import { pushBridge } from '$lib/components/pushBridge.svelte.js';
@@ -68,6 +68,23 @@
 		if (diffMin < 60) return m.dashboard_minutes_ago({ n: String(diffMin) });
 		const diffHr = Math.round(diffMin / 60);
 		return m.dashboard_hours_ago({ n: String(diffHr) });
+	});
+
+	const timeLabel = $derived(
+		new Date(now).toLocaleTimeString(getLocale(), { hour: '2-digit', minute: '2-digit' })
+	);
+
+	// Greeting meta — terse, glanceable. Hardcoded English for now;
+	// add i18n keys if/when the rest of the app gains plural-aware count messages.
+	const greetDetails = $derived.by<string[]>(() => {
+		const items: string[] = [timeLabel];
+		const matchCount = data.matches.length;
+		const borderlineCount = data.borderlines.length;
+		if (matchCount > 0) items.push(matchCount === 1 ? '1 match' : `${matchCount} matches`);
+		if (borderlineCount > 0)
+			items.push(borderlineCount === 1 ? '1 borderline' : `${borderlineCount} borderlines`);
+		if (items.length === 1) items.push(statusTone === 'ok' ? 'standby' : 'attention needed');
+		return items;
 	});
 
 	function pad2(n: number) {
@@ -316,17 +333,9 @@
 </script>
 
 <div class="page">
-	<div class="greeting">
-		<div class="greeting-line">
-			<span class="greeting-hi">Hey,</span>
-			<span class="greeting-name">{displayName}.</span>
-			<span class="greeting-spacer"></span>
-			<UserAvatarMenu />
-		</div>
-		{#if data.todayLabel}
-			<span class="greeting-date">{data.todayLabel}</span>
-		{/if}
-	</div>
+	<GreetingHeader name={displayName} eyebrow={data.todayLabel} details={greetDetails}>
+		{#snippet avatar()}<UserAvatarMenu />{/snippet}
+	</GreetingHeader>
 
 	{#if isDisconnected}
 		<section
@@ -768,15 +777,3 @@
 		</button>
 	</div>
 {/if}
-
-<style>
-	.greeting-line {
-		display: flex;
-		align-items: baseline;
-		gap: 8px;
-		flex-wrap: wrap;
-	}
-	.greeting-spacer {
-		flex: 1;
-	}
-</style>

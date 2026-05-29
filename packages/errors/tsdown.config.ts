@@ -8,5 +8,6 @@ export default defineConfig({
 	dts: true,
 	clean: true,
 	sourcemap: true,
+	deps: { onlyBundle: [] },
 	outExtensions: () => ({ js: '.js', dts: '.d.ts' })
 });

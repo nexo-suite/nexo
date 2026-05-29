@@ -10,5 +10,5 @@ export default defineConfig({
 	dts: false,
 	clean: true,
 	sourcemap: true,
-	deps: { alwaysBundle: [/.*/] }
+	deps: { alwaysBundle: [/.*/], onlyBundle: false }
 });

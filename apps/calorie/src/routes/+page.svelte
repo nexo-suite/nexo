@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { Plus, EyeOff } from '@lucide/svelte';
+	import { Plus, ScrollText } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
-	import { PageHeader } from '@nexo/ui';
+	import { GreetingHeader, useNow } from '@nexo/ui';
 	import KcalRing from '$lib/components/KcalRing.svelte';
 	import MacroBar from '$lib/components/MacroBar.svelte';
 	import MealSection from '$lib/components/MealSection.svelte';
 	import DateStrip from '$lib/components/DateStrip.svelte';
+	import DiaryView from '$lib/components/DiaryView.svelte';
 	import AddEntrySheet from '$lib/components/AddEntrySheet.svelte';
 	import EditEntrySheet from '$lib/components/EditEntrySheet.svelte';
 	import InlineAddPanel from '$lib/components/InlineAddPanel.svelte';
@@ -58,12 +59,24 @@
 	let preselectedSlot = $state<MealSlot | null>(null);
 	let editOpen = $state(false);
 	let editingEntry = $state<Entry | null>(null);
-	let showEmpty = $state(false);
+	// Diary view: chronological flat ledger instead of meal-grouped sections.
+	// The toggle persists for the session so flipping between today/history doesn't reset it.
+	let diaryMode = $state(false);
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		const stored = sessionStorage.getItem('calorie:diary-mode');
+		if (stored === '1') diaryMode = true;
+	});
+	function toggleDiary() {
+		diaryMode = !diaryMode;
+		if (typeof window !== 'undefined') {
+			sessionStorage.setItem('calorie:diary-mode', diaryMode ? '1' : '0');
+		}
+	}
 	// Slot whose inline add panel is currently expanded; null when no panel is open.
 	let openSlot = $state<MealSlot | null>(null);
 
 	const consumed = $derived.by(() => {
-		if (showEmpty) return { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 };
 		return todayEntries.reduce(
 			(acc, e) => ({
 				kcal: acc.kcal + e.kcal,
@@ -78,6 +91,26 @@
 
 	const showFiber = $derived(tierShowsFiber(profile.tier));
 	const showSugar = $derived(tierShowsSugar(profile.tier));
+
+	const displayName = $derived(data.user?.name?.split(' ')[0] || 'there');
+	const clock = useNow();
+	const timeLabel = $derived(
+		clock.value.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+	);
+	const greetDetails = $derived.by<string[]>(() => {
+		const items: string[] = [timeLabel];
+		const consumedKcal = Math.round(consumed.kcal);
+		const targetKcal = targets.kcal;
+		if (targetKcal > 0) {
+			items.push(`${consumedKcal} / ${targetKcal} kcal`);
+			if (consumedKcal === 0) items.push('untouched');
+			else if (consumedKcal >= targetKcal) items.push('over target');
+			else items.push(`${Math.round((consumedKcal / targetKcal) * 100)}% of target`);
+		} else {
+			items.push(`${consumedKcal} kcal`);
+		}
+		return items;
+	});
 
 	const slotOrder: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
@@ -95,7 +128,6 @@
 			dinner: [],
 			snack: []
 		};
-		if (showEmpty) return buckets;
 		for (const e of todayEntries) {
 			const slot: MealSlot = e.mealSlot ?? guessSlot(new Date(e.loggedAt).getHours());
 			buckets[slot].push(e);
@@ -110,7 +142,6 @@
 			dinner: [],
 			snack: []
 		};
-		if (showEmpty) return buckets;
 		const hasAnyEntries = todayEntries.length > 0;
 		for (const moment of todayMoments) {
 			if (moment.kind === 'first_of_day' && hasAnyEntries) continue;
@@ -125,7 +156,7 @@
 	});
 
 	const dayBookends = $derived.by(() => {
-		if (showEmpty || todayEntries.length === 0) return null;
+		if (todayEntries.length === 0) return null;
 		const sorted = [...todayEntries].sort(
 			(a, b) => new Date(a.loggedAt).getTime() - new Date(b.loggedAt).getTime()
 		);
@@ -139,6 +170,11 @@
 			first: fmt(sorted[0].loggedAt),
 			latest: fmt(sorted[sorted.length - 1].loggedAt)
 		};
+	});
+
+	const visibleMoments = $derived.by(() => {
+		const hasAnyEntries = todayEntries.length > 0;
+		return todayMoments.filter((mo) => !(mo.kind === 'first_of_day' && hasAnyEntries));
 	});
 
 	const slotTargetsMap = $derived(computeSlotTargets(targets.kcal));
@@ -171,16 +207,18 @@
 </script>
 
 <div class="page">
-	<PageHeader title={pageTitle} subtitle={m.app_tagline()}>
+	<GreetingHeader name={displayName} eyebrow={pageTitle} details={greetDetails}>
 		{#snippet avatar()}<UserAvatarMenu />{/snippet}
 		{#snippet actions()}
 			<button
 				class="icon-btn ghost"
+				class:on={diaryMode}
 				type="button"
-				onclick={() => (showEmpty = !showEmpty)}
-				aria-label="Demo toggle"
+				onclick={toggleDiary}
+				aria-label={m.action_toggle_diary()}
+				aria-pressed={diaryMode}
 			>
-				<EyeOff size={16} strokeWidth={1.6} />
+				<ScrollText size={16} strokeWidth={1.7} />
 			</button>
 			<button
 				class="icon-btn primary"
@@ -191,97 +229,81 @@
 				<Plus size={18} strokeWidth={2} />
 			</button>
 		{/snippet}
-	</PageHeader>
+	</GreetingHeader>
 
 	<DateStrip bind:selected={selectedDay} onSelect={handleDateSelect} />
 
-	{#if showEmpty}
-		<section class="empty">
-			<div class="empty-illustration" aria-hidden="true">
-				<svg viewBox="0 0 120 120" width="100" height="100">
-					<circle
-						cx="60"
-						cy="60"
-						r="48"
-						fill="none"
-						stroke="var(--color-border-default)"
-						stroke-width="1.5"
-						stroke-dasharray="2 4"
-					/>
-					<circle cx="60" cy="60" r="3" fill="var(--color-ember-soft)" />
-				</svg>
-			</div>
-			<h2 class="empty-title serif">{m.today_empty_heading()}</h2>
-			<p class="empty-body">{m.today_empty_body()}</p>
-			<button class="empty-cta" type="button" onclick={() => openAdd()}>
-				<Plus size={16} strokeWidth={2} />
-				{m.action_log_food()}
-			</button>
-		</section>
+	<section class="ring-section">
+		<div class="ring-triptych">
+			{#if dayBookends}
+				<div class="bookend left" aria-hidden="true">
+					<span class="be-time">{dayBookends.first}</span>
+					<span class="be-rule"></span>
+					<span class="be-label">started</span>
+				</div>
+			{:else}
+				<div class="bookend left placeholder" aria-hidden="true"></div>
+			{/if}
+
+			<KcalRing consumed={consumed.kcal} target={targets.kcal} size={216} />
+
+			{#if dayBookends}
+				<div class="bookend right" aria-hidden="true">
+					<span class="be-label">latest</span>
+					<span class="be-rule"></span>
+					<span class="be-time">{dayBookends.latest}</span>
+				</div>
+			{:else}
+				<div class="bookend right placeholder" aria-hidden="true"></div>
+			{/if}
+		</div>
+	</section>
+
+	<section class="macros">
+		<MacroBar
+			label={m.macro_protein()}
+			consumed={consumed.protein_g}
+			target={targets.protein_g}
+			colorVar="--color-protein"
+		/>
+		<MacroBar
+			label={m.macro_carbs()}
+			consumed={consumed.carbs_g}
+			target={targets.carbs_g}
+			colorVar="--color-carbs"
+		/>
+		<MacroBar
+			label={m.macro_fat()}
+			consumed={consumed.fat_g}
+			target={targets.fat_g}
+			colorVar="--color-fat"
+		/>
+		{#if showFiber}
+			<MacroBar
+				label={m.macro_fiber()}
+				consumed={consumed.fiber_g}
+				target={targets.fiber_g ?? 30}
+				colorVar="--color-fiber"
+			/>
+		{/if}
+		{#if showSugar}
+			<MacroBar
+				label={m.macro_sugar()}
+				consumed={Math.round(consumed.carbs_g * 0.4)}
+				target={targets.sugar_g ?? 50}
+				colorVar="--color-sugar"
+			/>
+		{/if}
+	</section>
+
+	{#if diaryMode}
+		<DiaryView
+			entries={todayEntries}
+			moments={visibleMoments}
+			onEntryTap={openEdit}
+			onAdd={() => openAdd()}
+		/>
 	{:else}
-		<section class="ring-section">
-			<div class="ring-triptych">
-				{#if dayBookends}
-					<div class="bookend left" aria-hidden="true">
-						<span class="be-time">{dayBookends.first}</span>
-						<span class="be-rule"></span>
-						<span class="be-label">started</span>
-					</div>
-				{:else}
-					<div class="bookend left placeholder" aria-hidden="true"></div>
-				{/if}
-
-				<KcalRing consumed={consumed.kcal} target={targets.kcal} size={216} />
-
-				{#if dayBookends}
-					<div class="bookend right" aria-hidden="true">
-						<span class="be-label">latest</span>
-						<span class="be-rule"></span>
-						<span class="be-time">{dayBookends.latest}</span>
-					</div>
-				{:else}
-					<div class="bookend right placeholder" aria-hidden="true"></div>
-				{/if}
-			</div>
-		</section>
-
-		<section class="macros">
-			<MacroBar
-				label={m.macro_protein()}
-				consumed={consumed.protein_g}
-				target={targets.protein_g}
-				colorVar="--color-protein"
-			/>
-			<MacroBar
-				label={m.macro_carbs()}
-				consumed={consumed.carbs_g}
-				target={targets.carbs_g}
-				colorVar="--color-carbs"
-			/>
-			<MacroBar
-				label={m.macro_fat()}
-				consumed={consumed.fat_g}
-				target={targets.fat_g}
-				colorVar="--color-fat"
-			/>
-			{#if showFiber}
-				<MacroBar
-					label={m.macro_fiber()}
-					consumed={consumed.fiber_g}
-					target={targets.fiber_g ?? 30}
-					colorVar="--color-fiber"
-				/>
-			{/if}
-			{#if showSugar}
-				<MacroBar
-					label={m.macro_sugar()}
-					consumed={Math.round(consumed.carbs_g * 0.4)}
-					target={targets.sugar_g ?? 50}
-					colorVar="--color-sugar"
-				/>
-			{/if}
-		</section>
-
 		<div class="rule" aria-hidden="true">
 			<span class="rule-line"></span>
 			<span class="rule-label">{m.today_section_timeline()}</span>
@@ -353,6 +375,22 @@
 	.icon-btn.ghost {
 		color: var(--color-text-subtle);
 		background: var(--color-bg-1);
+		transition:
+			background 200ms,
+			color 200ms,
+			box-shadow 240ms;
+	}
+
+	.icon-btn.ghost.on {
+		color: var(--color-ember-deep);
+		background: var(--ember-tint-bg);
+		box-shadow:
+			inset 0 0 0 1px var(--ember-line),
+			0 0 0 3px color-mix(in oklab, var(--color-ember) 8%, transparent);
+	}
+
+	.icon-btn.ghost:active {
+		transform: scale(0.94);
 	}
 
 	.icon-btn.primary {
@@ -497,54 +535,5 @@
 		display: flex;
 		flex-direction: column;
 		gap: 26px;
-	}
-
-	.empty {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 14px;
-		padding: 60px 20px;
-		text-align: center;
-	}
-
-	.empty-illustration {
-		opacity: 0.7;
-		margin-bottom: 8px;
-	}
-
-	.empty-title {
-		font-family: var(--font-display);
-		font-variation-settings:
-			'opsz' 60,
-			'SOFT' 80,
-			'wght' 460;
-		font-size: 30px;
-		line-height: 1;
-		letter-spacing: -0.025em;
-		color: var(--color-text-primary);
-		margin: 0;
-	}
-
-	.empty-body {
-		font-size: 14px;
-		color: var(--color-text-subtle);
-		margin: 0;
-		max-width: 240px;
-	}
-
-	.empty-cta {
-		all: unset;
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		padding: 12px 22px;
-		border-radius: 999px;
-		background: var(--color-text-primary);
-		color: var(--color-bg-0);
-		font-size: 14px;
-		font-weight: 500;
-		margin-top: 6px;
 	}
 </style>

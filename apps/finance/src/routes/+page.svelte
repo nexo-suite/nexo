@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PageHeader, SectionLabel } from '@nexo/ui';
+	import { SectionLabel, GreetingHeader, useNow } from '@nexo/ui';
 	import TrajectoryCard from '$lib/components/dashboard/TrajectoryCard.svelte';
 	import CashflowRiver from '$lib/components/dashboard/CashflowRiver.svelte';
 	import AccountCarousel from '$lib/components/dashboard/AccountCarousel.svelte';
@@ -9,7 +9,7 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import UserAvatarMenu from '$lib/components/UserAvatarMenu.svelte';
 	import { Search, X } from '@lucide/svelte';
-	import { getIntlLocale } from '$lib/utils';
+	import { getIntlLocale, formatCurrency } from '$lib/utils';
 	import { m } from '$lib/paraglide/messages.js';
 
 	let { data } = $props();
@@ -27,17 +27,21 @@
 		})
 	);
 
-	// Tiny day-of-week vibe emoji — keeps greeting alive without being noisy
-	const greetEmoji = $derived.by(() => {
-		const h = new Date().getHours();
-		if (h < 5) return '🌙';
-		if (h < 11) return '☕';
-		if (h < 17) return '🌤️';
-		if (h < 21) return '🌆';
-		return '🌙';
-	});
+	const clock = useNow();
+	const timeLabel = $derived(
+		clock.value.toLocaleTimeString(getIntlLocale(), { hour: '2-digit', minute: '2-digit' })
+	);
 
-	const greetTitle = $derived(`Hey, ${displayName} ${greetEmoji}`);
+	const greetDetails = $derived.by<string[]>(() => {
+		const items: string[] = [timeLabel];
+		const currency = data.settings?.currency ?? 'EUR';
+		const liquid = data.forecast?.liquidBalance ?? 0;
+		items.push(formatCurrency(liquid, currency, true));
+		const delta = data.forecast?.delta ?? 0;
+		if (delta > 0) items.push('▲ trending up');
+		else if (delta < 0) items.push('▼ trending down');
+		return items;
+	});
 
 	const spotlight = $derived(data.todayEvents?.[0] ?? null);
 
@@ -55,7 +59,7 @@
 </script>
 
 <div class="page">
-	<PageHeader title={greetTitle} subtitle={todayLabel}>
+	<GreetingHeader name={displayName} eyebrow={todayLabel} details={greetDetails}>
 		{#snippet actions()}
 			<button
 				type="button"
@@ -76,7 +80,7 @@
 			</button>
 		{/snippet}
 		{#snippet avatar()}<UserAvatarMenu />{/snippet}
-	</PageHeader>
+	</GreetingHeader>
 
 	{#if searchOpen}
 		<div class="mb-2 px-1">

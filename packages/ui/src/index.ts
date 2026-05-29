@@ -6,6 +6,7 @@ export type { BottomNavTab } from './BottomNav.types.js';
 export { default as BottomSheet } from './BottomSheet.svelte';
 export type { SheetAction, SheetActionVariant } from './BottomSheet.types.js';
 export { default as DeviceListRow } from './DeviceListRow.svelte';
+export { default as GreetingHeader } from './GreetingHeader.svelte';
 export { default as KonamiCode } from './KonamiCode.svelte';
 export { default as OptionPickerSheet } from './OptionPickerSheet.svelte';
 export { default as PageHeader } from './PageHeader.svelte';
@@ -22,6 +23,7 @@ export { default as ToggleRow } from './ToggleRow.svelte';
 export { default as UnsavedGuard } from './UnsavedGuard.svelte';
 export { default as UpdatePrompt } from './UpdatePrompt.svelte';
 export { default as UserAvatarMenu } from './UserAvatarMenu.svelte';
+export { useNow } from './utils/useNow.svelte.js';
 export {
 	addDiagnosticError,
 	buildBugReportUrl,

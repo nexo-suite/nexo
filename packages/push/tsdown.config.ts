@@ -18,6 +18,9 @@ export default defineConfig({
 	// rolldown-plugin-dts can't bundle postcss's CJS-style .d.ts files; @sveltejs/kit
 	// pulls postcss transitively. Keep these external so consumers resolve types
 	// from their own node_modules instead.
-	deps: { neverBundle: [/^@sveltejs\//, /^postcss/, /^better-auth/, /^esm-env/] },
+	deps: {
+		neverBundle: [/^@sveltejs\//, /^postcss/, /^better-auth/, /^esm-env/],
+		onlyBundle: false
+	},
 	outExtensions: () => ({ js: '.js', dts: '.d.ts' })
 });
