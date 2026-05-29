@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.0](https://github.com/nexo-suite/nexo/compare/bot-v0.6.2...bot-v0.7.0) (2026-05-29)
+
+
+### Features
+
+* **bot:** direct CLI signal channel replaces GHCR package webhook ([508e8dc](https://github.com/nexo-suite/nexo/commit/508e8dc22e521c49663ab019710821f51b978737))
+* **ui:** GreetingHeader + refreshed PageHeader across all apps ([286dd97](https://github.com/nexo-suite/nexo/commit/286dd97a2b53b5d30b9532611c0f70b6512763ec))
+
 ## [0.6.2](https://github.com/nexo-suite/nexo/compare/bot-v0.6.1...bot-v0.6.2) (2026-05-28)
 
 

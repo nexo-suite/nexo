@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/nexo-suite/nexo/compare/cli-v0.5.1...cli-v0.6.0) (2026-05-29)
+
+
+### Features
+
+* **bot:** direct CLI signal channel replaces GHCR package webhook ([508e8dc](https://github.com/nexo-suite/nexo/commit/508e8dc22e521c49663ab019710821f51b978737))
+
+
+### Bug Fixes
+
+* **cli:** bound bot-notify with per-request timeout ([f5544ae](https://github.com/nexo-suite/nexo/commit/f5544aef853c25145e2295e704fd701269c51491))
+
 ## [0.5.1](https://github.com/nexo-suite/nexo/compare/cli-v0.5.0...cli-v0.5.1) (2026-05-28)
 
 

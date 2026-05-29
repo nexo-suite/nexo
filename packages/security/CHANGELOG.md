@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/nexo-suite/nexo/compare/security-v0.4.1...security-v0.5.0) (2026-05-29)
+
+
+### Features
+
+* **ui:** GreetingHeader + refreshed PageHeader across all apps ([286dd97](https://github.com/nexo-suite/nexo/commit/286dd97a2b53b5d30b9532611c0f70b6512763ec))
+
 ## [0.4.1](https://github.com/nexo-suite/nexo/compare/security-v0.4.0...security-v0.4.1) (2026-05-27)
 
 

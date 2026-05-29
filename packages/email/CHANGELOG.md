@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/nexo-suite/nexo/compare/email-v0.3.0...email-v0.4.0) (2026-05-29)
+
+
+### Features
+
+* **ui:** GreetingHeader + refreshed PageHeader across all apps ([286dd97](https://github.com/nexo-suite/nexo/commit/286dd97a2b53b5d30b9532611c0f70b6512763ec))
+
 ## [0.3.0](https://github.com/nexo-suite/nexo/compare/email-v0.2.1...email-v0.3.0) (2026-05-25)
 
 

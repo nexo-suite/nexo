@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0](https://github.com/nexo-suite/nexo/compare/calorie-v0.4.1...calorie-v0.5.0) (2026-05-29)
+
+
+### Features
+
+* **ui:** GreetingHeader + refreshed PageHeader across all apps ([286dd97](https://github.com/nexo-suite/nexo/commit/286dd97a2b53b5d30b9532611c0f70b6512763ec))
+* **ui:** unified actions row on BottomSheet ([db4add1](https://github.com/nexo-suite/nexo/commit/db4add13562e8d7054fbd14cdf469acd9bbd1d11))
+
+
+### Bug Fixes
+
+* **admin:** drop legacy .sheet-backdrop/.sheet-* rules colliding with BottomSheet ([96d9c82](https://github.com/nexo-suite/nexo/commit/96d9c824497643e1b057c82d1ad13b5b0716e3ff))
+* **calorie:** always-zxing scanner + clear stale unstable cookie ([1831147](https://github.com/nexo-suite/nexo/commit/183114735524d83565e55e6ad9b2e92731d24dbe))
+* **calorie:** move zxing decode to worker + ROI crop to fix iOS blackscreen ([3ab9ec2](https://github.com/nexo-suite/nexo/commit/3ab9ec2e02ff24e68c26b1b8088b93c900a9387f))
+* **calorie:** reveal camera by dropping opaque reticle background ([2ec14c5](https://github.com/nexo-suite/nexo/commit/2ec14c561e594a113a6e04cc3a2de617c5b6a775))
+
 ## [0.4.1](https://github.com/nexo-suite/nexo/compare/calorie-v0.4.0...calorie-v0.4.1) (2026-05-28)
 
 

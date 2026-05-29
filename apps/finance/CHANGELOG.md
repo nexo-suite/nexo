@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/nexo-suite/nexo/compare/finance-v0.8.0...finance-v0.9.0) (2026-05-29)
+
+
+### Features
+
+* **ui:** GreetingHeader + refreshed PageHeader across all apps ([286dd97](https://github.com/nexo-suite/nexo/commit/286dd97a2b53b5d30b9532611c0f70b6512763ec))
+
+
+### Bug Fixes
+
+* **admin:** drop legacy .sheet-backdrop/.sheet-* rules colliding with BottomSheet ([96d9c82](https://github.com/nexo-suite/nexo/commit/96d9c824497643e1b057c82d1ad13b5b0716e3ff))
+
 ## [0.8.0](https://github.com/nexo-suite/nexo/compare/finance-v0.7.0...finance-v0.8.0) (2026-05-27)
 
 

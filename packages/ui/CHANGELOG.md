@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.10.0](https://github.com/nexo-suite/nexo/compare/ui-v0.9.1...ui-v0.10.0) (2026-05-29)
+
+
+### Features
+
+* **ui:** GreetingHeader + refreshed PageHeader across all apps ([286dd97](https://github.com/nexo-suite/nexo/commit/286dd97a2b53b5d30b9532611c0f70b6512763ec))
+* **ui:** unified actions row on BottomSheet ([db4add1](https://github.com/nexo-suite/nexo/commit/db4add13562e8d7054fbd14cdf469acd9bbd1d11))
+
+
+### Bug Fixes
+
+* **calorie:** always-zxing scanner + clear stale unstable cookie ([1831147](https://github.com/nexo-suite/nexo/commit/183114735524d83565e55e6ad9b2e92731d24dbe))
+
 ## [0.9.1](https://github.com/nexo-suite/nexo/compare/ui-v0.9.0...ui-v0.9.1) (2026-05-28)
 
 
