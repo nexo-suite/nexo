@@ -17,6 +17,7 @@
 	"action_edit": "Edit",
 	"action_delete": "Delete",
 	"action_close": "Close",
+	"common_unsaved_changes": "Unsaved changes",
 	"action_log_manually": "Log manually",
 	"action_torch": "Torch",
 	"action_toggle_diary": "Diary view",

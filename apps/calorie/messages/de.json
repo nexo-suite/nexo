@@ -17,6 +17,7 @@
 	"action_edit": "Bearbeiten",
 	"action_delete": "Löschen",
 	"action_close": "Schließen",
+	"common_unsaved_changes": "Ungespeicherte Änderungen",
 	"action_log_manually": "Manuell eintragen",
 	"action_torch": "Licht",
 	"action_toggle_diary": "Tagebuchansicht",

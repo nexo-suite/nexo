@@ -8,9 +8,11 @@
 		OptionPickerSheet,
 		PageHeader,
 		ProfileHubCard,
+		SaveBar,
 		SectionLabel,
 		SettingsCard,
 		SettingsRow,
+		UnsavedGuard,
 		type SheetAction
 	} from '@nexo/ui';
 	import Stepper from '$lib/components/Stepper.svelte';
@@ -44,28 +46,24 @@
 		{ value: 'de', label: m.search_locale_de(), icon: '🇩🇪' },
 		{ value: 'tr', label: m.search_locale_tr(), icon: '🇹🇷' }
 	]);
-	let pendingSearchLocale = $state<SearchLocaleOpt | null>(null);
 	let searchLocaleSheetOpen = $state(false);
-	let searchLocaleDraft = $state<SearchLocaleOpt>('auto');
-	let searchLocaleForm = $state<HTMLFormElement | null>(null);
+	// Writable derived: starts in sync with the server value and re-syncs whenever
+	// `searchLocale` changes (initial load, after a save). User picks inside the
+	// sheet just assign to it locally; persistence runs through SaveBar /
+	// UnsavedGuard like every other settings page (see apps/finance/src/routes/
+	// settings). Auto-submitting on every pick produced concurrent POSTs that
+	// aborted each other (Error: aborted) and occasionally persisted the wrong
+	// value.
+	let searchLocaleDraft: SearchLocaleOpt = $derived(searchLocale);
 
-	$effect(() => {
-		// Sync the draft to whatever the server says when the sheet isn't open;
-		// inside the sheet, draft is driven by the user's picks.
-		if (!searchLocaleSheetOpen) searchLocaleDraft = searchLocale;
-	});
+	const searchLocaleDirty = $derived(searchLocaleDraft !== searchLocale);
 
-	$effect(() => {
-		// Submit immediately on pick — same instant feel as the old segmented
-		// buttons, just inside the new sheet layout.
-		const next = searchLocaleDraft;
-		if (searchLocaleSheetOpen && next !== searchLocale && searchLocaleForm) {
-			searchLocaleForm.requestSubmit();
-		}
-	});
+	function discardSearchLocale() {
+		searchLocaleDraft = searchLocale;
+	}
 
 	const currentSearchLocaleLabel = $derived(
-		searchLocaleOptions.find((o) => o.value === (pendingSearchLocale ?? searchLocale))?.label ?? ''
+		searchLocaleOptions.find((o) => o.value === searchLocaleDraft)?.label ?? ''
 	);
 
 	let goalWeightOpen = $state(false);
@@ -233,15 +231,13 @@
 		/>
 
 		<form
-			bind:this={searchLocaleForm}
+			id="search-locale-form"
 			method="POST"
 			action="?/updateSearchLocale"
 			class="hidden-form"
 			use:enhance={() => {
-				pendingSearchLocale = searchLocaleDraft;
 				return async ({ update }) => {
 					await update({ reset: false });
-					pendingSearchLocale = null;
 				};
 			}}
 		>
@@ -324,6 +320,19 @@
 	title={m.search_locale_section()}
 	subtitle={m.search_locale_subtitle()}
 	options={searchLocaleOptions}
+/>
+
+<SaveBar
+	visible={searchLocaleDirty}
+	hint={m.common_unsaved_changes()}
+	label={m.action_save()}
+	formId="search-locale-form"
+/>
+
+<UnsavedGuard
+	dirty={searchLocaleDirty}
+	formId="search-locale-form"
+	onDiscard={discardSearchLocale}
 />
 
 <style>

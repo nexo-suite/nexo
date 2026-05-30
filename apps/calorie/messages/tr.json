@@ -17,6 +17,7 @@
 	"action_edit": "Düzenle",
 	"action_delete": "Sil",
 	"action_close": "Kapat",
+	"common_unsaved_changes": "Kaydedilmemiş değişiklikler",
 	"action_log_manually": "Elle gir",
 	"action_torch": "Işık",
 	"action_toggle_diary": "Günlük görünümü",
