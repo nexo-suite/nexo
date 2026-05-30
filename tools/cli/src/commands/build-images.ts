@@ -86,12 +86,16 @@ export async function buildImages(opts: BuildImagesOpts): Promise<void> {
 		const prTag = resolved.tags.find((t) => /^pr-\d+$/.test(t));
 		const prNumber = ctx?.prNumber ? Number(ctx.prNumber) : null;
 		if (prTag && prNumber && Number.isInteger(prNumber) && prNumber > 0) {
-			const events: ImageReadyEvent[] = targets.map((a) => ({
-				app: a.name,
-				prNumber,
-				tag: prTag
-			}));
-			await notifyImagesReady(events);
+			// Only deploy-strategy apps are user-toggleable on PR previews; the
+			// bot rejects events for bundle apps (bot, db) with HTTP 400.
+			const events: ImageReadyEvent[] = targets
+				.filter((a) => a.strategy === 'deploy')
+				.map((a) => ({
+					app: a.name,
+					prNumber,
+					tag: prTag
+				}));
+			if (events.length > 0) await notifyImagesReady(events);
 		}
 	}
 }
