@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/nexo-suite/nexo/compare/flaschen-v0.7.0...flaschen-v0.7.1) (2026-05-31)
+
+
+### Bug Fixes
+
+* **flaschen:** adjust accept shift endpoint to reflect api ([2959773](https://github.com/nexo-suite/nexo/commit/2959773bec46249077c336ef0852c9836b1b1dd0))
+
 ## [0.7.0](https://github.com/nexo-suite/nexo/compare/flaschen-v0.6.1...flaschen-v0.7.0) (2026-05-29)
 
 

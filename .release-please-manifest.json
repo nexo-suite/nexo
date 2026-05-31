@@ -12,7 +12,7 @@
 	"apps/admin": "0.11.0",
 	"apps/landing": "0.10.0",
 	"apps/bot": "0.7.0",
-	"apps/flaschen": "0.7.0",
+	"apps/flaschen": "0.7.1",
 	"apps/calorie": "0.5.1",
-	"tools/cli": "0.6.0"
+	"tools/cli": "0.6.1"
 }
