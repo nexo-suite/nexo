@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
 #
 # Thin runtime image. Build context is produced by `nexo prepare-contexts`,
 # which runs `pnpm --prod deploy` for this app — so the context
