@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/nexo-suite/nexo/compare/cli-v0.6.0...cli-v0.6.1) (2026-05-31)
+
+
+### Bug Fixes
+
+* **ci:** label container images with source repo for GHCR linkage ([b8b0c69](https://github.com/nexo-suite/nexo/commit/b8b0c699fbd3abd6e52ece3a6b6c56fcf6449a6b))
+* **ci:** skip bot-notify for bundle apps so HTTP 400s don't fail the build ([c5cb792](https://github.com/nexo-suite/nexo/commit/c5cb792e0b16cf752c5c05afaca1c12857355085))
+
 ## [0.6.0](https://github.com/nexo-suite/nexo/compare/cli-v0.5.1...cli-v0.6.0) (2026-05-29)
 
 
