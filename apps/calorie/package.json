@@ -46,7 +46,7 @@
 		"@vite-pwa/sveltekit": "catalog:",
 		"dotenv-cli": "^11.0.0",
 		"happy-dom": "^20.9.0",
-		"sharp": "^0.34.5",
+		"sharp": "^0.35.0",
 		"svelte": "catalog:",
 		"svelte-check-native": "catalog:",
 		"tailwindcss": "catalog:",
