@@ -6,7 +6,7 @@
 # same image runs the SvelteKit server (`node build`) and the worker
 # (`node build/worker/index.js`) — see docker-compose.yml.
 
-FROM node:24.15.0-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f
+FROM node:24.19.0-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43
 WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 
