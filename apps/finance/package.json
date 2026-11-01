@@ -49,7 +49,7 @@
 		"@types/node": "catalog:",
 		"@vite-pwa/sveltekit": "catalog:",
 		"@vitest/coverage-v8": "^4.1.7",
-		"happy-dom": "^20.9.0",
+		"happy-dom": "^21.0.0",
 		"svelte": "catalog:",
 		"svelte-check-native": "catalog:",
 		"tailwindcss": "catalog:",
