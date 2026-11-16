@@ -6,7 +6,7 @@
 # no node_modules, no pnpm deploy. Context is produced by `nexo
 # prepare-contexts` with strategy='bundle'.
 
-FROM node:24.15.0-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f
+FROM node:24.22.3-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5
 WORKDIR /app
 
 COPY dist ./dist
